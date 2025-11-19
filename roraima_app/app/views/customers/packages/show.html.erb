@@ -1,0 +1,118 @@
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-6">
+    <%= link_to customers_packages_path, class: "inline-flex items-center text-sm text-gray-500 hover:text-gray-700" do %>
+      <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Volver a Paquetes
+    <% end %>
+  </div>
+
+  <div class="bg-white shadow-md rounded-lg overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl font-bold text-gray-900">Detalles del Paquete</h1>
+          <% if @package.active? %>
+            <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
+          <% else %>
+            <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-red-100 text-red-800">Cancelado</span>
+          <% end %>
+        </div>
+        <% if @package.active? %>
+          <div class="flex gap-2">
+            <%= link_to edit_customers_package_path(@package), class: "inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+              <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Editar
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <% if @package.cancelled? %>
+        <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="ml-3 flex-1">
+              <h3 class="text-sm font-medium text-red-800">Este paquete fue cancelado</h3>
+              <div class="mt-2 text-sm text-red-700">
+                <p><strong>Fecha de cancelación:</strong> <%= l(@package.cancelled_at, format: :long) if @package.cancelled_at %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="px-6 py-6">
+      <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Nombre del Cliente</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.customer_name %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Empresa</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.company.presence || '-' %></dd>
+        </div>
+
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500">Dirección</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.address %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Región</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.region&.name || '-' %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Comuna</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.commune&.name || '-' %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Teléfono</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.phone %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Fecha de Retiro</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= l(@package.pickup_date, format: :long) if @package.pickup_date %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Intercambio</dt>
+          <dd class="mt-1">
+            <% if @package.exchange %>
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Sí</span>
+            <% else %>
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">No</span>
+            <% end %>
+          </dd>
+        </div>
+
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500">Descripción</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.description.presence || '-' %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Creado</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= l(@package.created_at, format: :long) %></dd>
+        </div>
+
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Última Actualización</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= l(@package.updated_at, format: :long) %></dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</div>

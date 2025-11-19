@@ -1,0 +1,89 @@
+<div class="px-4 sm:px-6 lg:px-8">
+  <div class="sm:flex sm:items-center">
+    <div class="sm:flex-auto">
+      <h1 class="text-2xl font-semibold text-gray-900">Usuarios</h1>
+      <p class="mt-2 text-sm text-gray-700">
+        Total: <%= @pagy.count %> usuarios
+      </p>
+    </div>
+    <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+      <%= link_to "Nuevo Usuario", new_admin_user_path, class: "inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700" %>
+    </div>
+  </div>
+
+  <div class="mt-8 flex flex-col">
+    <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+      <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+        <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+          <table class="min-w-full divide-y divide-gray-300 bg-white">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rol</th>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Creado</th>
+                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <% @users.each do |user| %>
+                <tr>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900"><%= user.email %></td>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm">
+                    <% if user.admin? %>
+                      <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Admin</span>
+                    <% else %>
+                      <span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-800">Usuario</span>
+                    <% end %>
+                  </td>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500"><%= user.created_at.strftime("%d/%m/%Y") %></td>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm">
+                    <%= link_to "Editar", edit_admin_user_path(user), class: "text-indigo-600 hover:text-indigo-900 mr-3" %>
+                    <% unless user.id == current_user.id %>
+                      <%= button_to "Eliminar", admin_user_path(user), method: :delete, data: { confirm: "¿Estás seguro?" }, class: "text-red-600 hover:text-red-900" %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginación con Pagy -->
+  <div class="mt-6 border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+    <div class="flex items-center justify-between">
+      <div class="flex-1 flex justify-between sm:hidden">
+        <% if @pagy.prev %>
+          <%= link_to "Anterior", admin_users_path(page: @pagy.prev), class: "relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" %>
+        <% else %>
+          <span class="relative inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400">Anterior</span>
+        <% end %>
+        
+        <% if @pagy.next %>
+          <%= link_to "Siguiente", admin_users_path(page: @pagy.next), class: "relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" %>
+        <% else %>
+          <span class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400">Siguiente</span>
+        <% end %>
+      </div>
+      
+      <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm text-gray-700">
+            Mostrando
+            <span class="font-medium"><%= @pagy.from %></span>
+            a
+            <span class="font-medium"><%= @pagy.to %></span>
+            de
+            <span class="font-medium"><%= @pagy.count %></span>
+            resultados
+          </p>
+        </div>
+        <div>
+          <%== pagy_nav(@pagy, pagy_id: 'pagy-nav', link_extra: 'class="relative inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"') %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

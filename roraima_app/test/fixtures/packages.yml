@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  customer_name: MyString
+  company: MyString
+  address: MyText
+  city: MyString
+  region: MyString
+  description: MyText
+
+two:
+  customer_name: MyString
+  company: MyString
+  address: MyText
+  city: MyString
+  region: MyString
+  description: MyText

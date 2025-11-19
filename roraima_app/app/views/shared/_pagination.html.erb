@@ -1,0 +1,38 @@
+<% if pagy.pages > 1 %>
+  <div class="flex items-center justify-center gap-2 mt-6">
+
+    <!-- Anterior -->
+    <% if pagy.prev %>
+      <%= link_to "←", pagy_url_for(pagy, pagy.prev),
+          class: "w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 transition" %>
+    <% end %>
+
+    <!-- Números -->
+    <% pagy.series.each do |item| %>
+      <% if item.is_a?(Integer) %>
+        <% if item == pagy.page %>
+          <span class="w-10 h-10 flex items-center justify-center rounded-lg bg-indigo-600 text-white font-semibold">
+            <%= item %>
+          </span>
+        <% else %>
+          <%= link_to item, pagy_url_for(pagy, item),
+              class: "w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 transition" %>
+        <% end %>
+      <% elsif item == :gap %>
+        <span class="w-10 h-10 flex items-center justify-center text-gray-400">⋯</span>
+      <% end %>
+    <% end %>
+
+    <!-- Siguiente -->
+    <% if pagy.next %>
+      <%= link_to "→", pagy_url_for(pagy, pagy.next),
+          class: "w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 transition" %>
+    <% end %>
+
+  </div>
+
+  <!-- Info de resultados -->
+  <p class="text-center text-sm text-gray-500 mt-2">
+    <%= pagy.from %>-<%= pagy.to %> de <%= pagy.count %>
+  </p>
+<% end %>
