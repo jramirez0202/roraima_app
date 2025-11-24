@@ -1,10 +1,29 @@
+require 'sidekiq/web'
+
 Rails.application.routes.draw do
-  devise_for :users
+  # Sidekiq Web UI (solo para admins)
+  authenticate :user, ->(user) { user.admin? } do
+    mount Sidekiq::Web => '/sidekiq'
+  end
+
+  # Devise routes - Disabled registrations and password recovery for security
+  # Only admins can create users through /admin/users
+  devise_for :users, skip: [:registrations, :passwords]
 
   # Admin namespace
   namespace :admin do
     resources :users
-    resources :packages
+    resources :packages do
+      collection do
+        post :generate_labels
+      end
+      member do
+        patch :change_status
+        patch :assign_courier
+        get :status_history
+      end
+    end
+    resources :bulk_uploads, only: [:new, :create, :show]
     root 'packages#index'
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
   end
@@ -12,10 +31,11 @@ Rails.application.routes.draw do
   # Customers namespace
   namespace :customers do
     resources :packages do
-      member do
-        patch :cancel
+      collection do
+        post :generate_labels
       end
     end
+    resources :bulk_uploads, only: [:new, :create, :show]
     resource :profile, only: [:show, :edit, :update]
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
   end

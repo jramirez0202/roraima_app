@@ -1,0 +1,12 @@
+---
+:concurrency: 5
+:max_retries: 3
+
+# Set timeout to 25 seconds (default is 25 seconds)
+:timeout: 25
+
+# Queues
+:queues:
+  - default
+  - mailers
+  - bulk_uploads

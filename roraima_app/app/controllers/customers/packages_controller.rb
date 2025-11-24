@@ -1,6 +1,6 @@
 module Customers
   class PackagesController < ApplicationController
-    before_action :set_package, only: [:show, :edit, :update, :destroy, :cancel]
+    before_action :set_package, only: [:show, :edit, :update, :destroy]
     before_action :authorize_package, only: [:show, :edit, :update, :destroy]
 
     def index
@@ -20,31 +20,39 @@ module Customers
 
     def new
       @package = current_user.packages.build
+      @package.region_id = metropolitan_region.id
+      @package.company = current_user.email
       authorize @package
-      @communes = []
+      @communes = metropolitan_region.communes.order(:name)
     end
 
     def create
       @package = current_user.packages.build(package_params)
+      @package.region_id = metropolitan_region.id
+      @package.company = current_user.email
       authorize @package
 
       if @package.save
         redirect_to customers_package_path(@package), notice: 'Paquete creado exitosamente.'
       else
-        @communes = @package.region_id ? Commune.where(region_id: @package.region_id).order(:name) : []
+        @communes = metropolitan_region.communes.order(:name)
         render :new, status: :unprocessable_entity
       end
     end
 
     def edit
-      @communes = @package.region ? @package.region.communes.order(:name) : []
+      @communes = metropolitan_region.communes.order(:name)
     end
 
     def update
-      if @package.update(package_params)
+      @package.assign_attributes(package_params)
+      @package.region_id = metropolitan_region.id
+      @package.company = current_user.email
+
+      if @package.save
         redirect_to customers_package_path(@package), notice: 'Paquete actualizado exitosamente.'
       else
-        @communes = @package.region_id ? Commune.where(region_id: @package.region_id).order(:name) : []
+        @communes = metropolitan_region.communes.order(:name)
         render :edit, status: :unprocessable_entity
       end
     end
@@ -54,14 +62,38 @@ module Customers
       redirect_to customers_packages_path, notice: 'Paquete eliminado exitosamente.'
     end
 
-    def cancel
-      authorize @package
+    def generate_labels
+      @packages = Package.where(id: params[:package_ids])
+      authorize Package
 
-      if @package.cancel!
-        redirect_to customers_packages_path, notice: 'Paquete cancelado exitosamente.'
-      else
-        redirect_to customers_package_path(@package), alert: 'No se pudo cancelar el paquete.'
+      # Validar que todos tengan la información necesaria
+      invalid_packages = @packages.reject(&:ready_for_label?)
+
+      if invalid_packages.any?
+        error_message = "Algunos paquetes no tienen toda la información necesaria (fecha de entrega, nombre, dirección, teléfono o comuna)"
+
+        respond_to do |format|
+          format.html do
+            flash[:alert] = error_message
+            redirect_to customers_packages_path
+          end
+          format.pdf do
+            render plain: error_message, status: :unprocessable_entity
+          end
+          format.any do
+            render plain: error_message, status: :unprocessable_entity
+          end
+        end
+        return
       end
+
+      # Generar PDF
+      pdf = LabelGeneratorService.new(@packages).generate
+
+      send_data pdf.render,
+                filename: "etiquetas_#{Time.current.strftime('%Y%m%d_%H%M%S')}.pdf",
+                type: 'application/pdf',
+                disposition: 'inline'
     end
 
     private
@@ -78,15 +110,18 @@ module Customers
     def package_params
       params.require(:package).permit(
         :customer_name,
-        :company,
         :address,
         :description,
         :phone,
         :exchange,
-        :pickup_date,
-        :region_id,
-        :commune_id
+        :loading_date,
+        :commune_id,
+        :amount
       )
+    end
+
+    def metropolitan_region
+      @metropolitan_region ||= Region.find_by(name: "Región Metropolitana")
     end
   end
 end

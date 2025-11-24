@@ -50,23 +50,23 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
           email: "newuser@roraima.cl",
           password: "password123",
           password_confirmation: "password123",
-          admin: false
+          role: :customer
         }
       }
     end
 
     assert_redirected_to admin_users_path
-    assert_equal "Usuario creado exitosamente.", flash[:notice]
+    assert_equal "Customer creado exitosamente.", flash[:notice]
   end
 
-  test "should create admin user when admin flag is true" do
+  test "should create admin user when role is admin" do
     assert_difference("User.count", 1) do
       post admin_users_url, params: {
         user: {
           email: "newadmin@roraima.cl",
           password: "password123",
           password_confirmation: "password123",
-          admin: true
+          role: :admin
         }
       }
     end
@@ -81,7 +81,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
         email: "testpass@roraima.cl",
         password: "mypassword123",
         password_confirmation: "mypassword123",
-        admin: false
+        role: :customer
       }
     }
 
@@ -96,7 +96,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
           email: "invalid",
           password: "password123",
           password_confirmation: "password123",
-          admin: false
+          role: :customer
         }
       }
     end
@@ -111,7 +111,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
           email: @other_user.email,
           password: "password123",
           password_confirmation: "password123",
-          admin: false
+          role: :customer
         }
       }
     end
@@ -126,7 +126,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
           email: "nopass@roraima.cl",
           password: "",
           password_confirmation: "",
-          admin: false
+          role: :customer
         }
       }
     end
@@ -154,7 +154,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
         email: "updated@roraima.cl",
         password: "",
         password_confirmation: "",
-        admin: false
+        role: :customer
       }
     }
 
@@ -163,7 +163,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_encrypted_password, @other_user.encrypted_password,
                  "Password should not change when blank"
     assert_redirected_to admin_users_path
-    assert_equal "Usuario actualizado exitosamente.", flash[:notice]
+    assert_equal "Customer actualizado exitosamente.", flash[:notice]
   end
 
   test "should update user password when password is provided" do
@@ -174,7 +174,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
         email: @other_user.email,
         password: "newpassword123",
         password_confirmation: "newpassword123",
-        admin: false
+        role: :customer
       }
     }
 
@@ -185,14 +185,14 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
            "New password should be valid"
   end
 
-  test "should update admin flag" do
+  test "should update role to admin" do
     assert_not @other_user.admin?, "User should not be admin initially"
 
     patch admin_user_url(@other_user), params: {
       user: {
         email: @other_user.email,
         password: "",
-        admin: true
+        role: :admin
       }
     }
 
@@ -205,7 +205,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
       user: {
         email: "invalid",
         password: "",
-        admin: false
+        role: :customer
       }
     }
 
@@ -220,7 +220,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
         email: @other_user.email,
         password: "newpassword123",
         password_confirmation: "different",
-        admin: false
+        role: :customer
       }
     }
 
@@ -335,7 +335,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
       user: {
         email: "keepadmin@roraima.cl",
         password: "",
-        admin: true
+        role: :admin
       }
     }
 
@@ -349,7 +349,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
         email: "special@roraima.cl",
         password: "P@ssw0rd!#$%",
         password_confirmation: "P@ssw0rd!#$%",
-        admin: false
+        role: :customer
       }
     }
 

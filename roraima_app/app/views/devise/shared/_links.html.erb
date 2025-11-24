@@ -10,22 +10,9 @@
     </div>
   <% end %>
 
-  <!-- Enlace a Registro (si no estamos en registro) -->
-  <%- if devise_mapping.registerable? && controller_name != 'registrations' %>
-    <div class="text-sm">
-      <span class="text-gray-600">¿No tienes cuenta?</span>
-      <%= link_to "Regístrate", new_registration_path(resource_name),
-          class: "font-medium text-violet-600 hover:text-violet-800 ml-1 transition duration-150 ease-in-out" %>
-    </div>
-  <% end %>
-
-  <!-- Enlace a Recuperar Contraseña (solo si no estamos en passwords o registrations) -->
-  <%- if devise_mapping.recoverable? && controller_name != 'passwords' && controller_name != 'registrations' %>
-    <div class="text-sm">
-      <%= link_to "¿Olvidaste tu contraseña?", new_password_path(resource_name),
-          class: "font-medium text-violet-600 hover:text-violet-800 transition duration-150 ease-in-out" %>
-    </div>
-  <% end %>
+  <!-- REGISTRO Y RECUPERACIÓN DE CONTRASEÑA DESHABILITADOS -->
+  <!-- Solo los administradores pueden crear usuarios desde /admin/users -->
+  <!-- Las rutas están deshabilitadas en config/routes.rb por seguridad -->
 
   <!-- Enlace a Confirmación (si está habilitado) -->
   <%- if devise_mapping.confirmable? && controller_name != 'confirmations' %>

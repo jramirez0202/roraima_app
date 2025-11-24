@@ -4,9 +4,9 @@ FactoryBot.define do
     company { "Empresa XYZ" }
     address { "Av. Principal 123, Depto 45" }
     description { "Paquete de prueba" }
-    phone { "+56912345678" }
+    sequence(:phone) { |n| "+569#{sprintf('%08d', 10000000 + n)}" }
     exchange { false }
-    pickup_date { Date.tomorrow }
+    loading_date { Date.tomorrow }
 
     # Required associations
     association :region
@@ -20,13 +20,13 @@ FactoryBot.define do
       company { nil }
       address { nil }
       description { nil }
-      phone { nil }
+      # phone is now required, so keep default valid phone
       user { nil }
     end
 
     # Trait for package scheduled for today
     trait :today do
-      pickup_date { Date.today }
+      loading_date { Date.today }
     end
 
     # Trait for exchange package
@@ -39,9 +39,9 @@ FactoryBot.define do
       user { nil }
     end
 
-    # Trait for past pickup date (invalid)
+    # Trait for past loading date (invalid)
     trait :past_date do
-      pickup_date { Date.yesterday }
+      loading_date { 1.week.ago.to_date }
     end
 
     # Trait for package with all optional fields
@@ -50,7 +50,28 @@ FactoryBot.define do
       company { "Roraima Logistics S.A." }
       address { "Av. Libertador Bernardo O'Higgins 1234, Oficina 567" }
       description { "Paquete urgente con documentos importantes y muestras" }
-      phone { "+56 9 8765 4321" }
+      phone { "+56987654321" }
+    end
+
+    # Traits for invalid phone formats (for testing)
+    trait :invalid_phone_with_spaces do
+      phone { "+56 9 1234 5678" }
+    end
+
+    trait :invalid_phone_too_short do
+      phone { "+5691234567" }
+    end
+
+    trait :invalid_phone_too_long do
+      phone { "+569123456789" }
+    end
+
+    trait :invalid_phone_missing_prefix do
+      phone { "912345678" }
+    end
+
+    trait :invalid_phone_wrong_prefix do
+      phone { "+56812345678" }
     end
   end
 end

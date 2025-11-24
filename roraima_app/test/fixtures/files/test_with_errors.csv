@@ -1,0 +1,6 @@
+FECHA,DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA
+2025-11-25,Juan Pérez,+56912345678,Calle Falsa 123,Santiago,Producto válido,15000,0,Empresa Test
+2025-11-25,María González,,Av. Principal 456,Providencia,Sin teléfono - DEBE FALLAR,20000,0,Empresa Test
+2025-11-25,Pedro Silva,+56987654321,Calle Real 789,COMUNA_INVALIDA,Comuna que no existe - DEBE FALLAR,30000,0,Empresa Test
+2025-11-25,Ana Torres,+56911111111,Los Aromos 321,Las Condes,Producto válido 2,25000,5000,Empresa Test
+fecha_invalida,Carlos Ruiz,+56922222222,Paseo Central 654,Vitacura,Fecha inválida - DEBE FALLAR,18000,0,Empresa Test

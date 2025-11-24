@@ -157,141 +157,234 @@ puts "\n👥 Creando usuarios..."
 
 # Crear admin
 admin = User.find_or_create_by!(email: 'admin@paqueteria.com') do |u|
-  u.password = 'password123'
+  u.password = '123456'
   u.role = :admin
-  u.admin = true  # Mantener compatibilidad
+  u.admin = true
+  u.rut = "11.111.111-1"
+  u.phone = "+56900000000"
+  u.company = "Administración"
+  u.delivery_charge = 0
+  u.active = true
 end
 puts "   ✅ Admin creado: admin@paqueteria.com"
 
-# Crear customers
+# Crear customers con información completa
 customer1 = User.find_or_create_by!(email: "customer1@example.com") do |u|
   u.password = 'password123'
   u.role = :customer
   u.admin = false
+  u.rut = "12.345.678-9"
+  u.phone = "+56987654321"
+  u.company = "Empresa ABC S.A."
+  u.delivery_charge = 5000
+  u.active = true
 end
-puts "   ✅ Customer 1 creado: customer1@example.com"
+puts "   ✅ Customer 1 creado: customer1@example.com (#{customer1.company})"
 
 customer2 = User.find_or_create_by!(email: "customer2@example.com") do |u|
   u.password = 'password123'
   u.role = :customer
   u.admin = false
+  u.rut = "23.456.789-0"
+  u.phone = "+56912345678"
+  u.company = "Comercial XYZ Ltda."
+  u.delivery_charge = 4500
+  u.active = true
 end
-puts "   ✅ Customer 2 creado: customer2@example.com"
+puts "   ✅ Customer 2 creado: customer2@example.com (#{customer2.company})"
 
 customer3 = User.find_or_create_by!(email: "customer3@example.com") do |u|
   u.password = 'password123'
   u.role = :customer
   u.admin = false
+  u.rut = "34.567.890-1"
+  u.phone = "+56998765432"
+  u.company = "Logística 123 SpA"
+  u.delivery_charge = 6000
+  u.active = true
 end
-puts "   ✅ Customer 3 creado: customer3@example.com"
+puts "   ✅ Customer 3 creado: customer3@example.com (#{customer3.company})"
 
-puts "✅ #{User.count} usuarios creados (1 admin + #{User.customer.count} customers)"
+# Crear un customer inactivo para testing
+customer_inactive = User.find_or_create_by!(email: "inactive@example.com") do |u|
+  u.password = 'password123'
+  u.role = :customer
+  u.admin = false
+  u.rut = "45.678.901-2"
+  u.phone = "+56911112222"
+  u.company = "Empresa Inactiva S.A."
+  u.delivery_charge = 3000
+  u.active = false
+end
+puts "   ✅ Customer inactivo creado: inactive@example.com (cuenta desactivada)"
+
+# Crear drivers (preparados para futuro)
+driver1 = User.find_or_create_by!(email: "driver1@example.com") do |u|
+  u.password = 'password123'
+  u.role = :driver
+  u.admin = false
+  u.rut = "56.789.012-3"
+  u.phone = "+56922223333"
+  u.active = true
+end
+puts "   ✅ Driver 1 creado: driver1@example.com"
+
+driver2 = User.find_or_create_by!(email: "driver2@example.com") do |u|
+  u.password = 'password123'
+  u.role = :driver
+  u.admin = false
+  u.rut = "67.890.123-4"
+  u.phone = "+56933334444"
+  u.active = true
+end
+puts "   ✅ Driver 2 creado: driver2@example.com"
+
+puts "✅ #{User.count} usuarios creados (1 admin + #{User.customer.count} customers + #{User.driver.count} drivers)"
 
 # Crear paquetes de prueba
 puts "\n📦 Creando paquetes de prueba..."
 
-regions = Region.all
-customers = User.customer
+# IMPORTANTE: El sistema solo opera en Región Metropolitana
+metropolitan_region = Region.find_by(name: "Región Metropolitana")
+metropolitan_communes = metropolitan_region.communes.to_a
 
 # Crear 5 paquetes para customer1
 5.times do |i|
-  region = regions.sample
-  commune = region.communes.sample
+  commune = metropolitan_communes.sample
 
   Package.create!(
     customer_name: "Cliente de Customer1 #{i + 1}",
-    company: ["Empresa A", "Empresa B", "Empresa C", nil].sample,
-    phone: "+56 9 #{rand(1000..9999)} #{rand(1000..9999)}",
+    company: customer1.email,
+    phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "Calle #{['Las Rosas', 'Los Olivos', 'Alameda', 'Providencia'].sample} #{rand(100..9999)}",
-    region_id: region.id,
+    region_id: metropolitan_region.id,
     commune_id: commune.id,
     description: "Paquete de prueba para customer1",
     exchange: [true, false, false, false].sample,
-    pickup_date: Date.today + rand(0..14).days,
+    loading_date: Date.today + rand(0..14).days,
     user_id: customer1.id
   )
 end
-puts "   ✅ 5 paquetes creados para customer1@example.com"
+puts "   ✅ 5 paquetes creados para customer1@example.com en Región Metropolitana"
 
 # Crear 3 paquetes para customer2
 3.times do |i|
-  region = regions.sample
-  commune = region.communes.sample
+  commune = metropolitan_communes.sample
 
   Package.create!(
     customer_name: "Cliente de Customer2 #{i + 1}",
-    company: ["TechCorp", "LogiSystems", nil].sample,
-    phone: "+56 9 #{rand(1000..9999)} #{rand(1000..9999)}",
+    company: customer2.email,
+    phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "Av. #{['Kennedy', 'Apoquindo', 'Vicuña Mackenna'].sample} #{rand(100..9999)}",
-    region_id: region.id,
+    region_id: metropolitan_region.id,
     commune_id: commune.id,
     description: "Paquete de prueba para customer2",
     exchange: [true, false, false].sample,
-    pickup_date: Date.today + rand(0..7).days,
+    loading_date: Date.today + rand(0..7).days,
     user_id: customer2.id
   )
 end
-puts "   ✅ 3 paquetes creados para customer2@example.com"
+puts "   ✅ 3 paquetes creados para customer2@example.com en Región Metropolitana"
 
 # Crear 2 paquetes para customer3
 2.times do |i|
-  region = regions.sample
-  commune = region.communes.sample
+  commune = metropolitan_communes.sample
 
   Package.create!(
     customer_name: "Cliente de Customer3 #{i + 1}",
-    company: nil,
-    phone: "+56 9 #{rand(1000..9999)} #{rand(1000..9999)}",
+    company: customer3.email,
+    phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "Pasaje #{['Los Aromos', 'Las Acacias', 'El Bosque'].sample} #{rand(10..999)}",
-    region_id: region.id,
+    region_id: metropolitan_region.id,
     commune_id: commune.id,
     description: "Paquete de prueba para customer3",
     exchange: false,
-    pickup_date: Date.today + rand(1..5).days,
+    loading_date: Date.today + rand(1..5).days,
     user_id: customer3.id
   )
 end
-puts "   ✅ 2 paquetes creados para customer3@example.com"
+puts "   ✅ 2 paquetes creados para customer3@example.com en Región Metropolitana"
 
 # Crear algunos paquetes adicionales asignados al admin
 5.times do |i|
-  region = regions.sample
-  commune = region.communes.sample
+  commune = metropolitan_communes.sample
 
   Package.create!(
     customer_name: "Cliente Admin #{i + 1}",
-    company: ["Importadora XYZ", "Retail ABC", nil].sample,
-    phone: "+56 9 #{rand(1000..9999)} #{rand(1000..9999)}",
+    company: admin.email,
+    phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "#{['Calle', 'Avenida', 'Paseo'].sample} #{rand(1..50)} Norte #{rand(100..9999)}",
-    region_id: region.id,
+    region_id: metropolitan_region.id,
     commune_id: commune.id,
     description: "Paquete gestionado por admin",
     exchange: [true, false].sample,
-    pickup_date: Date.today + rand(0..10).days,
+    loading_date: Date.today + rand(0..10).days,
     user_id: admin.id
   )
 end
-puts "   ✅ 5 paquetes creados para admin"
+puts "   ✅ 5 paquetes creados para admin en Región Metropolitana"
 
 puts "\n✅ #{Package.count} paquetes creados en total"
 puts "\n🎉 Seeds completados exitosamente!"
-puts "\n" + "="*50
+puts "\n" + "="*60
 puts "🔑 CREDENCIALES DE ACCESO"
-puts "="*50
+puts "="*60
 puts "\n👤 ADMIN:"
 puts "   Email: admin@paqueteria.com"
 puts "   Password: password123"
+puts "   Role: Administrador"
 puts "   Paquetes: #{admin.packages.count}"
+
 puts "\n👤 CUSTOMER 1:"
 puts "   Email: customer1@example.com"
 puts "   Password: password123"
+puts "   Empresa: #{customer1.company}"
+puts "   RUT: #{customer1.rut}"
+puts "   Teléfono: #{customer1.phone}"
+puts "   Cobro por envío: #{customer1.formatted_delivery_charge}"
 puts "   Paquetes: #{customer1.packages.count}"
+
 puts "\n👤 CUSTOMER 2:"
 puts "   Email: customer2@example.com"
 puts "   Password: password123"
+puts "   Empresa: #{customer2.company}"
+puts "   RUT: #{customer2.rut}"
+puts "   Teléfono: #{customer2.phone}"
+puts "   Cobro por envío: #{customer2.formatted_delivery_charge}"
 puts "   Paquetes: #{customer2.packages.count}"
+
 puts "\n👤 CUSTOMER 3:"
 puts "   Email: customer3@example.com"
 puts "   Password: password123"
+puts "   Empresa: #{customer3.company}"
+puts "   RUT: #{customer3.rut}"
+puts "   Teléfono: #{customer3.phone}"
+puts "   Cobro por envío: #{customer3.formatted_delivery_charge}"
 puts "   Paquetes: #{customer3.packages.count}"
-puts "\n" + "="*50
+
+puts "\n👤 CUSTOMER INACTIVO (para testing):"
+puts "   Email: inactive@example.com"
+puts "   Password: password123"
+puts "   Estado: INACTIVO (no puede iniciar sesión)"
+puts "   Empresa: #{customer_inactive.company}"
+
+puts "\n🚗 DRIVER 1:"
+puts "   Email: driver1@example.com"
+puts "   Password: password123"
+puts "   RUT: #{driver1.rut}"
+puts "   Teléfono: #{driver1.phone}"
+
+puts "\n🚗 DRIVER 2:"
+puts "   Email: driver2@example.com"
+puts "   Password: password123"
+puts "   RUT: #{driver2.rut}"
+puts "   Teléfono: #{driver2.phone}"
+
+puts "\n" + "="*60
+puts "📊 RESUMEN:"
+puts "   • #{User.admin.count} Administrador(es)"
+puts "   • #{User.customer.active.count} Clientes activos"
+puts "   • #{User.customer.inactive.count} Cliente(s) inactivo(s)"
+puts "   • #{User.driver.count} Conductor(es)"
+puts "   • #{Package.count} Paquetes"
+puts "="*60

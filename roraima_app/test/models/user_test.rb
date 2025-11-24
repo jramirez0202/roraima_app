@@ -93,7 +93,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "admin? should return false for regular users" do
-    user = create(:user)
+    user = create(:user, :customer)
     assert_not user.admin?, "admin? should return false for regular user"
   end
 
@@ -154,5 +154,183 @@ class UserTest < ActiveSupport::TestCase
   test "with_packages trait should create user with packages" do
     user = create(:user, :with_packages)
     assert_equal 3, user.packages.count
+  end
+
+  # ====================
+  # DRIVER Validations
+  # ====================
+  test "driver should require email" do
+    driver = build(:user, role: :driver, email: nil)
+    assert_not driver.valid?
+    assert_includes driver.errors[:email], "can't be blank"
+  end
+
+  test "driver should require password" do
+    driver = build(:user, role: :driver, password: nil, password_confirmation: nil)
+    assert_not driver.valid?
+    assert_includes driver.errors[:password], "can't be blank"
+  end
+
+  test "driver should require rut" do
+    driver = build(:user, role: :driver, rut: nil)
+    assert_not driver.valid?
+    assert_includes driver.errors[:rut], "no puede estar vacío"
+  end
+
+  test "driver should require phone" do
+    driver = build(:user, role: :driver, phone: nil)
+    assert_not driver.valid?
+    assert_includes driver.errors[:phone], "no puede estar vacío"
+  end
+
+  test "driver should validate rut format" do
+    driver = build(:user, role: :driver, rut: "invalid-rut")
+    assert_not driver.valid?
+    assert_includes driver.errors[:rut], "debe tener formato válido (ej: 12.345.678-9)"
+  end
+
+  test "driver should validate phone format" do
+    driver = build(:user, role: :driver, phone: "123456789")
+    assert_not driver.valid?
+    assert_includes driver.errors[:phone], "debe tener formato +569XXXXXXXX (12 caracteres)"
+  end
+
+  test "driver should require unique rut" do
+    create(:user, role: :driver, rut: "12.345.678-9", phone: "+56987654321")
+    duplicate = build(:user, role: :driver, rut: "12.345.678-9", phone: "+56987654322")
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:rut], "has already been taken"
+  end
+
+  test "driver should be valid with all required fields" do
+    driver = build(:user,
+      role: :driver,
+      email: "driver@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      rut: "11.111.111-1",
+      phone: "+56987654321"
+    )
+    assert driver.valid?, "Driver should be valid with all required fields: #{driver.errors.full_messages}"
+  end
+
+  # ====================
+  # CUSTOMER Validations
+  # ====================
+  test "customer should require email" do
+    customer = build(:user, role: :customer, email: nil)
+    assert_not customer.valid?
+    assert_includes customer.errors[:email], "can't be blank"
+  end
+
+  test "customer should require password" do
+    customer = build(:user, role: :customer, password: nil, password_confirmation: nil)
+    assert_not customer.valid?
+    assert_includes customer.errors[:password], "can't be blank"
+  end
+
+  test "customer should require rut" do
+    customer = build(:user, role: :customer, rut: nil)
+    assert_not customer.valid?
+    assert_includes customer.errors[:rut], "no puede estar vacío"
+  end
+
+  test "customer should require phone" do
+    customer = build(:user, role: :customer, phone: nil)
+    assert_not customer.valid?
+    assert_includes customer.errors[:phone], "no puede estar vacío"
+  end
+
+  test "customer should require company" do
+    customer = build(:user, role: :customer, company: nil)
+    assert_not customer.valid?
+    assert_includes customer.errors[:company], "no puede estar vacío"
+  end
+
+  test "customer should require delivery_charge" do
+    customer = build(:user, role: :customer, delivery_charge: nil)
+    assert_not customer.valid?
+    assert_includes customer.errors[:delivery_charge], "no puede estar vacío"
+  end
+
+  test "customer should validate rut format" do
+    customer = build(:user, role: :customer, rut: "invalid-rut")
+    assert_not customer.valid?
+    assert_includes customer.errors[:rut], "debe tener formato válido (ej: 12.345.678-9)"
+  end
+
+  test "customer should validate phone format" do
+    customer = build(:user, role: :customer, phone: "123456789")
+    assert_not customer.valid?
+    assert_includes customer.errors[:phone], "debe tener formato +569XXXXXXXX (12 caracteres)"
+  end
+
+  test "customer should validate delivery_charge is non-negative" do
+    customer = build(:user, role: :customer, delivery_charge: -100)
+    assert_not customer.valid?
+    assert_includes customer.errors[:delivery_charge], "must be greater than or equal to 0"
+  end
+
+  test "customer should require unique rut" do
+    create(:user, role: :customer, rut: "22.222.222-2", phone: "+56987654321", company: "Company A", delivery_charge: 1000)
+    duplicate = build(:user, role: :customer, rut: "22.222.222-2", phone: "+56987654322", company: "Company B", delivery_charge: 2000)
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:rut], "has already been taken"
+  end
+
+  test "customer should be valid with all required fields" do
+    customer = build(:user,
+      role: :customer,
+      email: "customer@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      rut: "33.333.333-3",
+      phone: "+56987654321",
+      company: "Test Company",
+      delivery_charge: 5000
+    )
+    assert customer.valid?, "Customer should be valid with all required fields: #{customer.errors.full_messages}"
+  end
+
+  test "customer should allow zero delivery_charge" do
+    customer = build(:user,
+      role: :customer,
+      email: "customer@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      rut: "44.444.444-4",
+      phone: "+56987654321",
+      company: "Test Company",
+      delivery_charge: 0
+    )
+    assert customer.valid?, "Customer should allow 0 delivery_charge: #{customer.errors.full_messages}"
+  end
+
+  # ====================
+  # ADMIN Validations (no extra fields required)
+  # ====================
+  test "admin should only require email and password" do
+    admin = build(:user,
+      role: :admin,
+      email: "admin@example.com",
+      password: "password123",
+      password_confirmation: "password123"
+    )
+    assert admin.valid?, "Admin should be valid with only email and password: #{admin.errors.full_messages}"
+  end
+
+  test "admin should not require rut" do
+    admin = build(:user, role: :admin, rut: nil)
+    assert admin.valid?, "Admin should not require rut"
+  end
+
+  test "admin should not require phone" do
+    admin = build(:user, role: :admin, phone: nil)
+    assert admin.valid?, "Admin should not require phone"
+  end
+
+  test "admin should not require company" do
+    admin = build(:user, role: :admin, company: nil)
+    assert admin.valid?, "Admin should not require company"
   end
 end

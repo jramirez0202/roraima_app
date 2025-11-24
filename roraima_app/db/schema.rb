@@ -10,9 +10,55 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_11_18_010644) do
+ActiveRecord::Schema[7.1].define(version: 2025_11_24_173812) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "bulk_uploads", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "total_rows", default: 0
+    t.integer "successful_rows", default: 0
+    t.integer "failed_rows", default: 0
+    t.jsonb "error_details", default: []
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "processed_count", default: 0, null: false
+    t.integer "current_row"
+    t.datetime "started_at"
+    t.index ["created_at"], name: "index_bulk_uploads_on_created_at"
+    t.index ["status"], name: "index_bulk_uploads_on_status"
+    t.index ["user_id"], name: "index_bulk_uploads_on_user_id"
+  end
 
   create_table "communes", force: :cascade do |t|
     t.string "name"
@@ -34,20 +80,37 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_18_010644) do
     t.bigint "user_id"
     t.string "phone"
     t.boolean "exchange", default: false, null: false
-    t.date "pickup_date"
+    t.date "loading_date"
     t.bigint "region_id"
     t.bigint "commune_id"
     t.integer "status", default: 0, null: false
     t.datetime "cancelled_at"
     t.text "cancellation_reason"
+    t.decimal "amount", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "tracking_code", null: false
+    t.integer "previous_status"
+    t.jsonb "status_history", default: []
+    t.string "location"
+    t.integer "attempts_count", default: 0
+    t.bigint "assigned_courier_id"
+    t.text "proof"
+    t.datetime "reprogramed_to"
+    t.text "reprogram_motive"
+    t.datetime "picked_at"
+    t.datetime "shipped_at"
+    t.datetime "delivered_at"
+    t.boolean "admin_override", default: false
+    t.index ["assigned_courier_id"], name: "index_packages_on_assigned_courier_id"
     t.index ["commune_id"], name: "index_packages_on_commune_id"
     t.index ["created_at"], name: "index_packages_on_created_at"
     t.index ["exchange"], name: "index_packages_on_exchange"
-    t.index ["pickup_date"], name: "index_packages_on_pickup_date"
+    t.index ["loading_date"], name: "index_packages_on_loading_date"
     t.index ["region_id", "commune_id"], name: "index_packages_on_region_and_commune"
     t.index ["region_id"], name: "index_packages_on_region_id"
-    t.index ["status", "pickup_date"], name: "index_packages_on_status_and_pickup_date"
+    t.index ["status", "assigned_courier_id"], name: "index_packages_on_status_and_assigned_courier_id"
+    t.index ["status", "loading_date"], name: "index_packages_on_status_and_loading_date"
     t.index ["status"], name: "index_packages_on_status"
+    t.index ["tracking_code"], name: "index_packages_on_tracking_code", unique: true
     t.index ["user_id", "status"], name: "index_packages_on_user_id_and_status"
     t.index ["user_id"], name: "index_packages_on_user_id"
   end
@@ -69,13 +132,26 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_18_010644) do
     t.datetime "updated_at", null: false
     t.boolean "admin", default: false
     t.integer "role", default: 1, null: false
+    t.boolean "show_logo_on_labels", default: true
+    t.string "rut"
+    t.string "phone"
+    t.string "company"
+    t.boolean "active", default: true, null: false
+    t.decimal "delivery_charge", precision: 10, scale: 2, default: "0.0", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["phone"], name: "index_users_on_phone"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["role", "active"], name: "index_users_on_role_and_active"
     t.index ["role"], name: "index_users_on_role"
+    t.index ["rut"], name: "index_users_on_rut", unique: true, where: "(rut IS NOT NULL)"
   end
 
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "bulk_uploads", "users"
   add_foreign_key "communes", "regions"
   add_foreign_key "packages", "communes"
   add_foreign_key "packages", "regions"
   add_foreign_key "packages", "users"
+  add_foreign_key "packages", "users", column: "assigned_courier_id"
 end

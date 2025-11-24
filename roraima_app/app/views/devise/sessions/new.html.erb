@@ -58,8 +58,8 @@
           </div>
         </div>
 
-        <!-- Recordarme y Olvidaste contraseña -->
-        <div class="flex items-center justify-between">
+        <!-- Recordarme -->
+        <div class="flex items-center">
           <% if devise_mapping.rememberable? %>
             <div class="flex items-center">
               <%= f.check_box :remember_me,
@@ -67,11 +67,9 @@
               <%= f.label :remember_me, "Recordarme", class: "ml-2 block text-sm text-gray-700 cursor-pointer" %>
             </div>
           <% end %>
-
-          <div class="text-sm">
-            <%= link_to "¿Olvidaste tu contraseña?", new_password_path(resource_name), class: "font-medium text-violet-600 hover:text-violet-800 transition duration-150 ease-in-out" %>
-          </div>
         </div>
+
+        <!-- PASSWORD RECOVERY DISABLED - Only admins can create/manage users -->
 
         <!-- Botón de Submit -->
         <div>

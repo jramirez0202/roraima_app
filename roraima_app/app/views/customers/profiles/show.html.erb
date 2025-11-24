@@ -11,6 +11,36 @@
     </div>
 
     <div class="px-6 py-6">
+      <% if @user.company_logo.attached? %>
+        <div class="mb-6 pb-6 border-b border-gray-200">
+          <h3 class="text-sm font-medium text-gray-500 mb-3">Logo de Empresa</h3>
+          <div class="flex items-start space-x-6">
+            <%= image_tag @user.company_logo, class: "h-32 w-32 object-contain border border-gray-200 rounded p-3 bg-white" %>
+            <div class="flex-1">
+              <p class="text-sm text-gray-700 mb-2">
+                <span class="font-medium">Nombre:</span> <%= @user.company_logo.filename %>
+              </p>
+              <p class="text-sm text-gray-700 mb-2">
+                <span class="font-medium">Tamaño:</span> <%= number_to_human_size(@user.company_logo.byte_size) %>
+              </p>
+              <div class="flex items-center">
+                <span class="text-sm font-medium text-gray-700 mr-2">En etiquetas:</span>
+                <% if @user.show_logo_on_labels? %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    Activado
+                  </span>
+                <% else %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                    Desactivado
+                  </span>
+                <% end %>
+              </div>
+              <p class="mt-2 text-xs text-gray-500">El logo aparece en la esquina superior izquierda de las etiquetas de envío</p>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
       <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
         <div class="sm:col-span-1">
           <dt class="text-sm font-medium text-gray-500">Email</dt>
