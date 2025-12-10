@@ -8,11 +8,8 @@ document.addEventListener("turbo:load", function () {
   const form = document.getElementById("labels-form");
 
   if (!selectAllCheckbox || !generateBtn || !form) {
-    console.log("📦 Página sin checkboxes. JS de etiquetas no se activa.");
-    return;
+    return; // Página sin elementos de etiquetas, salir silenciosamente
   }
-
-  console.log("📦 JS de etiquetas inicializado");
 
   // Funcionalidad de seleccionar todos
   selectAllCheckbox.addEventListener("change", function () {

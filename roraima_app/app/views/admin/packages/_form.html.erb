@@ -19,7 +19,7 @@
     <!-- FECHA CARGA -->
     <div>
       <%= form.label :loading_date, "Fecha de Carga", class: "block text-sm font-medium text-gray-700" %>
-      <%= form.date_field :loading_date, min: Date.today, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+      <%= form.date_field :loading_date, min: Date.current, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
     </div>
 
     <!-- CLIENTE -->
@@ -28,10 +28,16 @@
       <%= form.text_field :customer_name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
     </div>
 
+    <!-- EMAIL REMITENTE -->
+    <div>
+      <%= form.label :sender_email, "Email Remitente", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.email_field :sender_email, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+    </div>
+
     <!-- EMPRESA -->
     <div>
-      <%= form.label :company, "Empresa", class: "block text-sm font-medium text-gray-700" %>
-      <%= form.text_field :company, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+      <%= form.label :company_name, "Nombre Empresa", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :company_name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
     </div>
 
     <!-- TELEFONO -->
@@ -71,10 +77,11 @@
 
     <!-- ASIGNADO A USUARIO -->
     <div>
-      <%= form.label :user_id, "Asignado a usuario", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.label :user_id, "Asignado a usuario (Customer) *", class: "block text-sm font-medium text-gray-700" %>
       <%= form.collection_select :user_id, @users, :id, :email,
-            { prompt: "Sin asignar" },
-            { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+            { prompt: "Seleccione un usuario" },
+            { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm", required: true } %>
+      <p class="mt-1 text-xs text-gray-500">Este campo es obligatorio. Solo se muestran usuarios tipo Customer.</p>
     </div>
 
     <!-- DESCRIPCION -->

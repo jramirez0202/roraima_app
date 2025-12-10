@@ -5,5 +5,8 @@ import "controllers"
 // Importar módulo de etiquetas
 import "./labels"
 
+// Importar formulario de paquetes (JavaScript vanilla)
+import "./package_form"
+
 console.log("App cargada - Turbo Rails + Stimulus habilitados (versión local)")
 import "./channels"

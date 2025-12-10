@@ -1,227 +1,34 @@
-<div class="max-w-7xl lg:max-w-[90%] xl:max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
-  <div class="sm:flex sm:items-center">
-    <div class="sm:flex-auto">
-      <h1 class="text-2xl font-semibold text-gray-900">Paquetes</h1>
-      <p class="mt-2 text-sm text-gray-700">
-        Total: <span class="font-semibold text-indigo-600"><%= @pagy.count %></span> paquetes registrados
-      </p>
-    </div>
-    <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-3">
-      <%= link_to new_admin_bulk_upload_path, class: "inline-flex items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700" do %>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-        </svg>
-        Carga Masiva
-      <% end %>
+<div class="max-w-7xl lg:max-w-[90%] xl:max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8"
+     data-controller="bulk-packages"
+     data-bulk-packages-translations-value='<%= status_translations_json %>'
+     data-bulk-packages-badge-classes-value='<%= PackagesHelper::STATUS_BADGE_CLASSES.transform_keys(&:to_s).to_json %>'>
+  <%# Header with title and action buttons %>
+  <%= render 'header', pagy: @pagy %>
 
-      <%= link_to new_admin_package_path, class: "inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700" do %>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        Nuevo Paquete
-      <% end %>
-    </div>
-  </div>
+  <%# Status filter tabs %>
+  <%= render 'status_tabs',
+      status_counts: {
+        total: @total_count,
+        pending_pickup: @pending_pickup_count,
+        in_warehouse: @in_warehouse_count,
+        in_transit: @in_transit_count,
+        rescheduled: @rescheduled_count,
+        return: @return_count,
+        delivered: @delivered_count,
+        picked_up: @picked_up_count,
+        cancelled: @cancelled_count
+      },
+      current_status: params[:status] %>
 
-  <!-- Tabs de Filtro -->
-  <div class="mt-6 border-b border-gray-200">
-    <nav class="-mb-px flex flex-wrap gap-x-8 gap-y-2" aria-label="Tabs">
-      <!-- Todos -->
-      <%= link_to admin_packages_path,
-          class: "#{params[:status].blank? ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        Todos
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= params[:status].blank? ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-900' %>">
-          <%= @total_count %>
-        </span>
-      <% end %>
+  <%# Filters Panel - Accordion %>
+  <%= render 'filters_panel' %>
 
-      <!-- En Proceso -->
-      <%= link_to admin_packages_path(status: 'pendiente_retiro'),
-          class: "#{tab_classes(params[:status], 'pendiente_retiro')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        Pendiente Retiro
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'pendiente_retiro') %>">
-          <%= @pending_pickup_count %>
-        </span>
-      <% end %>
+  <%# Bulk action buttons %>
+  <%= render 'bulk_actions' %>
 
-      <%= link_to admin_packages_path(status: 'en_bodega'),
-          class: "#{tab_classes(params[:status], 'en_bodega')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        En Bodega
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'en_bodega') %>">
-          <%= @in_warehouse_count %>
-        </span>
-      <% end %>
+  <%# Packages table %>
+  <%= render 'table', packages: @packages, drivers: @drivers, pagy: @pagy %>
 
-      <%= link_to admin_packages_path(status: 'en_camino'),
-          class: "#{tab_classes(params[:status], 'en_camino')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        En Camino
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'en_camino') %>">
-          <%= @in_transit_count %>
-        </span>
-      <% end %>
-
-      <!-- Necesitan Atención -->
-      <%= link_to admin_packages_path(status: 'reprogramado'),
-          class: "#{tab_classes(params[:status], 'reprogramado')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        Reprogramado
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'reprogramado') %>">
-          <%= @rescheduled_count %>
-        </span>
-      <% end %>
-
-      <%= link_to admin_packages_path(status: 'devolucion'),
-          class: "#{tab_classes(params[:status], 'devolucion')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        Devolución
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'devolucion') %>">
-          <%= @return_count %>
-        </span>
-      <% end %>
-
-      <!-- Terminados -->
-      <%= link_to admin_packages_path(status: 'entregado'),
-          class: "#{tab_classes(params[:status], 'entregado')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        Entregado
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'entregado') %>">
-          <%= @delivered_count %>
-        </span>
-      <% end %>
-
-      <%= link_to admin_packages_path(status: 'retirado'),
-          class: "#{tab_classes(params[:status], 'retirado')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        Retirado
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'retirado') %>">
-          <%= @picked_up_count %>
-        </span>
-      <% end %>
-
-      <%= link_to admin_packages_path(status: 'cancelado'),
-          class: "#{tab_classes(params[:status], 'cancelado')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-        Cancelado
-        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(params[:status], 'cancelado') %>">
-          <%= @cancelled_count %>
-        </span>
-      <% end %>
-    </nav>
-  </div>
-
-  <!-- Botón Generar Etiquetas -->
-  <div class="mt-4 mb-4">
-    <button type="button"
-            id="generate-labels-btn"
-            class="hidden inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-      </svg>
-      Generar Etiquetas
-    </button>
-  </div>
-
-  <div class="mt-8 flex flex-col">
-    <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-      <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-        <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-
-          <%= form_tag generate_labels_admin_packages_path, method: :post, id: "labels-form" do %>
-
-            <table class="min-w-full divide-y divide-gray-300 bg-white">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-3 py-3.5 text-left">
-                  <input type="checkbox" id="select-all" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                </th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Estado</th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Tracking</th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Cliente</th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Empresa</th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Teléfono</th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Dirección</th>
-                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Fecha Carga</th>
-                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider w-24">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody class="divide-y divide-gray-200">
-              <% @packages.each do |package| %>
-                <tr class="hover:bg-gray-50">
-
-                  <!-- Checkbox -->
-                  <td class="px-3 py-4 whitespace-nowrap">
-                    <input type="checkbox"
-                           name="package_ids[]"
-                           value="<%= package.id %>"
-                           class="package-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                  </td>
-
-                  <!-- Estado -->
-                  <td class="px-3 py-2 text-sm whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_classes(package.status) %>">
-                      <%= status_text(package.status) %>
-                    </span>
-                  </td>
-
-                  <!-- Tracking -->
-                  <td class="px-3 py-2 text-sm whitespace-nowrap">
-                    <span class="font-mono text-xs"><%= package.tracking_code %></span>
-                  </td>
-
-                  <!-- Cliente + Descripción -->
-                  <td class="px-3 py-2 text-sm max-w-xs">
-                    <div class="font-medium text-gray-900 break-words"><%= package.customer_name %></div>
-                    <% if package.description.present? %>
-                      <div class="text-xs text-gray-500 truncate"><%= package.description %></div>
-                    <% end %>
-                  </td>
-
-                  <!-- Empresa -->
-                  <td class="px-3 py-2 text-sm">
-                    <%= package.company.present? ? package.company : "—" %>
-                  </td>
-
-                  <!-- Teléfono -->
-                  <td class="px-3 py-2 text-sm">
-                    <%= package.phone.present? ? package.phone : "—" %>
-                  </td>
-
-                  <!-- Dirección + Comuna -->
-                  <td class="px-3 py-2 text-sm max-w-xs">
-                    <div class="break-words"><%= package.address.present? ? package.address : "—" %></div>
-                    <div class="text-xs text-gray-500"><%= package.commune&.name || "—" %></div>
-                  </td>
-
-                  <!-- Fecha Carga -->
-                  <td class="px-3 py-2 text-sm">
-                    <% if package.loading_date %>
-                      <%= package.loading_date.strftime("%d/%m/%Y") %>
-                    <% else %>
-                      <span class="text-gray-400">—</span>
-                    <% end %>
-                  </td>
-
-                  <!-- Acciones -->
-                  <td class="px-3 py-2 text-sm">
-                    <div class="flex items-center justify-center gap-1">
-                      <%= link_to edit_admin_package_path(package), class: "p-1.5 text-indigo-600 hover:bg-indigo-50 rounded" do %>
-                        ✏️
-                      <% end %>
-
-                      <%= button_to admin_package_path(package), method: :delete, data: { confirm: "¿Eliminar paquete?" }, class: "p-1.5 text-red-600 hover:bg-red-50 rounded" do %>
-                        🗑️
-                      <% end %>
-                    </div>
-                  </td>
-
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-
-          <% end %>
-
-          <!-- 🔥 Aquí integras tu paginado parcial -->
-          <%= render "shared/pagination", pagy: @pagy %>
-
-        </div>
-      </div>
-    </div>
-  </div>
+  <%# Bulk status change modal %>
+  <%= render 'bulk_status_modal' %>
 </div>

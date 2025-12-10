@@ -1,0 +1,21 @@
+<div class="px-4 sm:px-6 lg:px-8 py-8">
+  <%= link_to admin_driver_path(@driver), class: "text-green-600 hover:text-green-900 mb-4 inline-flex items-center" do %>
+    ← Volver al detalle
+  <% end %>
+
+  <div class="md:grid md:grid-cols-3 md:gap-6">
+    <div class="md:col-span-1">
+      <h3 class="text-lg font-medium text-gray-900">Editar Conductor</h3>
+      <p class="mt-1 text-sm text-gray-600">
+        Actualiza la información del conductor <%= @driver.email %>.
+      </p>
+      <p class="mt-2 text-sm text-gray-600">
+        Los campos marcados con * son obligatorios.
+      </p>
+    </div>
+
+    <div class="md:col-span-2 mt-5 md:mt-0">
+      <%= render "form", driver: @driver %>
+    </div>
+  </div>
+</div>

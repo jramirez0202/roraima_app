@@ -16,6 +16,15 @@ class ApplicationController < ActionController::Base
 
   # Redirigir después del login según el rol
   def after_sign_in_path_for(resource)
-    stored_location_for(resource) || (resource.admin? ? admin_root_path : customers_dashboard_path)
+    return stored_location_for(resource) if stored_location_for(resource)
+
+    case
+    when resource.admin?
+      admin_root_path
+    when resource.is_a?(Driver)
+      drivers_root_path
+    else
+      customers_dashboard_path
+    end
   end
 end

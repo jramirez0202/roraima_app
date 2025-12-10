@@ -4,6 +4,7 @@
     <!-- Anterior -->
     <% if pagy.prev %>
       <%= link_to "←", pagy_url_for(pagy, pagy.prev),
+          data: { turbo_prefetch: false },
           class: "w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 transition" %>
     <% end %>
 
@@ -16,6 +17,7 @@
           </span>
         <% else %>
           <%= link_to item, pagy_url_for(pagy, item),
+              data: { turbo_prefetch: false },
               class: "w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 transition" %>
         <% end %>
       <% elsif item == :gap %>
@@ -26,6 +28,7 @@
     <!-- Siguiente -->
     <% if pagy.next %>
       <%= link_to "→", pagy_url_for(pagy, pagy.next),
+          data: { turbo_prefetch: false },
           class: "w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 transition" %>
     <% end %>
 

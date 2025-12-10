@@ -6,8 +6,14 @@ module Admin
 
     def check_admin
       unless current_user&.admin?
-        # Redirigir a customers dashboard si es customer, o root si no hay usuario
-        redirect_path = current_user&.customer? ? customers_dashboard_path : root_path
+        # Redirigir según tipo de usuario
+        redirect_path = if current_user.is_a?(Driver)
+                          drivers_root_path
+                        elsif current_user&.customer?
+                          customers_dashboard_path
+                        else
+                          root_path
+                        end
         redirect_to redirect_path, alert: 'No tienes permiso para acceder a esta sección.'
       end
     end

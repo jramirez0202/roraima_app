@@ -137,17 +137,17 @@
 
               <div class="text-center">
                 <dt class="text-sm font-medium text-gray-500">Entregados</dt>
-                <dd class="mt-1 text-2xl font-bold text-green-600"><%= @user.packages.entregado.count %></dd>
+                <dd class="mt-1 text-2xl font-bold text-green-600"><%= @user.packages.delivered.count %></dd>
               </div>
 
               <div class="text-center">
                 <dt class="text-sm font-medium text-gray-500">En Proceso</dt>
-                <dd class="mt-1 text-2xl font-bold text-blue-600"><%= @user.packages.en_proceso.count %></dd>
+                <dd class="mt-1 text-2xl font-bold text-blue-600"><%= @user.packages.active.count %></dd>
               </div>
 
               <div class="text-center">
                 <dt class="text-sm font-medium text-gray-500">Cancelados</dt>
-                <dd class="mt-1 text-2xl font-bold text-red-600"><%= @user.packages.cancelado.count %></dd>
+                <dd class="mt-1 text-2xl font-bold text-red-600"><%= @user.packages.cancelled.count %></dd>
               </div>
             </dl>
           </div>

@@ -4,7 +4,10 @@ FactoryBot.define do
     password { "password123" }
     password_confirmation { "password123" }
     sequence(:rut) { |n| format("%d.%03d.%03d-%d", n % 19 + 1, (n * 3) % 1000, (n * 7) % 1000, n % 10) }
-    role { :admin }
+    sequence(:phone) { |n| "+569#{sprintf('%08d', 10000000 + n)}" }
+    sequence(:company) { |n| "Empresa #{n} S.A." }
+    delivery_charge { [3000, 4000, 5000, 6000].sample }
+    role { :customer }
     active { true }
 
     # Trait for admin users

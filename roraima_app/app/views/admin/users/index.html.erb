@@ -24,12 +24,16 @@
         <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Usuario</label>
         <div class="flex flex-wrap gap-2">
           <%= link_to "Todos", admin_users_path(status: params[:status]),
+              data: { turbo_prefetch: false },
               class: "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium #{params[:role].blank? ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" %>
           <%= link_to "Admins", admin_users_path(role: 'admin', status: params[:status]),
+              data: { turbo_prefetch: false },
               class: "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium #{params[:role] == 'admin' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" %>
           <%= link_to "Clientes", admin_users_path(role: 'customer', status: params[:status]),
+              data: { turbo_prefetch: false },
               class: "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium #{params[:role] == 'customer' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" %>
           <%= link_to "Conductores", admin_users_path(role: 'driver', status: params[:status]),
+              data: { turbo_prefetch: false },
               class: "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium #{params[:role] == 'driver' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" %>
         </div>
       </div>
@@ -39,10 +43,13 @@
         <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
         <div class="flex flex-wrap gap-2">
           <%= link_to "Todos", admin_users_path(role: params[:role]),
+              data: { turbo_prefetch: false },
               class: "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium #{params[:status].blank? ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" %>
           <%= link_to "Activos", admin_users_path(role: params[:role], status: 'active'),
+              data: { turbo_prefetch: false },
               class: "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium #{params[:status] == 'active' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" %>
           <%= link_to "Inactivos", admin_users_path(role: params[:role], status: 'inactive'),
+              data: { turbo_prefetch: false },
               class: "inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium #{params[:status] == 'inactive' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}" %>
         </div>
       </div>
@@ -93,7 +100,7 @@
 
                   <!-- Status Badge -->
                   <td class="whitespace-nowrap px-3 py-4 text-sm">
-                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold <%= status_badge_classes(user.active) %>">
+                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold <%= user_status_badge_classes(user.active) %>">
                       <% if user.active %>
                         <svg class="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -103,7 +110,7 @@
                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                         </svg>
                       <% end %>
-                      <%= status_text(user.active) %>
+                      <%= user_status_text(user.active) %>
                     </span>
                   </td>
 
@@ -149,13 +156,17 @@
     <div class="flex items-center justify-between">
       <div class="flex-1 flex justify-between sm:hidden">
         <% if @pagy.prev %>
-          <%= link_to "Anterior", admin_users_path(page: @pagy.prev, role: params[:role], status: params[:status]), class: "relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" %>
+          <%= link_to "Anterior", admin_users_path(page: @pagy.prev, role: params[:role], status: params[:status]),
+              data: { turbo_prefetch: false },
+              class: "relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" %>
         <% else %>
           <span class="relative inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400">Anterior</span>
         <% end %>
 
         <% if @pagy.next %>
-          <%= link_to "Siguiente", admin_users_path(page: @pagy.next, role: params[:role], status: params[:status]), class: "relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" %>
+          <%= link_to "Siguiente", admin_users_path(page: @pagy.next, role: params[:role], status: params[:status]),
+              data: { turbo_prefetch: false },
+              class: "relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" %>
         <% else %>
           <span class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400">Siguiente</span>
         <% end %>

@@ -1,4 +1,6 @@
 class Admin::PackagesController < Admin::BaseController
+  include FilterablePackages
+
   before_action :set_package, only: [:show, :edit, :update, :destroy, :change_status, :assign_courier, :status_history]
   before_action :authorize_package, only: [:show, :edit, :update, :destroy]
   before_action :load_users, only: [:new, :create, :edit, :update]
@@ -7,35 +9,58 @@ class Admin::PackagesController < Admin::BaseController
   def index
     packages = policy_scope(Package).includes(:user, :region, :commune, :assigned_courier)
 
-    # Optimization: Calculate status counts in a single query
-    # Uses index_packages_on_status
-    status_counts = Package.group(:status).count
-    @total_count = Package.count
+    # Cargar drivers activos para el dropdown de asignación individual
+    @drivers = Driver.active.includes(:assigned_zone).order(:email)
 
-    # Counts by each status
-    @pending_pickup_count = status_counts[0] || 0
-    @in_warehouse_count = status_counts[1] || 0
-    @in_transit_count = status_counts[2] || 0
-    @rescheduled_count = status_counts[3] || 0
-    @delivered_count = status_counts[4] || 0
-    @picked_up_count = status_counts[5] || 0
-    @return_count = status_counts[6] || 0
-    @cancelled_count = status_counts[7] || 0
+    # === APLICAR FILTRO DE FECHA PRIMERO (para counts correctos en tabs) ===
+    # IMPORTANTE: Si busca por tracking, NO aplicar filtro de fecha por defecto
+    searching_by_tracking = filter_params[:tracking_query].present?
 
-    # Grouped counts
-    @in_progress_count = @pending_pickup_count + @in_warehouse_count + @in_transit_count
-    @needs_attention_count = @rescheduled_count + @return_count
-    @completed_count = @delivered_count + @picked_up_count + @cancelled_count
+    # Determinar rango de fecha según params
+    if filter_params[:date_from].present? || filter_params[:date_to].present?
+      # Usuario especificó fechas explícitamente
+      date_from = parse_date(filter_params[:date_from])
+      date_to = parse_date(filter_params[:date_to])
 
-    # Filtrar por estado si se especifica
-    if params[:status].present? && Package.statuses.key?(params[:status])
-      packages = packages.where(status: params[:status])
+      # Si solo especifica "Desde" sin "Hasta", usar HOY como fecha final
+      date_to ||= Date.current if date_from.present?
+
+      # Si solo especifica "Hasta" sin "Desde", usar hace 3 días como fecha inicial
+      date_from ||= Date.current - 2.days if date_to.present?
+
+      packages_with_date = packages.loading_date_between(date_from, date_to)
+    elsif !searching_by_tracking
+      # Por defecto: últimos 3 días (solo si NO busca por tracking)
+      date_from = Date.current - 2.days
+      date_to = Date.current
+      packages_with_date = packages.loading_date_between(date_from, date_to)
+    else
+      # Si busca por tracking sin fechas explícitas, NO filtrar por fecha
+      packages_with_date = packages
     end
 
-    # Filtrar por courier asignado
-    if params[:courier_id].present?
-      packages = packages.where(assigned_courier_id: params[:courier_id])
-    end
+    # Status counts (respetando filtro de fecha)
+    status_counts = packages_with_date.group(:status).count
+    @total_count = packages_with_date.count
+    @pending_pickup_count = status_counts["pending_pickup"] || 0
+    @in_warehouse_count = status_counts["in_warehouse"] || 0
+    @in_transit_count = status_counts["in_transit"] || 0
+    @rescheduled_count = status_counts["rescheduled"] || 0
+    @delivered_count = status_counts["delivered"] || 0
+    @picked_up_count = status_counts["picked_up"] || 0
+    @return_count = status_counts["return"] || 0
+    @cancelled_count = status_counts["cancelled"] || 0
+
+    # === APLICAR TODOS LOS FILTROS (incluyendo estado, comuna, driver) ===
+    packages = apply_package_filters(packages)
+
+    # === DATOS PARA FILTROS ===
+    # Solo comunas de Región Metropolitana
+    @communes = metropolitan_region&.communes&.order(:name) || Commune.none
+    @couriers = Driver.active.order(:name)
+    @active_filters = active_filters
+    @active_filters_count = active_filters_count
+    @filtered_count = packages.count
 
     @pagy, @packages = pagy(packages.order(created_at: :desc), items: 20)
     authorize Package
@@ -55,6 +80,8 @@ class Admin::PackagesController < Admin::BaseController
     @package = Package.new(package_params)
     @package.user_id = current_user.id if @package.user_id.blank?
     @package.region_id = metropolitan_region.id
+    @package.sender_email ||= current_user.email
+    @package.company_name ||= @package.user&.company
     authorize @package
 
     if @package.save
@@ -128,6 +155,32 @@ end
     location = params[:location]
     override = params[:override] == 'true' && policy(@package).override_transition?
 
+    # Manejar cambio de driver si se proporciona
+    if params[:courier_id].present?
+      new_courier = User.find_by(id: params[:courier_id])
+
+      if new_courier
+        # Registrar el cambio de driver en el historial si había uno anterior
+        if @package.assigned_courier_id.present? && @package.assigned_courier_id != new_courier.id
+          previous_courier = @package.assigned_courier
+          @package.add_to_history(
+            status: @package.status,
+            user_id: current_user.id,
+            reason: "Driver cambiado: #{previous_courier.email} → #{new_courier.email}",
+            location: location
+          )
+          @package.save! # Guardar el historial
+        end
+
+        # Asignar el nuevo driver con auditoría
+        @package.update(
+          assigned_courier_id: new_courier.id,
+          assigned_at: Time.current,
+          assigned_by_id: current_user.id
+        )
+      end
+    end
+
     # Parámetros adicionales según el tipo de cambio
     additional_params = {}
     additional_params[:proof] = params[:proof] if params[:proof].present?
@@ -137,10 +190,72 @@ end
     service = PackageStatusService.new(@package, current_user)
 
     if service.change_status(new_status, reason: reason, location: location, override: override, **additional_params)
+      # Adjuntar fotos de reprogramación si se proporcionaron
+      if new_status == 'rescheduled' && params[:reschedule_photos].present?
+        params[:reschedule_photos].each do |photo|
+          @package.reschedule_photos.attach(photo)
+        end
+      end
+
       redirect_to admin_package_path(@package), notice: "Estado cambiado a #{new_status} exitosamente"
     else
       redirect_to admin_package_path(@package), alert: "Error al cambiar estado: #{service.errors.join(', ')}"
     end
+  end
+
+  # Cambia el estado de múltiples paquetes a la vez
+  def bulk_status_change
+    authorize Package, :bulk_update?
+
+    package_ids = params[:package_ids] || []
+    new_status = params[:new_status]
+    reason = params[:reason] || 'Cambio masivo desde admin'
+
+    if package_ids.empty?
+      render json: { success: false, error: 'No se seleccionaron paquetes' }, status: :unprocessable_entity
+      return
+    end
+
+    if new_status.blank?
+      render json: { success: false, error: 'Debe especificar un estado' }, status: :unprocessable_entity
+      return
+    end
+
+    # Cargar paquetes y validar permisos
+    packages = Package.where(id: package_ids)
+    successes = []
+    errors = []
+
+    packages.each do |package|
+      # Verificar permisos individuales
+      unless policy(package).change_status?
+        errors << { tracking_code: package.tracking_code, error: 'Sin permisos' }
+        next
+      end
+
+      # Verificar que no sea un estado terminal
+      if package.terminal?
+        errors << { tracking_code: package.tracking_code, error: 'Estado terminal, no se puede cambiar' }
+        next
+      end
+
+      # Intentar cambiar el estado
+      service = PackageStatusService.new(package, current_user)
+      if service.change_status(new_status, reason: reason, override: true)
+        successes << package.tracking_code
+      else
+        errors << { tracking_code: package.tracking_code, error: service.errors.join(', ') }
+      end
+    end
+
+    render json: {
+      success: true,
+      total: packages.count,
+      successful: successes.count,
+      failed: errors.count,
+      successes: successes,
+      errors: errors
+    }
   end
 
   # Asigna un courier al paquete
@@ -150,10 +265,14 @@ end
     courier_id = params[:courier_id]
     service = PackageStatusService.new(@package, current_user)
 
-    if service.assign_courier(courier_id)
-      redirect_to admin_package_path(@package), notice: 'Courier asignado exitosamente'
-    else
-      redirect_to admin_package_path(@package), alert: "Error al asignar courier: #{service.errors.join(', ')}"
+    respond_to do |format|
+      if service.assign_courier(courier_id)
+        format.html { redirect_to admin_packages_path(status: params[:return_status]), notice: 'Conductor asignado exitosamente' }
+        format.json { head :ok }
+      else
+        format.html { redirect_to admin_packages_path(status: params[:return_status]), alert: "Error al asignar conductor: #{service.errors.join(', ')}" }
+        format.json { render json: { errors: service.errors }, status: :unprocessable_entity }
+      end
     end
   end
 
@@ -175,23 +294,30 @@ end
   end
 
   def load_users
-    # Optimización: Cargar usuarios una sola vez con memoización
-    @users ||= User.all.order(:email)
+    # Cargar solo usuarios customers activos (excluyendo Drivers, Admins e inactivos)
+    @users ||= User.where(type: nil).where(admin: false).where(active: true).order(:email)
   end
 
   def load_couriers
-    # Cargar solo usuarios que pueden ser couriers (admins y couriers)
-    @couriers ||= User.all.order(:email)
+    # Cargar solo drivers (usuarios con type = 'Driver')
+    @couriers ||= Driver.all.order(:email)
   end
 
   def package_params
     params.require(:package).permit(
-      :customer_name, :company, :address, :description, :user_id,
+      :customer_name, :sender_email, :company_name, :address, :description, :user_id,
       :phone, :exchange, :loading_date, :commune_id, :amount
     )
   end
 
   def metropolitan_region
     @metropolitan_region ||= Region.find_by(name: "Región Metropolitana")
+  end
+
+  def parse_date(date_string)
+    return nil if date_string.blank?
+    Date.parse(date_string)
+  rescue ArgumentError, TypeError
+    nil
   end
 end

@@ -16,7 +16,7 @@ class BulkPackageValidatorService
     'DESCRIPCION' => :description, # Alternativa sin tilde
     'MONTO' => :amount,
     'CAMBIO' => :exchange,
-    'EMPRESA' => :company
+    'EMPRESA' => :sender_email
   }.freeze
 
   MAX_ROWS_TO_VALIDATE = 100
@@ -106,7 +106,7 @@ class BulkPackageValidatorService
   end
 
   def valid_headers?(headers)
-    required_fields = [:loading_date, :customer_name, :phone, :address, :commune, :description, :amount, :exchange, :company]
+    required_fields = [:loading_date, :customer_name, :phone, :address, :commune, :description, :amount, :exchange, :sender_email]
     required_fields.all? { |field| headers.include?(field) }
   end
 
@@ -132,8 +132,8 @@ class BulkPackageValidatorService
     # MONTO -> amount
     validate_amount(row_number, row_data[:amount])
 
-    # EMPRESA -> company
-    validate_company(row_number, row_data[:company])
+    # EMPRESA -> sender_email
+    validate_sender_email(row_number, row_data[:sender_email])
   end
 
   def validate_loading_date(row_number, date_value)
@@ -211,21 +211,21 @@ class BulkPackageValidatorService
     end
   end
 
-  def validate_company(row_number, company_value)
+  def validate_sender_email(row_number, sender_email_value)
     # Solo validar EMPRESA si es admin
     # Para customers, el campo es opcional/informativo ya que se asigna al usuario logueado
     return unless @user.admin?
 
-    company = company_value.to_s.strip
-    if company.blank?
-      add_error(row_number, 'EMPRESA', company_value, 'no puede estar vacío (debe ser el email del cliente)')
+    sender_email = sender_email_value.to_s.strip
+    if sender_email.blank?
+      add_error(row_number, 'EMPRESA', sender_email_value, 'no puede estar vacío (debe ser el email del cliente)')
       return
     end
 
     # Validar que el email del customer exista
-    customer = find_customer_by_email(company)
+    customer = find_customer_by_email(sender_email)
     if customer.nil?
-      add_error(row_number, 'EMPRESA', company_value, 'el email no existe o no corresponde a un cliente activo')
+      add_error(row_number, 'EMPRESA', sender_email_value, 'el email no existe o no corresponde a un cliente activo')
     end
   end
 

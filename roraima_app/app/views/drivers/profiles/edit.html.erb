@@ -1,0 +1,124 @@
+<div class="px-4 sm:px-0">
+  <div class="mb-6">
+    <%= link_to drivers_profile_path, class: "text-blue-600 hover:text-blue-800 inline-flex items-center" do %>
+      <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      Volver a Mi Perfil
+    <% end %>
+  </div>
+
+  <h1 class="text-3xl font-bold text-gray-900 mb-6">Editar Mi Perfil</h1>
+
+  <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <%= form_with model: @driver, url: drivers_profile_path, method: :patch, class: "divide-y divide-gray-200" do |f| %>
+      <!-- Información de Contacto -->
+      <div class="px-6 py-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Información de Contacto</h2>
+
+        <div class="space-y-4">
+          <div>
+            <%= f.label :phone, "Teléfono", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= f.text_field :phone,
+                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+                placeholder: "+569 1234 5678" %>
+            <% if @driver.errors[:phone].any? %>
+              <p class="mt-1 text-sm text-red-600"><%= @driver.errors[:phone].first %></p>
+            <% end %>
+          </div>
+
+          <div class="bg-gray-50 p-4 rounded-md">
+            <p class="text-sm text-gray-600">
+              <strong>Email:</strong> <%= @driver.email %><br>
+              <strong>RUT:</strong> <%= @driver.rut %><br>
+              <strong>Nombre:</strong> <%= @driver.full_name %>
+            </p>
+            <p class="text-xs text-gray-500 mt-2">
+              Para cambiar estos datos, contacta al administrador.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Información del Vehículo -->
+      <div class="px-6 py-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Información del Vehículo</h2>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <%= f.label :vehicle_plate, "Patente", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= f.text_field :vehicle_plate,
+                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono uppercase",
+                placeholder: "ABCD12 o AB1234",
+                required: true %>
+            <% if @driver.errors[:vehicle_plate].any? %>
+              <p class="mt-1 text-sm text-red-600"><%= @driver.errors[:vehicle_plate].first %></p>
+            <% end %>
+            <p class="mt-1 text-xs text-gray-500">Formato chileno: ABCD12 o AB1234</p>
+          </div>
+
+          <div>
+            <%= f.label :vehicle_model, "Modelo del Vehículo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= f.text_field :vehicle_model,
+                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+                placeholder: "Ej: Toyota Hiace 2020",
+                required: true %>
+            <% if @driver.errors[:vehicle_model].any? %>
+              <p class="mt-1 text-sm text-red-600"><%= @driver.errors[:vehicle_model].first %></p>
+            <% end %>
+          </div>
+
+          <div class="sm:col-span-2">
+            <%= f.label :vehicle_capacity, "Capacidad de Carga (kg)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= f.number_field :vehicle_capacity,
+                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+                placeholder: "Ej: 1000",
+                min: 1,
+                step: 0.01,
+                required: true %>
+            <% if @driver.errors[:vehicle_capacity].any? %>
+              <p class="mt-1 text-sm text-red-600"><%= @driver.errors[:vehicle_capacity].first %></p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zona de Trabajo -->
+      <div class="px-6 py-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Zona de Trabajo</h2>
+
+        <div>
+          <%= f.label :assigned_zone_id, "Zona Asignada", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.select :assigned_zone_id,
+              options_from_collection_for_select(@zones, :id, :name, @driver.assigned_zone_id),
+              { include_blank: "Sin zona asignada" },
+              class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" %>
+          <% if @driver.errors[:assigned_zone_id].any? %>
+            <p class="mt-1 text-sm text-red-600"><%= @driver.errors[:assigned_zone_id].first %></p>
+          <% end %>
+          <p class="mt-1 text-xs text-gray-500">
+            La zona asignada determina las comunas en las que realizarás entregas.
+          </p>
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="px-6 py-4 bg-gray-50 flex gap-3">
+        <%= f.submit "Guardar Cambios", class: "flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" %>
+        <%= link_to "Cancelar", drivers_profile_path, class: "px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('turbo:load', function() {
+    // Auto uppercase para patente
+    const plateInput = document.querySelector('input[name="driver[vehicle_plate]"]');
+    if (plateInput) {
+      plateInput.addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+      });
+    }
+  });
+</script>

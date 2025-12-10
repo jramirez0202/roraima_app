@@ -1,7 +1,8 @@
 FactoryBot.define do
   factory :package do
     sequence(:customer_name) { |n| "Cliente #{n}" }
-    company { "Empresa XYZ" }
+    sender_email { "remitente@example.com" }
+    company_name { "Empresa XYZ" }
     address { "Av. Principal 123, Depto 45" }
     description { "Paquete de prueba" }
     sequence(:phone) { |n| "+569#{sprintf('%08d', 10000000 + n)}" }
@@ -11,17 +12,18 @@ FactoryBot.define do
     # Required associations
     association :region
     association :commune
-    # user is optional
-    association :user
+    # user must be customer (not admin, not driver)
+    association :user, factory: [:user, :customer]
 
     # Trait for minimal valid package (only required fields)
     trait :minimal do
       customer_name { nil }
-      company { nil }
+      sender_email { nil }
+      company_name { nil }
       address { nil }
       description { nil }
       # phone is now required, so keep default valid phone
-      user { nil }
+      # user is also required (belongs_to without optional: true)
     end
 
     # Trait for package scheduled for today
@@ -47,7 +49,8 @@ FactoryBot.define do
     # Trait for package with all optional fields
     trait :complete do
       customer_name { "Juan Pérez González" }
-      company { "Roraima Logistics S.A." }
+      sender_email { "sender@roraima.com" }
+      company_name { "Roraima Logistics S.A." }
       address { "Av. Libertador Bernardo O'Higgins 1234, Oficina 567" }
       description { "Paquete urgente con documentos importantes y muestras" }
       phone { "+56987654321" }

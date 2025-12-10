@@ -24,12 +24,14 @@
               </div>
               <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <% if current_user.admin? %>
-                  <%= link_to "Paquetes", admin_packages_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
-                  <%= link_to "Usuarios", admin_users_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
+                  <%= link_to "Paquetes", admin_packages_path, data: { turbo_prefetch: false }, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
+                  <%= link_to "Usuarios", admin_users_path, data: { turbo_prefetch: false }, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
+                  <%= link_to "Conductores", admin_drivers_path, data: { turbo_prefetch: false }, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
+                  <%= link_to "Configuración", admin_settings_path, data: { turbo_prefetch: false }, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
                 <% else %>
-                  <%= link_to "Dashboard", customers_dashboard_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
-                  <%= link_to "Mis Paquetes", customers_packages_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
-                  <%= link_to "Mi Perfil", customers_profile_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
+                  <%= link_to "Dashboard", customers_dashboard_path, data: { turbo_prefetch: false }, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
+                  <%= link_to "Mis Paquetes", customers_packages_path, data: { turbo_prefetch: false }, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
+                  <%= link_to "Mi Perfil", customers_profile_path, data: { turbo_prefetch: false }, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 border-b-2 border-transparent hover:border-gray-300" %>
                 <% end %>
               </div>
             </div>

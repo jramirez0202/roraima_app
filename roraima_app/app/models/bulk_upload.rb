@@ -1,6 +1,8 @@
 class BulkUpload < ApplicationRecord
   belongs_to :user
+  has_many :packages, dependent: :nullify
   has_one_attached :file
+  has_one_attached :labels_pdf
 
   enum status: {
     pending: 0,
