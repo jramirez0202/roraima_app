@@ -38,7 +38,7 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should not allow admin to create bulk upload in customers namespace" do
     sign_in @admin
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     assert_no_difference 'BulkUpload.count' do
       post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
@@ -99,20 +99,19 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should create bulk upload with valid file as customer" do
     sign_in @customer
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     assert_difference 'BulkUpload.count', 1 do
       post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
     end
 
-    assert_redirected_to customers_packages_path
-    assert_match /Carga iniciada/, flash[:notice]
+    assert_redirected_to customers_bulk_upload_path(BulkUpload.last)
   end
 
   test "should enqueue job on successful upload" do
     sign_in @customer
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     assert_enqueued_jobs 1, only: ProcessBulkPackageUploadJob do
       post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
@@ -122,7 +121,7 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should associate bulk upload with current customer" do
     sign_in @customer
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
 
@@ -133,7 +132,7 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should show success message for customers" do
     sign_in @customer
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
 
@@ -167,19 +166,13 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should not create bulk upload with wrong file type" do
     sign_in @customer
 
-    # Create a simple text file for testing
-    File.write(Rails.root.join('test', 'fixtures', 'files', 'test.txt'), 'test content')
-
-    file = fixture_file_upload('files/test.txt', 'text/plain')
+    file = fixture_file_upload('test.txt', 'text/plain')
 
     assert_no_difference 'BulkUpload.count' do
       post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
     end
 
     assert_response :unprocessable_entity
-
-    # Cleanup
-    File.delete(Rails.root.join('test', 'fixtures', 'files', 'test.txt'))
   end
 
   # ====================
@@ -188,7 +181,7 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should show appropriate flash message on success" do
     sign_in @customer
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
 
@@ -203,7 +196,7 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should redirect to customers packages path on success" do
     sign_in @customer
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
 
@@ -225,39 +218,21 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "should handle empty CSV file" do
     sign_in @customer
 
-    # Create empty CSV
-    File.write(Rails.root.join('test', 'fixtures', 'files', 'empty_customer.csv'),
-      "FECHA,NRO DE PEDIDO,DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA\n")
-
-    file = fixture_file_upload('files/empty_customer.csv', 'text/csv')
+    file = fixture_file_upload('empty_customer.csv', 'text/csv')
 
     assert_difference 'BulkUpload.count', 1 do
       post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
     end
-
-    # Cleanup
-    File.delete(Rails.root.join('test', 'fixtures', 'files', 'empty_customer.csv'))
   end
 
   test "should handle large file" do
     sign_in @customer
 
-    # Create a CSV with many rows
-    content = "FECHA,NRO DE PEDIDO,DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA\n"
-    100.times do |i|
-      content += "2025-01-15,ORDER-#{i},Cliente #{i},912345678,Dirección #{i},Providencia,Desc #{i},1000,NO,Empresa\n"
-    end
-
-    File.write(Rails.root.join('test', 'fixtures', 'files', 'large_customer.csv'), content)
-
-    file = fixture_file_upload('files/large_customer.csv', 'text/csv')
+    file = fixture_file_upload('large_customer.csv', 'text/csv')
 
     assert_difference 'BulkUpload.count', 1 do
       post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
     end
-
-    # Cleanup
-    File.delete(Rails.root.join('test', 'fixtures', 'files', 'large_customer.csv'))
   end
 
   # ====================
@@ -266,7 +241,7 @@ class Customers::BulkUploadsControllerTest < ActionDispatch::IntegrationTest
   test "customer should only see their own bulk uploads" do
     sign_in @customer
 
-    file = fixture_file_upload('files/valid_packages.csv', 'text/csv')
+    file = fixture_file_upload('valid_packages.csv', 'text/csv')
 
     post customers_bulk_uploads_path, params: { bulk_upload: { file: file } }
 

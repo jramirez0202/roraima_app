@@ -152,7 +152,7 @@ class LabelGeneratorService
 
   def show_company_name_fallback(pdf, package, cursor_y)
     pdf.bounding_box([0, cursor_y], width: LABEL_WIDTH - 2*MARGIN, height: 40) do
-      pdf.text(package.company.presence || "N/A", size: 11, style: :bold, align: :left)
+      pdf.text(package.company_name.presence || "N/A", size: 11, style: :bold, align: :left)
     end
   end
 end

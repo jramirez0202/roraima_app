@@ -1,0 +1,142 @@
+<%= form_with(model: [:admin, driver], class: "space-y-6") do |form| %>
+  <% if driver.errors.any? %>
+    <div class="rounded-md bg-red-50 p-4">
+      <h3 class="text-sm font-medium text-red-800">
+        <%= pluralize(driver.errors.count, "error") %> impidieron guardar este conductor:
+      </h3>
+      <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+        <% driver.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <!-- Sección 1: Información del Conductor -->
+  <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 space-y-6">
+    <h3 class="text-base font-semibold leading-7 text-gray-900">Información del Conductor</h3>
+
+    <!-- Nombre -->
+    <div>
+      <%= form.label :name, "Nombre Completo *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :name,
+          placeholder: "Juan Pérez González",
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" %>
+    </div>
+
+    <!-- Email -->
+    <div>
+      <%= form.label :email, "Email *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.email_field :email,
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" %>
+    </div>
+
+    <!-- Password -->
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <%= form.label :password, "Contraseña #{driver.persisted? ? '(dejar en blanco para no cambiar)' : '*'}",
+            class: "block text-sm font-medium text-gray-700" %>
+        <%= form.password_field :password, autocomplete: "new-password",
+            class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" %>
+      </div>
+
+      <div>
+        <%= form.label :password_confirmation, "Confirmar Contraseña",
+            class: "block text-sm font-medium text-gray-700" %>
+        <%= form.password_field :password_confirmation, autocomplete: "new-password",
+            class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" %>
+      </div>
+    </div>
+
+    <!-- RUT -->
+    <div>
+      <%= form.label :rut, "RUT *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :rut, placeholder: "12.345.678-9",
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" %>
+      <p class="mt-1 text-xs text-gray-500">Formato: 12.345.678-9</p>
+    </div>
+
+    <!-- Phone -->
+    <div data-controller="phone">
+      <%= form.label :phone, "Teléfono *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.telephone_field :phone,
+          value: form.object.phone.presence || "+569",
+          placeholder: "+56987654321",
+          pattern: "\\+569[0-9]{8}",
+          maxlength: "12",
+          data: {
+            phone_target: "input",
+            action: "focus->phone#focus input->phone#input keydown->phone#keydown paste->phone#paste"
+          },
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm" %>
+      <p class="mt-1 text-xs text-gray-500">Formato: +569XXXXXXXX (12 caracteres)</p>
+    </div>
+  </div>
+
+  <!-- Sección 2: Información del Vehículo -->
+  <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 space-y-6">
+    <h3 class="text-base font-semibold leading-7 text-gray-900">Información del Vehículo</h3>
+
+    <!-- Placa Vehicular -->
+    <div>
+      <%= form.label :vehicle_plate, "Placa Vehicular *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :vehicle_plate,
+          placeholder: "ABCD12",
+          maxlength: "6",
+          style: "text-transform: uppercase;",
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 font-mono uppercase" %>
+      <p class="mt-1 text-xs text-gray-500">Formato chileno: AB1234 o ABCD12</p>
+    </div>
+
+    <!-- Modelo -->
+    <div>
+      <%= form.label :vehicle_model, "Modelo del Vehículo *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :vehicle_model,
+          placeholder: "Toyota Hilux 2020",
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" %>
+    </div>
+
+    <!-- Capacidad -->
+    <div>
+      <%= form.label :vehicle_capacity, "Capacidad de Carga *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.number_field :vehicle_capacity,
+          min: "1",
+          step: "1",
+          placeholder: "50",
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" %>
+      <p class="mt-1 text-xs text-gray-500">Cantidad máxima de paquetes</p>
+    </div>
+
+    <!-- Zona Asignada -->
+    <div>
+      <%= form.label :assigned_zone_id, "Zona Asignada", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.select :assigned_zone_id,
+          options_for_select(@zones.map { |z| [z.name, z.id] }, form.object.assigned_zone_id),
+          { prompt: "Seleccione una zona (opcional)..." },
+          { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" } %>
+      <p class="mt-1 text-xs text-gray-500">La zona determina qué comunas puede atender este conductor</p>
+    </div>
+  </div>
+
+  <!-- Sección 3: Estado de la Cuenta -->
+  <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+    <h3 class="text-base font-semibold leading-7 text-gray-900 mb-4">Estado de la Cuenta</h3>
+
+    <div class="flex flex-col">
+      <div class="flex items-center gap-x-2">
+        <span class="font-medium text-gray-900">Cuenta Activa</span>
+        <%= form.check_box :active,
+            class: "h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" %>
+      </div>
+      <p class="text-gray-500 text-sm mt-1">Desactivar impedirá que el conductor inicie sesión</p>
+    </div>
+  </div>
+
+  <!-- Botones -->
+  <div class="flex justify-end space-x-3 pt-6 border-t">
+    <%= link_to "Cancelar", admin_drivers_path,
+        class: "inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50" %>
+    <%= form.submit driver.persisted? ? "Actualizar Conductor" : "Crear Conductor",
+        class: "inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 cursor-pointer" %>
+  </div>
+<% end %>

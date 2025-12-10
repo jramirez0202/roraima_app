@@ -1,0 +1,116 @@
+<%= form_with(model: [:admin, zone], local: true, class: "space-y-6") do |f| %>
+  <% if zone.errors.any? %>
+    <div class="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <strong class="font-bold">¡Atención!</strong>
+      <ul class="list-disc list-inside mt-2">
+        <% zone.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="bg-white shadow-md rounded-lg p-6">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Información de la Zona</h2>
+
+    <!-- Nombre de la Zona -->
+    <div class="mb-4">
+      <%= f.label :name, "Nombre de la Zona *", class: "block text-sm font-medium text-gray-700 mb-2" %>
+      <%= f.text_field :name,
+                       class: "w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500",
+                       placeholder: "Ej: Zona Norte, Zona Centro, Zona Sur" %>
+      <p class="mt-1 text-sm text-gray-500">Nombre descriptivo para identificar la zona de reparto</p>
+    </div>
+
+    <!-- Región -->
+    <div class="mb-4">
+      <%= f.label :region_id, "Región *", class: "block text-sm font-medium text-gray-700 mb-2" %>
+      <%= f.select :region_id,
+                   options_from_collection_for_select(@regions, :id, :name, zone.region_id),
+                   { prompt: "Selecciona una región" },
+                   class: "w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500",
+                   data: { controller: "zone-communes", action: "change->zone-communes#loadCommunes" } %>
+      <p class="mt-1 text-sm text-gray-500">Región a la que pertenecen las comunas de esta zona</p>
+    </div>
+
+    <!-- Comunas (Multiple Select) -->
+    <div class="mb-4">
+      <%= f.label :communes, "Comunas *", class: "block text-sm font-medium text-gray-700 mb-2" %>
+      <div id="communes-container">
+        <% if zone.region.present? && zone.region.communes.any? %>
+          <%= f.select :communes,
+                       options_from_collection_for_select(zone.region.communes.order(:name), :id, :name, zone.communes),
+                       {},
+                       {
+                         multiple: true,
+                         size: 10,
+                         class: "w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       } %>
+        <% else %>
+          <p class="text-sm text-gray-500 italic">Selecciona primero una región para ver las comunas disponibles</p>
+        <% end %>
+      </div>
+      <p class="mt-1 text-sm text-gray-500">
+        Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar múltiples comunas
+      </p>
+    </div>
+
+    <!-- Estado Activo/Inactivo -->
+    <div class="mb-4">
+      <div class="flex items-center">
+        <%= f.check_box :active, class: "h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" %>
+        <%= f.label :active, "Zona activa", class: "ml-2 block text-sm text-gray-900" %>
+      </div>
+      <p class="mt-1 text-sm text-gray-500">Las zonas inactivas no aparecerán disponibles para asignar a drivers</p>
+    </div>
+  </div>
+
+  <!-- Botones de Acción -->
+  <div class="flex justify-end space-x-3">
+    <%= link_to "Cancelar", admin_zones_path, class: "bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded" %>
+    <%= f.submit (zone.new_record? ? "Crear Zona" : "Actualizar Zona"),
+                 class: "bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded" %>
+  </div>
+<% end %>
+
+<% content_for :javascript do %>
+  <script>
+    // Cargar comunas dinámicamente según región seleccionada
+    document.addEventListener('turbo:load', function() {
+      const regionSelect = document.querySelector('[data-controller="zone-communes"]');
+      if (!regionSelect) return;
+
+      regionSelect.addEventListener('change', async function() {
+        const regionId = this.value;
+        const container = document.getElementById('communes-container');
+
+        if (!regionId) {
+          container.innerHTML = '<p class="text-sm text-gray-500 italic">Selecciona primero una región para ver las comunas disponibles</p>';
+          return;
+        }
+
+        try {
+          const response = await fetch(`/admin/zones/communes_by_region/${regionId}`);
+          const communes = await response.json();
+
+          if (communes.length === 0) {
+            container.innerHTML = '<p class="text-sm text-gray-500 italic">No hay comunas disponibles para esta región</p>';
+            return;
+          }
+
+          // Crear select múltiple
+          let html = '<select name="zone[communes][]" multiple size="10" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">';
+          communes.forEach(commune => {
+            html += `<option value="${commune.id}">${commune.name}</option>`;
+          });
+          html += '</select>';
+
+          container.innerHTML = html;
+        } catch (error) {
+          console.error('Error loading communes:', error);
+          container.innerHTML = '<p class="text-sm text-red-500">Error al cargar comunas. Intenta nuevamente.</p>';
+        }
+      });
+    });
+  </script>
+<% end %>

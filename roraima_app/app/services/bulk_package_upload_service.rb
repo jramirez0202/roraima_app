@@ -16,7 +16,7 @@ class BulkPackageUploadService
     'DESCRIPCION' => :description, # Alternativa sin tilde
     'MONTO' => :amount,
     'CAMBIO' => :exchange,
-    'EMPRESA' => :company
+    'EMPRESA' => :sender_email
   }.freeze
 
   def initialize(bulk_upload)
@@ -110,7 +110,7 @@ class BulkPackageUploadService
   end
 
   def valid_headers?(headers)
-    required_fields = [:loading_date, :customer_name, :phone, :address, :commune, :description, :amount, :exchange, :company]
+    required_fields = [:loading_date, :customer_name, :phone, :address, :commune, :description, :amount, :exchange, :sender_email]
     required_fields.all? { |field| headers.include?(field) }
   end
 
@@ -236,33 +236,38 @@ class BulkPackageUploadService
     exchange_value = row_data[:exchange].to_s.strip.upcase
     params[:exchange] = ['SI', 'SÍ', 'S', 'TRUE', '1', 'YES', 'Y'].include?(exchange_value)
 
-    # company y user_id (lógica diferente para admin vs customer)
-    company = row_data[:company].to_s.strip
+    # sender_email y company_name (lógica diferente para admin vs customer)
+    sender_email = row_data[:sender_email].to_s.strip
 
     # Si el uploader es admin, EMPRESA es obligatorio
     if bulk_upload.user.admin?
-      if company.blank?
-        add_error(row_number, 'EMPRESA', company, 'no puede estar vacío (debe ser el email del cliente)')
+      if sender_email.blank?
+        add_error(row_number, 'EMPRESA', sender_email, 'no puede estar vacío (debe ser el email del cliente)')
         has_errors = true
       else
-        params[:company] = company
-        customer = find_customer_by_email(company)
+        params[:sender_email] = sender_email
+        customer = find_customer_by_email(sender_email)
         if customer
           params[:user_id] = customer.id
+          params[:company_name] = customer.company
         else
-          add_error(row_number, 'EMPRESA', company, 'email no existe o no es un customer válido')
+          add_error(row_number, 'EMPRESA', sender_email, 'email no existe o no es un customer válido')
           has_errors = true
         end
       end
     else
       # Si es customer, EMPRESA es opcional/informativo
-      params[:company] = company if company.present?
+      params[:sender_email] = sender_email if sender_email.present?
+      params[:company_name] = bulk_upload.user.company
       # Siempre asignar al usuario logueado
       params[:user_id] = bulk_upload.user_id
     end
 
-    # Status inicial
-    params[:status] = :pendiente_retiro
+    # Initial status
+    params[:status] = :pending_pickup
+
+    # Asignar el bulk_upload_id para trazabilidad
+    params[:bulk_upload_id] = bulk_upload.id
 
     return nil if has_errors
     params

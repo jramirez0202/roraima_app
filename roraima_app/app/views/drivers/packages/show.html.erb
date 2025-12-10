@@ -1,0 +1,323 @@
+<div class="px-4 sm:px-0">
+  <div class="mb-6">
+    <%= link_to drivers_packages_path, class: "text-blue-600 hover:text-blue-800 inline-flex items-center" do %>
+      <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      Volver a Mis Paquetes
+    <% end %>
+  </div>
+
+  <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <!-- Encabezado del Paquete -->
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Paquete <%= @package.tracking_code %></h1>
+        </div>
+        <div class="text-right">
+          <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full <%= status_badge_class(@package.status) %>">
+            <%= status_text(@package.status) %>
+          </span>
+          <% if (@package.delivered? || @package.picked_up?) && @package.delivered_at %>
+            <p class="mt-1 text-xs text-gray-600">
+              <%= l(@package.delivered_at, format: :short) %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Información del Destinatario -->
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900 mb-3">Información de Entrega</h2>
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Destinatario</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.customer_name %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Teléfono</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <a href="tel:<%= @package.phone %>" class="text-blue-600 hover:text-blue-800">
+              <%= @package.phone %>
+            </a>
+          </dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="text-sm font-medium text-gray-500">Dirección de Entrega</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <%= @package.address %><br>
+            <%= @package.commune&.name %>, <%= @package.region&.name %>
+            <% if @package.address.present? %>
+              <div class="mt-2">
+                <% maps_url = "https://www.google.com/maps/search/?api=1&query=#{ERB::Util.url_encode(@package.address + ', ' + @package.commune&.name.to_s)}" %>
+                <%= link_to maps_url, target: "_blank", class: "text-blue-600 hover:text-blue-800 inline-flex items-center" do %>
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  Abrir en Maps
+                <% end %>
+              </div>
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Información del Paquete -->
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900 mb-3">Detalles del Paquete</h2>
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Fecha de Carga</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.loading_date&.strftime('%d/%m/%Y') || '-' %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Monto</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.formatted_amount %></dd>
+        </div>
+        <% if @package.description.present? %>
+          <div class="sm:col-span-2">
+            <dt class="text-sm font-medium text-gray-500">Descripción</dt>
+            <dd class="mt-1 text-sm text-gray-900"><%= @package.description %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+
+    <!-- Información de Reprogramación -->
+    <% if @package.reprogramed_to || @package.reprogram_motive || @package.reschedule_photos.attached? %>
+      <div class="px-6 py-4 border-b border-gray-200 bg-red-50">
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">⚠️ Paquete Reprogramado</h2>
+        <dl class="grid grid-cols-1 gap-4">
+          <% if @package.reprogramed_to %>
+            <div>
+              <dt class="text-sm font-medium text-gray-700">Nueva Fecha de Entrega</dt>
+              <dd class="mt-1 text-sm text-gray-900"><%= l(@package.reprogramed_to, format: :long) %></dd>
+            </div>
+          <% end %>
+
+          <% if @package.reprogram_motive %>
+            <div>
+              <dt class="text-sm font-medium text-gray-700">Motivo de Reprogramación</dt>
+              <dd class="mt-1">
+                <p class="text-base font-bold text-red-600"><%= @package.reprogram_motive %></p>
+              </dd>
+            </div>
+          <% end %>
+
+          <% if @package.reschedule_photos.attached? %>
+            <div>
+              <dt class="text-sm font-medium text-gray-700 mb-2">Fotos de Evidencia</dt>
+              <dd class="mt-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <% @package.reschedule_photos.each do |photo| %>
+                    <div class="relative group">
+                      <%= image_tag photo,
+                          class: "w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-90 transition-opacity",
+                          onclick: "openReschedulePhotoModal('#{url_for(photo)}')",
+                          alt: "Foto de reprogramación" %>
+                      <button type="button"
+                              onclick="openReschedulePhotoModal('#{url_for(photo)}')"
+                              class="absolute top-1 right-1 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-1 shadow-lg transition-all opacity-0 group-hover:opacity-100">
+                        <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                        </svg>
+                      </button>
+                    </div>
+                  <% end %>
+                </div>
+                <p class="mt-2 text-xs text-gray-600">
+                  <svg class="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                  Click en la foto para verla en tamaño completo
+                </p>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    <% end %>
+
+    <!-- Cambio de Estado -->
+    <div class="px-6 py-4 bg-gray-50">
+      <h2 class="text-lg font-semibold text-gray-900 mb-3">Cambiar Estado</h2>
+      <%= form_with url: change_status_drivers_package_path(@package),
+                    method: :patch,
+                    local: true,
+                    id: "package-status-form",
+                    class: "space-y-4" do |f| %>
+        <div>
+          <%= f.label :new_status, "Nuevo Estado", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.select :new_status,
+              options_for_select(
+                [
+                  ['En Camino', 'in_transit'],
+                  ['Entregado', 'delivered'],
+                  ['Cancelado', 'cancelled'],
+                  ['Reprogramado', 'rescheduled']
+                ].reject { |label, value| value == @package.status }
+              ),
+              { prompt: 'Seleccionar nuevo estado...' },
+              class: "mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          %>
+        </div>
+
+        <div id="reason-field" style="display: none;">
+          <%= f.label :reason, class: "block text-sm font-medium text-gray-700 mb-1" do %>
+            Motivo (Requerido para Cancelado/Reprogramado)
+            <span class="text-xs text-gray-500 font-normal">- Máximo 30 caracteres</span>
+          <% end %>
+          <%= f.text_area :reason,
+                          rows: 3,
+                          maxlength: 30,
+                          class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+                          placeholder: "Ej: Cliente no disponible...",
+                          required: true,
+                          oninput: "updateDriverReasonCounter()" %>
+          <p class="mt-1 text-xs text-gray-500">
+            <span id="driver-reason-counter">0</span>/30 caracteres
+          </p>
+        </div>
+
+        <div id="reschedule-photos-field" style="display: none;">
+          <%= f.label :reschedule_photos, "Fotos de Evidencia de Reprogramación (Opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.file_field :reschedule_photos,
+                           multiple: true,
+                           accept: "image/*",
+                           capture: "environment",
+                           class: "mt-1 block w-full text-sm text-gray-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-md file:border-0
+                                  file:text-sm file:font-medium
+                                  file:bg-blue-50 file:text-blue-700
+                                  hover:file:bg-blue-100" %>
+          <p class="mt-1 text-xs text-gray-500">Puedes seleccionar múltiples fotos para adjuntar evidencia</p>
+        </div>
+
+        <!-- <div>
+          <%= f.label :location, "Ubicación Actual (Opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.text_field :location, class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm", placeholder: "Ej: En ruta, En casa del cliente, etc." %>
+        </div> -->
+
+        <!-- Campo de Fotos de Evidencia (para "Entregado" y "Reprogramado") -->
+        <div id="proof-field" style="display: none;">
+          <%= f.label :proof, "Fotos de Evidencia (Máximo 4)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <div class="mt-1 space-y-3">
+            <div class="border border-gray-300 rounded-md p-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Tomar o Seleccionar Fotos</label>
+              <input type="file"
+                     id="photo-input"
+                     accept="image/*"
+                     capture="environment"
+                     multiple
+                     class="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-md file:border-0
+                            file:text-sm file:font-medium
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100">
+              <div id="compression-status" class="mt-2 text-sm text-blue-600" style="display: none;">
+                ⏳ Optimizando imágenes...
+              </div>
+              <div id="photos-container" class="mt-3 grid grid-cols-2 gap-2"></div>
+              <%= f.hidden_field :proof, id: "proof-data" %>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-gray-500">
+            ✅ <strong>Máximo 4 fotos.</strong> El sistema automáticamente optimiza y reduce las imágenes antes de guardar.
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          <%= f.submit "Actualizar Estado", class: "flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" %>
+          <%= link_to "Cancelar", drivers_packages_path, class: "px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver fotos de reprogramación en tamaño completo -->
+<% if @package.reschedule_photos.attached? %>
+  <div id="reschedule-photo-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Overlay -->
+    <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onclick="closeReschedulePhotoModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex min-h-screen items-center justify-center p-4">
+      <div class="relative max-w-7xl w-full">
+        <!-- Botón de cerrar -->
+        <button type="button"
+                onclick="closeReschedulePhotoModal()"
+                class="absolute -top-12 right-0 text-white hover:text-gray-300 focus:outline-none">
+          <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span class="sr-only">Cerrar</span>
+        </button>
+
+        <!-- Imagen -->
+        <img id="reschedule-photo-modal-img"
+             src=""
+             alt="Foto de reprogramación - Tamaño completo"
+             class="w-full h-auto rounded-lg shadow-2xl"
+             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'bg-white p-8 rounded-lg text-center\'><p class=\'text-red-600\'>Error al cargar la imagen</p></div>';">
+
+        <!-- Info adicional -->
+        <div class="mt-4 bg-white bg-opacity-90 rounded-lg p-4">
+          <p class="text-sm text-gray-900">
+            <strong>Paquete:</strong> <%= @package.tracking_code %>
+            <span class="mx-2">•</span>
+            <strong>Cliente:</strong> <%= @package.customer_name %>
+          </p>
+          <% if @package.reprogramed_to %>
+            <p class="text-xs text-gray-600 mt-1">
+              Reprogramado para <%= l(@package.reprogramed_to, format: :long) %>
+            </p>
+          <% end %>
+          <% if @package.reprogram_motive %>
+            <p class="text-xs font-bold text-red-600 mt-1">
+              <%= @package.reprogram_motive %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openReschedulePhotoModal(imageUrl) {
+      const modal = document.getElementById('reschedule-photo-modal');
+      const img = document.getElementById('reschedule-photo-modal-img');
+      img.src = imageUrl;
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeReschedulePhotoModal() {
+      document.getElementById('reschedule-photo-modal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+
+    // Contador de caracteres para el campo de razón
+    function updateDriverReasonCounter() {
+      const reasonField = document.querySelector('#reason');
+      const counter = document.getElementById('driver-reason-counter');
+      if (reasonField && counter) {
+        counter.textContent = reasonField.value.length;
+      }
+    }
+
+    // Cerrar con ESC
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeReschedulePhotoModal();
+      }
+    });
+  </script>
+<% end %>

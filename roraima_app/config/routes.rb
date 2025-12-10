@@ -13,9 +13,23 @@ Rails.application.routes.draw do
   # Admin namespace
   namespace :admin do
     resources :users
+    resources :drivers do
+      member do
+        patch :toggle_ready
+      end
+      collection do
+        post :bulk_start_routes
+      end
+    end
+    resources :zones do
+      collection do
+        get 'communes_by_region/:region_id', to: 'zones#communes_by_region', as: 'communes_by_region'
+      end
+    end
     resources :packages do
       collection do
         post :generate_labels
+        post :bulk_status_change
       end
       member do
         patch :change_status
@@ -24,6 +38,7 @@ Rails.application.routes.draw do
       end
     end
     resources :bulk_uploads, only: [:new, :create, :show]
+    resource :settings, only: [:show, :update]
     root 'packages#index'
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
   end
@@ -40,6 +55,24 @@ Rails.application.routes.draw do
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
   end
 
+  # Drivers namespace
+  namespace :drivers do
+    resources :packages, only: [:index, :show] do
+      member do
+        patch :change_status
+      end
+    end
+
+    resource :profile, only: [:show, :edit, :update]
+
+    # Route management
+    post 'start_route', to: 'dashboard#start_route', as: :start_route
+
+    root 'dashboard#index'
+
+    get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
+  end
+
   # Dashboard principal de customers (fuera del namespace)
   get 'customers', to: 'customers#index', as: :customers_dashboard
 
@@ -47,10 +80,19 @@ Rails.application.routes.draw do
   authenticated :user do
     root to: redirect { |params, request|
       user = request.env['warden'].user
-      user.admin? ? '/admin' : '/customers'
+      if user.admin?
+        '/admin'
+      elsif user.is_a?(Driver)
+        '/drivers'
+      else
+        '/customers'
+      end
     }, as: :authenticated_root
   end
 
   # Root por defecto (usuarios no autenticados van al login)
   root to: redirect('/users/sign_in')
+  #Eso le devuelve un No Content (204) y Chrome queda feliz, y no aparece como error.
+  get "/.well-known/appspecific/com.chrome.devtools.json", to: proc { [204, {}, []] }
+
 end

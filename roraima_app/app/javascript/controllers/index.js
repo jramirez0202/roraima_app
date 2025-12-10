@@ -4,5 +4,32 @@
 
 import { application } from "./application"
 
+import AutoDismissController from "./auto_dismiss_controller"
+application.register("auto-dismiss", AutoDismissController)
+
+import BulkRoutesController from "./bulk_routes_controller"
+application.register("bulk-routes", BulkRoutesController)
+
+import BulkPackagesController from "./bulk_packages_controller"
+application.register("bulk-packages", BulkPackagesController)
+
+import AutocompleteController from "./autocomplete_controller"
+application.register("autocomplete", AutocompleteController)
+
+import FiltersPanelController from "./filters_panel_controller"
+application.register("filters-panel", FiltersPanelController)
+
 import HelloController from "./hello_controller"
 application.register("hello", HelloController)
+
+import PackageStatusController from "./package_status_controller"
+application.register("package-status", PackageStatusController)
+
+import PhoneController from "./phone_controller"
+application.register("phone", PhoneController)
+
+import RegionCommuneController from "./region_commune_controller"
+application.register("region-commune", RegionCommuneController)
+
+import UserRoleController from "./user_role_controller"
+application.register("user-role", UserRoleController)

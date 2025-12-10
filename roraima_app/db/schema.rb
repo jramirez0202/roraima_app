@@ -10,8 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_11_24_173812) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_10_181256) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_trgm"
   enable_extension "plpgsql"
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -72,7 +73,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_24_173812) do
 
   create_table "packages", force: :cascade do |t|
     t.string "customer_name"
-    t.string "company"
+    t.string "sender_email"
     t.text "address"
     t.text "description"
     t.datetime "created_at", null: false
@@ -100,7 +101,15 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_24_173812) do
     t.datetime "shipped_at"
     t.datetime "delivered_at"
     t.boolean "admin_override", default: false
+    t.bigint "bulk_upload_id"
+    t.string "company_name"
+    t.datetime "assigned_at"
+    t.bigint "assigned_by_id"
+    t.index ["assigned_by_id"], name: "index_packages_on_assigned_by_id"
+    t.index ["assigned_courier_id", "assigned_at"], name: "index_packages_on_assigned_courier_id_and_assigned_at"
+    t.index ["assigned_courier_id", "delivered_at"], name: "index_packages_on_assigned_courier_and_delivered_at", comment: "Optimizes Driver#today_deliveries queries (QA audit fix)"
     t.index ["assigned_courier_id"], name: "index_packages_on_assigned_courier_id"
+    t.index ["bulk_upload_id"], name: "index_packages_on_bulk_upload_id"
     t.index ["commune_id"], name: "index_packages_on_commune_id"
     t.index ["created_at"], name: "index_packages_on_created_at"
     t.index ["exchange"], name: "index_packages_on_exchange"
@@ -111,6 +120,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_24_173812) do
     t.index ["status", "loading_date"], name: "index_packages_on_status_and_loading_date"
     t.index ["status"], name: "index_packages_on_status"
     t.index ["tracking_code"], name: "index_packages_on_tracking_code", unique: true
+    t.index ["tracking_code"], name: "index_packages_on_tracking_code_trigram", opclass: :gin_trgm_ops, using: :gin, comment: "Trigram index for fast ILIKE searches on tracking_code"
     t.index ["user_id", "status"], name: "index_packages_on_user_id_and_status"
     t.index ["user_id"], name: "index_packages_on_user_id"
   end
@@ -120,6 +130,26 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_24_173812) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_regions_on_name", unique: true
+  end
+
+  create_table "routes", force: :cascade do |t|
+    t.bigint "driver_id", null: false
+    t.datetime "started_at", null: false
+    t.datetime "ended_at"
+    t.integer "packages_delivered", default: 0, null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["driver_id", "started_at"], name: "index_routes_on_driver_and_started"
+    t.index ["driver_id", "status"], name: "index_routes_on_driver_and_status"
+    t.index ["driver_id"], name: "index_routes_on_driver_id"
+    t.index ["status"], name: "index_routes_on_status"
+  end
+
+  create_table "settings", force: :cascade do |t|
+    t.boolean "require_driver_authorization", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "users", force: :cascade do |t|
@@ -138,20 +168,53 @@ ActiveRecord::Schema[7.1].define(version: 2025_11_24_173812) do
     t.string "company"
     t.boolean "active", default: true, null: false
     t.decimal "delivery_charge", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "type"
+    t.string "vehicle_plate"
+    t.string "vehicle_model"
+    t.integer "vehicle_capacity"
+    t.bigint "assigned_zone_id"
+    t.boolean "ready_for_route", default: false, null: false
+    t.integer "route_status", default: 0, null: false
+    t.datetime "route_started_at"
+    t.datetime "route_ended_at"
+    t.string "name"
+    t.index ["assigned_zone_id"], name: "index_users_on_assigned_zone_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["phone"], name: "index_users_on_phone"
+    t.index ["ready_for_route"], name: "index_users_on_ready_for_route"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["role", "active"], name: "index_users_on_role_and_active"
     t.index ["role"], name: "index_users_on_role"
+    t.index ["route_status"], name: "index_users_on_route_status"
     t.index ["rut"], name: "index_users_on_rut", unique: true, where: "(rut IS NOT NULL)"
+    t.index ["type", "route_status"], name: "index_users_on_type_and_route_status"
+    t.index ["type"], name: "index_users_on_type"
+    t.index ["vehicle_plate"], name: "index_users_on_vehicle_plate", unique: true, where: "(vehicle_plate IS NOT NULL)"
+  end
+
+  create_table "zones", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "region_id"
+    t.jsonb "communes", default: []
+    t.boolean "active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_zones_on_active"
+    t.index ["name"], name: "index_zones_on_name", unique: true
+    t.index ["region_id"], name: "index_zones_on_region_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "bulk_uploads", "users"
   add_foreign_key "communes", "regions"
+  add_foreign_key "packages", "bulk_uploads"
   add_foreign_key "packages", "communes"
   add_foreign_key "packages", "regions"
   add_foreign_key "packages", "users"
+  add_foreign_key "packages", "users", column: "assigned_by_id"
   add_foreign_key "packages", "users", column: "assigned_courier_id"
+  add_foreign_key "routes", "users", column: "driver_id"
+  add_foreign_key "users", "zones", column: "assigned_zone_id"
+  add_foreign_key "zones", "regions"
 end

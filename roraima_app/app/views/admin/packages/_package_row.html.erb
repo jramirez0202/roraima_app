@@ -1,0 +1,111 @@
+<%
+  # Expected local variables:
+  # - package: Package instance
+  # - drivers: Collection of Driver users
+%>
+
+<tr class="hover:bg-gray-50">
+  <!-- Checkbox -->
+  <td class="px-3 py-4 whitespace-nowrap">
+    <input type="checkbox"
+          name="package_ids[]"
+          value="<%= package.id %>"
+          data-bulk-packages-target="checkbox"
+          data-action="change->bulk-packages#updateButtons"
+          class="package-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+  </td>
+
+  <!-- Estado -->
+  <td class="px-3 py-2 text-sm">
+    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_classes(package.status) %>">
+      <%= status_text(package.status) %>
+    </span>
+
+    <% if (package.delivered? || package.picked_up?) && package.delivered_at %>
+      <div class="mt-1 text-xs text-gray-500">
+        <%= l(package.delivered_at, format: :short) %>
+      </div>
+    <% end %>
+  </td>
+
+  <!-- Tracking -->
+  <td class="px-3 py-2 text-sm whitespace-nowrap">
+    <span class="font-mono text-xs"><%= package.tracking_code %></span>
+  </td>
+
+  <!-- Destinatario-->
+  <td class="px-3 py-2 text-sm max-w-xs">
+    <div class="font-medium text-gray-900 wrap-break-word"><%= package.customer_name %></div>
+  </td>
+
+  <!-- Empresa -->
+  <td class="px-3 py-2 text-sm">
+    <% if package.user.present? %>
+      <div><%= package.company_name.presence || package.user&.company || "—" %></div>
+      <div class="text-xs text-gray-600"><%= package.user.email %></div>
+    <% else %>
+      —
+    <% end %>
+  </td>
+
+  <!-- Teléfono -->
+  <td class="px-3 py-2 text-sm">
+    <%= package.phone.present? ? package.phone : "—" %>
+  </td>
+
+  <!-- Dirección + Comuna -->
+  <td class="px-3 py-2 text-sm max-w-xs">
+    <div class="wrap-break-word"><%= package.address.present? ? package.address : "—" %></div>
+    <div class="text-xs text-gray-500"><%= package.commune&.name || "—" %></div>
+  </td>
+
+  <!-- Fecha Carga -->
+  <td class="px-3 py-2 text-sm">
+    <% if package.loading_date %>
+      <%= package.loading_date.strftime("%d/%m/%Y") %>
+    <% else %>
+      <span class="text-gray-400">—</span>
+    <% end %>
+  </td>
+
+  <!-- Conductor Asignado -->
+  <td class="px-3 py-2 text-sm">
+    <select name="driver_assignment"
+            class="block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            data-package-id="<%= package.id %>"
+            data-assign-url="<%= assign_courier_admin_package_path(package) %>"
+            data-csrf-token="<%= form_authenticity_token %>"
+            data-action="change->bulk-packages#assignDriver">
+      <option value="">Sin asignar</option>
+      <% drivers.each do |driver| %>
+        <option value="<%= driver.id %>"
+                <%= 'selected' if package.assigned_courier_id == driver.id %>>
+          <%= driver.name %><%= " (#{driver.assigned_zone&.name})" if driver.assigned_zone %>
+        </option>
+      <% end %>
+    </select>
+  </td>
+
+  <!-- Acciones -->
+  <td class="px-3 py-2 text-sm">
+    <div class="flex items-center justify-center gap-1">
+      <%= link_to admin_package_path(package),
+          data: { turbo_prefetch: false },
+          class: "p-1.5 text-blue-600 hover:bg-blue-50 rounded",
+          title: "Ver detalle y cambiar estado" do %>
+        👁️
+      <% end %>
+
+      <%= link_to edit_admin_package_path(package),
+          data: { turbo_prefetch: false },
+          class: "p-1.5 text-indigo-600 hover:bg-indigo-50 rounded",
+          title: "Editar información" do %>
+        ✏️
+      <% end %>
+
+      <%= button_to admin_package_path(package), method: :delete, data: { confirm: "¿Eliminar paquete?" }, class: "p-1.5 text-red-600 hover:bg-red-50 rounded", title: "Eliminar" do %>
+        🗑️
+      <% end %>
+    </div>
+  </td>
+</tr>

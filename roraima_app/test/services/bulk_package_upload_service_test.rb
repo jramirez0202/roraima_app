@@ -228,14 +228,14 @@ class BulkPackageUploadServiceTest < ActiveSupport::TestCase
     assert_not packages[2].exchange
   end
 
-  test "should set status to pendiente_retiro" do
+  test "should set status to pending_pickup" do
     bulk_upload = create(:bulk_upload, :with_csv, user: @user)
     service = BulkPackageUploadService.new(bulk_upload)
 
     service.process
 
     package = Package.last
-    assert package.pendiente_retiro?
+    assert package.pending_pickup?
   end
 
   test "should associate packages with user" do
@@ -404,7 +404,7 @@ class BulkPackageUploadServiceTest < ActiveSupport::TestCase
 
     package = Package.last
     assert_equal customer.id, package.user_id, "Package should be assigned to customer, not admin"
-    assert_equal 'cliente@empresa.com', package.company
+    assert_equal 'cliente@empresa.com', package.sender_email
   end
 
   test "admin upload should error when customer email not found" do
@@ -496,7 +496,7 @@ class BulkPackageUploadServiceTest < ActiveSupport::TestCase
     package = Package.last
     assert_equal customer.id, package.user_id, "Package should be assigned to logged-in customer"
     assert_not_equal other_customer.id, package.user_id
-    assert_equal 'otraempresa@empresa.com', package.company, "EMPRESA field should still be saved"
+    assert_equal 'otraempresa@empresa.com', package.sender_email, "EMPRESA field should still be saved"
   end
 
   test "find_customer_by_email should find active customer case-insensitive" do

@@ -25,6 +25,7 @@
 - [Cómo Correr Pruebas](#-cómo-correr-pruebas)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Características Principales](#-características-principales)
+- [Carga Masiva y Trazabilidad](#-carga-masiva-y-trazabilidad)
 - [Contribuir](#-contribuir)
 - [Licencia](#-licencia)
 
@@ -48,6 +49,7 @@ Este proyecto nace de la necesidad de contar con una solución robusta y escalab
 
 ✅ Sistema de roles (Admin/Cliente) con autorización granular
 ✅ CRUD completo de paquetes con validaciones robustas
+✅ **Carga masiva de paquetes** desde CSV/XLSX con trazabilidad completa
 ✅ Gestión geográfica: 16 regiones y 345+ comunas de Chile
 ✅ Cancelación de paquetes con registro de razón
 ✅ Marcado de paquetes de devolucion
@@ -680,6 +682,27 @@ end
 - Responsive design
 - Tipografía Inter
 
+### 📤 Carga Masiva de Paquetes
+
+- **Importación masiva** desde archivos CSV/XLSX
+- **Validación automática** de datos con reporte de errores detallado
+- **Trazabilidad completa**: cada paquete vinculado a su carga de origen
+- **Procesamiento asíncrono** con actualizaciones en tiempo real
+- **Estadísticas de carga**: filas procesadas, exitosas, fallidas
+- **Auditoría**: rastrear qué archivo creó cada paquete
+- **Compatibilidad**: paquetes manuales y masivos conviven sin problemas
+
+### 🚗 Sistema de Drivers y Zonas de Reparto
+
+- **Driver Model (STI)**: Conductores heredan de User usando Single Table Inheritance
+- **Zone Model**: Zonas geográficas con comunas asignadas en JSONB
+- **Gestión completa de vehículos**: Patente chilena, modelo, capacidad
+- **Asignación de zonas**: Cada driver puede tener una zona asignada
+- **Portal para drivers**: Vista de paquetes asignados y cambio de estados
+- **Validaciones de seguridad**: Solo drivers activos pueden ser asignados
+- **CRUD completo**: Administración de drivers y zonas desde panel admin
+- **40 tests**: Cobertura completa de Driver y Zone models (100% pasando)
+
 ### 📊 Dashboard
 
 - Admin: vista de todos los paquetes del sistema
@@ -688,7 +711,469 @@ end
 
 ---
 
+## 📤 Carga Masiva y Trazabilidad
 
+### Visión General
+
+El sistema incluye funcionalidad de **carga masiva de paquetes** que permite crear múltiples paquetes simultáneamente desde archivos CSV/XLSX. Cada paquete creado mediante carga masiva mantiene una **relación de trazabilidad** con su carga de origen.
+
+### Relación BulkUpload ↔ Package
+
+Desde **Noviembre 2025**, todos los paquetes creados mediante carga masiva se vinculan automáticamente con su `BulkUpload` de origen:
+
+```ruby
+# Modelo Package
+belongs_to :bulk_upload, optional: true
+
+# Modelo BulkUpload
+has_many :packages, dependent: :nullify
+```
+
+**Características importantes:**
+- ✅ `optional: true` - Los paquetes creados manualmente NO requieren `bulk_upload_id`
+- ✅ `dependent: :nullify` - Si se elimina un BulkUpload, los paquetes permanecen pero su `bulk_upload_id` se establece en NULL
+- ✅ **Retrocompatibilidad total** - Paquetes existentes sin `bulk_upload_id` siguen funcionando normalmente
+
+### Estructura de Base de Datos
+
+**Migración aplicada:** `20251125031149_add_bulk_upload_ref_to_packages.rb`
+
+```ruby
+add_reference :packages, :bulk_upload, foreign_key: true, index: true
+```
+
+Esto crea:
+- Columna `bulk_upload_id` (bigint, nullable)
+- Foreign key constraint hacia `bulk_uploads.id`
+- Índice para optimizar consultas de trazabilidad
+
+### Servicio de Carga Masiva
+
+El `BulkPackageUploadService` asigna automáticamente el `bulk_upload_id` durante el procesamiento:
+
+```ruby
+# app/services/bulk_package_upload_service.rb
+def build_package_params(row_number, row_data)
+  # ... transformación de datos ...
+
+  params[:bulk_upload_id] = bulk_upload.id  # ← Asignación automática
+
+  params
+end
+```
+
+### Ejemplos de Uso
+
+#### Consultar Paquetes de una Carga Específica
+
+```ruby
+# Obtener una carga masiva
+bulk_upload = BulkUpload.find(29)
+
+# Ver todos los paquetes creados por esta carga
+bulk_upload.packages
+# => [#<Package id: 101, tracking_code: "PKG-...", bulk_upload_id: 29>, ...]
+
+# Contar paquetes
+bulk_upload.packages.count
+# => 150
+
+# Filtrar por estado
+bulk_upload.packages.where(status: :entregado)
+bulk_upload.packages.where(status: [:en_camino, :reprogramado])
+
+# Ver estadísticas
+bulk_upload.packages.group(:status).count
+# => {"pendiente_retiro"=>120, "en_camino"=>25, "entregado"=>5}
+```
+
+#### Rastrear el Origen de un Paquete
+
+```ruby
+# Obtener un paquete
+package = Package.find(638)
+
+# Ver de qué carga masiva proviene
+package.bulk_upload
+# => #<BulkUpload id: 29, user_id: 5, status: "completed", ...>
+
+# Si fue creado manualmente
+package.bulk_upload
+# => nil (sin carga asociada)
+
+# Verificar si proviene de carga masiva
+package.bulk_upload_id.present?  # => true/false
+```
+
+#### Auditoría y Reportes
+
+```ruby
+# Paquetes creados manualmente vs carga masiva
+manual_packages = Package.where(bulk_upload_id: nil)
+bulk_packages = Package.where.not(bulk_upload_id: nil)
+
+puts "Paquetes manuales: #{manual_packages.count}"
+puts "Paquetes por carga masiva: #{bulk_packages.count}"
+
+# Listar todas las cargas con sus métricas
+BulkUpload.recent.each do |upload|
+  puts "Upload ##{upload.id} - #{upload.created_at.strftime('%d/%m/%Y')}"
+  puts "  Total procesado: #{upload.total_rows}"
+  puts "  Exitosos: #{upload.successful_rows}"
+  puts "  Fallidos: #{upload.failed_rows}"
+  puts "  Paquetes actuales: #{upload.packages.count}"
+  puts "  Tasa éxito: #{upload.success_rate}%"
+end
+
+# Encontrar cargas con errores para investigación
+BulkUpload.where("failed_rows > ?", 0).each do |upload|
+  puts "Carga ##{upload.id} tuvo #{upload.failed_rows} errores"
+  puts upload.formatted_errors.join("\n")
+end
+```
+
+#### Análisis de Desempeño por Carga
+
+```ruby
+# Comparar tasas de entrega entre diferentes cargas masivas
+BulkUpload.completed.each do |upload|
+  total = upload.packages.count
+  entregados = upload.packages.where(status: :entregado).count
+  tasa_entrega = (entregados.to_f / total * 100).round(2)
+
+  puts "Carga ##{upload.id}: #{tasa_entrega}% entregado (#{entregados}/#{total})"
+end
+```
+
+### Casos de Uso
+
+#### 1. Debugging de Cargas Problemáticas
+Si una carga masiva tuvo problemas, puedes identificar exactamente qué paquetes fueron afectados:
+
+```ruby
+bulk_upload = BulkUpload.find(29)
+problematic_packages = bulk_upload.packages.where(status: [:devolucion, :cancelado])
+```
+
+#### 2. Reportes para Clientes
+Generar reportes específicos de una carga:
+
+```ruby
+bulk_upload = BulkUpload.find(29)
+user = bulk_upload.user
+
+puts "Reporte para #{user.email}"
+puts "Fecha de carga: #{bulk_upload.created_at}"
+puts "Paquetes entregados: #{bulk_upload.packages.where(status: :entregado).count}"
+puts "Paquetes en tránsito: #{bulk_upload.packages.where(status: [:en_bodega, :en_camino]).count}"
+```
+
+#### 3. Validación de Integridad
+Verificar que la cantidad de paquetes coincide con los registros:
+
+```ruby
+bulk_upload = BulkUpload.find(29)
+
+if bulk_upload.successful_rows != bulk_upload.packages.count
+  puts "⚠️ ALERTA: Discrepancia detectada"
+  puts "Registrados como exitosos: #{bulk_upload.successful_rows}"
+  puts "Paquetes reales: #{bulk_upload.packages.count}"
+end
+```
+
+### Beneficios de la Trazabilidad
+
+1. **Auditoría Completa**: Saber exactamente qué archivo/carga creó cada paquete
+2. **Debugging Eficiente**: Identificar problemas relacionados a cargas específicas
+3. **Reportes Precisos**: Generar estadísticas por carga masiva
+4. **Historial**: Mantener registro completo de todas las cargas realizadas
+5. **Integridad de Datos**: Validar que los números coincidan entre procesamiento y resultado
+
+### Archivos Relacionados
+
+| Archivo | Descripción |
+|---------|-------------|
+| `app/models/package.rb` | Modelo con relación `belongs_to :bulk_upload` |
+| `app/models/bulk_upload.rb` | Modelo con relación `has_many :packages` |
+| `app/services/bulk_package_upload_service.rb` | Servicio que asigna `bulk_upload_id` |
+| `db/migrate/20251125031149_add_bulk_upload_ref_to_packages.rb` | Migración que crea la columna |
+
+### Notas Técnicas
+
+- La columna `bulk_upload_id` es **nullable** por diseño para mantener compatibilidad
+- Los índices están optimizados para consultas de trazabilidad
+- La relación `dependent: :nullify` previene eliminación accidental de paquetes
+- El servicio asigna automáticamente el ID sin intervención manual
+
+---
+
+## 🚗 Sistema de Drivers y Zonas de Reparto
+
+### Visión General
+
+El sistema incluye funcionalidad completa para gestionar **conductores (drivers)** y **zonas de reparto** utilizando patrones avanzados de Rails como Single Table Inheritance (STI) y almacenamiento JSONB para flexibilidad.
+
+### Arquitectura
+
+#### Driver Model - Single Table Inheritance (STI)
+
+Los drivers heredan de `User` manteniendo todos los atributos y métodos mientras agregan funcionalidad específica:
+
+```ruby
+User (Tabla base)
+├── User (type: nil) - Admin/Customer
+└── Driver (type: 'Driver') - Conductores
+```
+
+**Campos específicos de Driver:**
+- `vehicle_plate` (String) - Patente chilena (ABCD12 o AB1234)
+- `vehicle_model` (String) - Modelo del vehículo
+- `vehicle_capacity` (Integer) - Capacidad en kg
+- `assigned_zone_id` (BigInt) - FK a tabla zones
+
+#### Zone Model - JSONB Storage
+
+Las zonas agrupan comunas geográficamente usando JSONB para flexibilidad:
+
+```ruby
+class Zone < ApplicationRecord
+  belongs_to :region
+  has_many :drivers, foreign_key: :assigned_zone_id
+
+  # Comunas almacenadas como array JSONB de IDs
+  # communes: [123, 456, 789]
+end
+```
+
+### Funcionalidades Principales
+
+#### 1. Gestión de Drivers (Admin)
+
+**Ruta:** `/admin/drivers`
+
+- CRUD completo de conductores
+- Validación de patente chilena (ABCD12 o AB1234)
+- Asignación de zona geográfica
+- Vista de paquetes asignados
+- Estadísticas diarias (entregas hoy, pendientes)
+- Filtros por zona y estado (activo/inactivo)
+
+**Validaciones:**
+```ruby
+validates :vehicle_plate,
+  presence: true,
+  uniqueness: true,
+  format: { with: /\A[A-Z]{2}\d{4}|[A-Z]{4}\d{2}\z/ }
+
+validates :vehicle_capacity, numericality: { greater_than: 0 }
+```
+
+#### 2. Gestión de Zonas (Admin)
+
+**Ruta:** `/admin/zones`
+
+- CRUD completo de zonas
+- Asignación de múltiples comunas (JSONB)
+- Selector dinámico de comunas por región (AJAX)
+- Vista de drivers asignados
+- Listado de comunas incluidas
+
+#### 3. Portal de Driver
+
+**Ruta:** `/drivers`
+
+- Vista de paquetes asignados
+- Cambio de estado de paquetes
+- Estadísticas diarias
+- Restricción: solo ve paquetes asignados a él
+
+### Sistema de Asignación
+
+**Flujo de asignación de paquetes:**
+
+1. Admin asigna driver a paquete desde `/admin/packages`
+2. Sistema valida que el usuario sea Driver (no customer/admin)
+3. Sistema valida que el driver esté activo
+4. Paquete se asigna y aparece en portal del driver
+5. Driver puede cambiar estados según flujo permitido
+
+**Validaciones de seguridad:**
+```ruby
+# Solo drivers activos pueden ser asignados
+unless courier.is_a?(Driver)
+  @errors << "El usuario no es un conductor válido"
+  return false
+end
+
+unless courier.active?
+  @errors << "No se puede asignar un conductor inactivo"
+  return false
+end
+```
+
+### Zonas de Ejemplo (Seeds)
+
+El sistema incluye 4 zonas pre-configuradas para Región Metropolitana:
+
+- **Zona Norte RM**: Huechuraba, Conchalí, Independencia, Recoleta, Quilicura, Colina, Lampa
+- **Zona Centro RM**: Santiago, Providencia, Las Condes, Vitacura, Ñuñoa, La Reina
+- **Zona Sur RM**: La Florida, Puente Alto, La Pintana, San Bernardo, El Bosque
+- **Zona Oeste RM**: Maipú, Pudahuel, Cerrillos, Lo Prado, Renca, Cerro Navia
+
+### Drivers de Ejemplo (Seeds)
+
+```ruby
+# Driver 1
+Email: driver1@example.com
+Vehículo: Toyota Hiace 2020 (AABB12)
+Capacidad: 1500 kg
+Zona: Zona Norte RM
+
+# Driver 2
+Email: driver2@example.com
+Vehículo: Hyundai H100 2021 (CCDD34)
+Capacidad: 1200 kg
+Zona: Zona Centro RM
+```
+
+### Ejemplos de Uso
+
+#### Consultar Drivers por Zona
+
+```ruby
+# Obtener una zona
+zone = Zone.find_by(name: "Zona Norte RM")
+
+# Ver todos los drivers asignados
+zone.drivers
+# => [#<Driver id: 10, email: "driver1@...", vehicle_plate: "AABB12">, ...]
+
+# Drivers activos en esa zona
+zone.drivers.active
+```
+
+#### Paquetes Asignados a un Driver
+
+```ruby
+# Obtener un driver
+driver = Driver.find_by(email: "driver1@example.com")
+
+# Entregas de hoy
+driver.today_deliveries
+# => [#<Package>, #<Package>]
+
+# Pendientes (in_transit + rescheduled)
+driver.pending_deliveries
+# => [#<Package>, #<Package>, #<Package>]
+
+# Todos los paquetes asignados
+driver.assigned_packages
+```
+
+#### Asignar Paquete a Driver
+
+```ruby
+# Desde el servicio de estado
+package = Package.find(123)
+driver = Driver.find(10)
+
+service = PackageStatusService.new(package, current_user)
+service.assign_courier(driver.id)
+# => true (si validaciones pasan)
+```
+
+### Seguridad y Permisos
+
+**DriverPolicy:**
+- Solo admins pueden crear/editar drivers
+- Drivers pueden ver solo su propia información
+- Customers no pueden ver drivers
+
+**ZonePolicy:**
+- Solo admins pueden gestionar zonas
+- Drivers/Customers no tienen acceso
+
+**PackagePolicy:**
+- Solo admins pueden asignar drivers a paquetes
+- Drivers pueden cambiar estados solo de paquetes asignados a ellos
+
+### Testing
+
+El sistema incluye tests exhaustivos:
+
+**Driver Model (28 tests):**
+- STI funcionamiento
+- Validaciones de vehículo
+- Formato de patente chilena
+- Asociaciones con zonas
+- Asignación de paquetes
+- Scopes active/inactive
+
+**Zone Model (12 tests):**
+- Validaciones de nombre único
+- Asociaciones con region y drivers
+- Almacenamiento JSONB de comunas
+- Métodos de instancia
+
+```bash
+# Ejecutar tests de drivers y zonas
+bin/rails test test/models/driver_test.rb
+# => 28 runs, 111 assertions, 0 failures
+
+bin/rails test test/models/zone_test.rb
+# => 12 runs, 31 assertions, 0 failures
+```
+
+### Archivos Creados
+
+**Modelos:**
+- `app/models/driver.rb`
+- `app/models/zone.rb`
+
+**Controladores:**
+- `app/controllers/admin/drivers_controller.rb`
+- `app/controllers/admin/zones_controller.rb`
+
+**Políticas:**
+- `app/policies/driver_policy.rb`
+- `app/policies/zone_policy.rb`
+
+**Vistas:**
+- `app/views/admin/drivers/*` (5 archivos)
+- `app/views/admin/zones/*` (5 archivos)
+
+**Tests:**
+- `test/models/driver_test.rb`
+- `test/models/zone_test.rb`
+- `test/factories/drivers.rb`
+- `test/factories/zones.rb`
+
+**Migraciones:**
+- `20251125132343_add_type_to_users.rb` (STI)
+- `20251125132344_create_zones.rb`
+- `20251125132345_add_driver_fields_to_users.rb`
+- `20251125132346_migrate_driver_users_to_sti.rb`
+
+### Ventajas del Diseño
+
+**Single Table Inheritance (STI):**
+- Una sola tabla, evita joins complejos
+- Herencia natural de User
+- Polimorfismo: `user.is_a?(Driver)` funciona perfecto
+- Scopes compartidos
+
+**JSONB para Comunas:**
+- Flexibilidad para agregar/quitar comunas
+- No requiere tabla intermedia
+- Queries eficientes con índices PostgreSQL
+- Simplicidad en el modelo
+
+### Documentación Completa
+
+Para detalles completos de implementación, ver:
+- `SISTEMA_DRIVERS_ZONAS.md` - Documentación técnica completa
+
+---
 
 ## 📝 Licencia
 

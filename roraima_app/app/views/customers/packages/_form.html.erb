@@ -19,7 +19,7 @@
     <!-- FECHA CARGA -->
     <div>
       <%= form.label :loading_date, "Fecha de Carga", class: "block text-sm font-medium text-gray-700" %>
-      <%= form.date_field :loading_date, min: Date.today, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+      <%= form.date_field :loading_date, min: Date.current, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
     </div>
 
     <!-- CLIENTE -->
@@ -28,10 +28,17 @@
       <%= form.text_field :customer_name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
     </div>
 
+    <!-- EMAIL REMITENTE -->
+    <div>
+      <%= form.label :sender_email, "Email Remitente", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.email_field :sender_email, readonly: true, class: "mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+      <p class="mt-1 text-xs text-gray-500">Este campo se asigna automáticamente</p>
+    </div>
+
     <!-- EMPRESA -->
     <div>
-      <%= form.label :company, "Empresa", class: "block text-sm font-medium text-gray-700" %>
-      <%= form.text_field :company, readonly: true, class: "mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+      <%= form.label :company_name, "Empresa", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :company_name, readonly: true, class: "mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
       <p class="mt-1 text-xs text-gray-500">Este campo se asigna automáticamente</p>
     </div>
 

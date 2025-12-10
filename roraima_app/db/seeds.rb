@@ -152,6 +152,58 @@ puts "\n📊 Resumen:"
 puts "   Regiones: #{Region.count}"
 puts "   Comunas: #{Commune.count}"
 
+# Crear zonas de reparto (solo para Región Metropolitana)
+puts "\n🗺️  Creando zonas de reparto..."
+
+metropolitan_region = Region.find_by(name: "Región Metropolitana")
+metropolitan_communes = metropolitan_region.communes
+
+# Zona Norte: comunas del norte de Santiago
+zona_norte = Zone.find_or_create_by!(name: "Zona Norte RM") do |z|
+  z.region = metropolitan_region
+  z.communes = metropolitan_communes.where(name: [
+    "Huechuraba", "Conchalí", "Independencia", "Recoleta",
+    "Quilicura", "Colina", "Lampa"
+  ]).pluck(:id)
+  z.active = true
+end
+puts "   ✅ Zona Norte RM: #{zona_norte.commune_names.count} comunas"
+
+# Zona Centro: comunas del centro de Santiago
+zona_centro = Zone.find_or_create_by!(name: "Zona Centro RM") do |z|
+  z.region = metropolitan_region
+  z.communes = metropolitan_communes.where(name: [
+    "Santiago", "Providencia", "Las Condes", "Vitacura",
+    "Ñuñoa", "La Reina", "Estación Central", "Quinta Normal"
+  ]).pluck(:id)
+  z.active = true
+end
+puts "   ✅ Zona Centro RM: #{zona_centro.commune_names.count} comunas"
+
+# Zona Sur: comunas del sur de Santiago
+zona_sur = Zone.find_or_create_by!(name: "Zona Sur RM") do |z|
+  z.region = metropolitan_region
+  z.communes = metropolitan_communes.where(name: [
+    "La Florida", "Puente Alto", "La Pintana", "San Bernardo",
+    "El Bosque", "La Granja", "San Ramón", "Pedro Aguirre Cerda"
+  ]).pluck(:id)
+  z.active = true
+end
+puts "   ✅ Zona Sur RM: #{zona_sur.commune_names.count} comunas"
+
+# Zona Oeste: comunas del oeste de Santiago
+zona_oeste = Zone.find_or_create_by!(name: "Zona Oeste RM") do |z|
+  z.region = metropolitan_region
+  z.communes = metropolitan_communes.where(name: [
+    "Maipú", "Pudahuel", "Cerrillos", "Lo Prado",
+    "Renca", "Cerro Navia", "Peñalolén"
+  ]).pluck(:id)
+  z.active = true
+end
+puts "   ✅ Zona Oeste RM: #{zona_oeste.commune_names.count} comunas"
+
+puts "\n📊 Zonas creadas: #{Zone.count}"
+
 # Crear usuarios
 puts "\n👥 Creando usuarios..."
 
@@ -218,28 +270,55 @@ customer_inactive = User.find_or_create_by!(email: "inactive@example.com") do |u
 end
 puts "   ✅ Customer inactivo creado: inactive@example.com (cuenta desactivada)"
 
-# Crear drivers (preparados para futuro)
-driver1 = User.find_or_create_by!(email: "driver1@example.com") do |u|
+# Crear drivers con STI
+puts "\n🚗 Creando conductores..."
+
+driver1 = Driver.find_or_create_by!(email: "driver1@example.com") do |u|
   u.password = 'password123'
   u.role = :driver
   u.admin = false
   u.rut = "56.789.012-3"
   u.phone = "+56922223333"
   u.active = true
+  u.vehicle_plate = "AABB12"
+  u.vehicle_model = "Toyota Hiace 2020"
+  u.vehicle_capacity = 1500
+  u.assigned_zone = zona_norte
 end
-puts "   ✅ Driver 1 creado: driver1@example.com"
+puts "   ✅ Driver 1 creado: driver1@example.com (#{driver1.vehicle_model}, Zona: #{driver1.assigned_zone.name})"
 
-driver2 = User.find_or_create_by!(email: "driver2@example.com") do |u|
+driver2 = Driver.find_or_create_by!(email: "driver2@example.com") do |u|
   u.password = 'password123'
   u.role = :driver
   u.admin = false
   u.rut = "67.890.123-4"
   u.phone = "+56933334444"
   u.active = true
+  u.vehicle_plate = "CCDD34"
+  u.vehicle_model = "Hyundai H100 2021"
+  u.vehicle_capacity = 1200
+  u.assigned_zone = zona_centro
 end
-puts "   ✅ Driver 2 creado: driver2@example.com"
+puts "   ✅ Driver 2 creado: driver2@example.com (#{driver2.vehicle_model}, Zona: #{driver2.assigned_zone.name})"
 
-puts "✅ #{User.count} usuarios creados (1 admin + #{User.customer.count} customers + #{User.driver.count} drivers)"
+driver3 = Driver.find_or_create_by!(email: "driver3@example.com") do |u|
+  u.password = 'password123'
+  u.role = :driver
+  u.admin = false
+  u.rut = "78.901.234-5"
+  u.phone = "+56944445555"
+  u.active = true
+  u.vehicle_plate = "EEFF56"
+  u.vehicle_model = "Chevrolet N300 2019"
+  u.vehicle_capacity = 800
+  u.assigned_zone = zona_sur
+end
+puts "   ✅ Driver 3 creado: driver3@example.com (#{driver3.vehicle_model}, Zona: #{driver3.assigned_zone.name})"
+
+puts "\n✅ #{User.count} usuarios creados:"
+puts "   • #{User.admin.count} Administrador(es)"
+puts "   • #{User.customer.count} Cliente(s)"
+puts "   • #{Driver.count} Conductor(es)"
 
 # Crear paquetes de prueba
 puts "\n📦 Creando paquetes de prueba..."
@@ -254,7 +333,8 @@ metropolitan_communes = metropolitan_region.communes.to_a
 
   Package.create!(
     customer_name: "Cliente de Customer1 #{i + 1}",
-    company: customer1.email,
+    sender_email: customer1.email,
+    company_name: customer1.company,
     phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "Calle #{['Las Rosas', 'Los Olivos', 'Alameda', 'Providencia'].sample} #{rand(100..9999)}",
     region_id: metropolitan_region.id,
@@ -273,7 +353,8 @@ puts "   ✅ 5 paquetes creados para customer1@example.com en Región Metropolit
 
   Package.create!(
     customer_name: "Cliente de Customer2 #{i + 1}",
-    company: customer2.email,
+    sender_email: customer2.email,
+    company_name: customer2.company,
     phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "Av. #{['Kennedy', 'Apoquindo', 'Vicuña Mackenna'].sample} #{rand(100..9999)}",
     region_id: metropolitan_region.id,
@@ -292,7 +373,8 @@ puts "   ✅ 3 paquetes creados para customer2@example.com en Región Metropolit
 
   Package.create!(
     customer_name: "Cliente de Customer3 #{i + 1}",
-    company: customer3.email,
+    sender_email: customer3.email,
+    company_name: customer3.company,
     phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "Pasaje #{['Los Aromos', 'Las Acacias', 'El Bosque'].sample} #{rand(10..999)}",
     region_id: metropolitan_region.id,
@@ -311,7 +393,8 @@ puts "   ✅ 2 paquetes creados para customer3@example.com en Región Metropolit
 
   Package.create!(
     customer_name: "Cliente Admin #{i + 1}",
-    company: admin.email,
+    sender_email: admin.email,
+    company_name: admin.company,
     phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
     address: "#{['Calle', 'Avenida', 'Paseo'].sample} #{rand(1..50)} Norte #{rand(100..9999)}",
     region_id: metropolitan_region.id,
@@ -373,18 +456,37 @@ puts "   Email: driver1@example.com"
 puts "   Password: password123"
 puts "   RUT: #{driver1.rut}"
 puts "   Teléfono: #{driver1.phone}"
+puts "   Vehículo: #{driver1.vehicle_model}"
+puts "   Patente: #{driver1.vehicle_plate}"
+puts "   Capacidad: #{driver1.vehicle_capacity} kg"
+puts "   Zona asignada: #{driver1.assigned_zone.name}"
 
 puts "\n🚗 DRIVER 2:"
 puts "   Email: driver2@example.com"
 puts "   Password: password123"
 puts "   RUT: #{driver2.rut}"
 puts "   Teléfono: #{driver2.phone}"
+puts "   Vehículo: #{driver2.vehicle_model}"
+puts "   Patente: #{driver2.vehicle_plate}"
+puts "   Capacidad: #{driver2.vehicle_capacity} kg"
+puts "   Zona asignada: #{driver2.assigned_zone.name}"
+
+puts "\n🚗 DRIVER 3:"
+puts "   Email: driver3@example.com"
+puts "   Password: password123"
+puts "   RUT: #{driver3.rut}"
+puts "   Teléfono: #{driver3.phone}"
+puts "   Vehículo: #{driver3.vehicle_model}"
+puts "   Patente: #{driver3.vehicle_plate}"
+puts "   Capacidad: #{driver3.vehicle_capacity} kg"
+puts "   Zona asignada: #{driver3.assigned_zone.name}"
 
 puts "\n" + "="*60
 puts "📊 RESUMEN:"
 puts "   • #{User.admin.count} Administrador(es)"
 puts "   • #{User.customer.active.count} Clientes activos"
 puts "   • #{User.customer.inactive.count} Cliente(s) inactivo(s)"
-puts "   • #{User.driver.count} Conductor(es)"
+puts "   • #{Driver.count} Conductor(es) con STI"
+puts "   • #{Zone.count} Zonas de reparto"
 puts "   • #{Package.count} Paquetes"
 puts "="*60

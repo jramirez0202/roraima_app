@@ -15,7 +15,8 @@ class PackageStatusService
 
     # Validaciones previas
     return false unless validate_transition(new_status_sym, override)
-    return false unless validate_requirements(new_status_sym, additional_params)
+    # Solo validar requisitos si NO hay override (admin puede saltarse requisitos)
+    return false unless override || validate_requirements(new_status_sym, additional_params)
 
     # Ejecutar transición
     begin
@@ -52,7 +53,24 @@ class PackageStatusService
       return false
     end
 
-    package.update(assigned_courier_id: courier_id)
+    # Validar que el courier sea un Driver
+    unless courier.is_a?(Driver)
+      @errors << "El usuario no es un conductor válido"
+      return false
+    end
+
+    # Validar que el courier esté activo
+    unless courier.active?
+      @errors << "No se puede asignar un conductor inactivo"
+      return false
+    end
+
+    # Actualizar con campos de auditoría
+    package.update(
+      assigned_courier_id: courier_id,
+      assigned_at: Time.current,
+      assigned_by_id: @user.id
+    )
   end
 
   # Marca como reprogramado con nueva fecha
@@ -63,7 +81,7 @@ class PackageStatusService
     end
 
     change_status(
-      :reprogramado,
+      :rescheduled,
       reason: motive,
       reprogram_date: new_date,
       motive: motive
@@ -78,7 +96,7 @@ class PackageStatusService
     end
 
     change_status(
-      :entregado,
+      :delivered,
       reason: "Entrega exitosa",
       location: location,
       proof: proof
@@ -93,7 +111,7 @@ class PackageStatusService
     end
 
     change_status(
-      :retirado,
+      :picked_up,
       reason: "Retirado por cliente",
       location: location,
       proof: proof
@@ -108,7 +126,7 @@ class PackageStatusService
     end
 
     change_status(
-      :devolucion,
+      :return,
       reason: reason
     )
   end
@@ -132,77 +150,118 @@ class PackageStatusService
 
   # Valida si la transición es permitida
   def validate_transition(new_status, override)
+    # SEGURIDAD: Solo admins pueden usar override
+    if override && !user.admin?
+      @errors << "Solo administradores pueden forzar transiciones con override"
+      return false
+    end
+
     unless package.can_transition_to?(new_status, override: override)
       current = package.status
-      @errors << "Transición no permitida: #{current} → #{new_status}"
+      current_text = translate_status(current)
+      new_status_text = translate_status(new_status)
+      @errors << "Transición no permitida: #{current_text} → #{new_status_text}"
       return false
     end
 
     true
   end
 
-  # Valida requisitos específicos según el estado destino
+  # Validates specific requirements according to destination status
   def validate_requirements(new_status, params)
     case new_status
-    when :en_camino
+    when :in_transit
       unless package.assigned_courier_id.present?
         @errors << "Debe asignar un courier antes de marcar como 'en camino'"
         return false
       end
 
-    when :entregado, :retirado
+    when :delivered, :picked_up
       unless params[:proof].present?
-        @errors << "Se requiere prueba (firma/foto/documento) para marcar como #{new_status}"
+        status_text = translate_status(new_status)
+        @errors << "Se requiere prueba (firma/foto/documento) para marcar como #{status_text}"
         return false
       end
 
-    when :reprogramado
-      unless params[:reprogram_date].present? && params[:motive].present?
-        @errors << "Se requiere nueva fecha y motivo para reprogramar"
+    when :rescheduled
+      unless params[:motive].present? || params[:reason].present?
+        @errors << "Se requiere un motivo para reprogramar"
         return false
       end
 
-    when :devolucion
-      # Devolución siempre requiere motivo (ya validado en change_status)
+    when :return
+      # Return always requires reason (already validated in change_status)
     end
 
     true
   end
 
-  # Aplica parámetros adicionales al paquete
+  # Applies additional parameters to the package
   def apply_additional_params(new_status, params)
     case new_status
-    when :reprogramado
+    when :rescheduled
       package.reprogramed_to = params[:reprogram_date]
       package.reprogram_motive = params[:motive]
 
-    when :entregado, :retirado
+    when :delivered, :picked_up
       package.proof = params[:proof] if params[:proof].present?
 
-    when :cancelado
+    when :cancelled
       package.cancellation_reason = params[:reason] if params[:reason].present?
     end
   end
 
-  # Acciones que se ejecutan después de una transición exitosa
+  # Actions executed after a successful transition
   def after_transition_actions(new_status)
     case new_status
-    when :entregado, :retirado
-      # TODO: Enviar notificación de entrega al cliente
-      # TODO: Enviar notificación al remitente
+    when :delivered, :picked_up
+      # TODO: Send delivery notification to customer
+      # TODO: Send notification to sender
       Rails.logger.info "Paquete #{package.tracking_code} marcado como #{new_status}"
 
-    when :cancelado
-      # TODO: Enviar notificación de cancelación
+      # Auto-complete route if all packages delivered
+      if package.assigned_courier.is_a?(Driver) && package.assigned_courier.on_route?
+        RouteManagementService.new(package.assigned_courier).auto_complete_if_finished
+      end
+
+    when :cancelled
+      # TODO: Send cancellation notification
       Rails.logger.info "Paquete #{package.tracking_code} cancelado"
 
-    when :reprogramado
-      # TODO: Enviar notificación de reprogramación con nueva fecha
+    when :rescheduled
+      # TODO: Send rescheduling notification with new date
       Rails.logger.info "Paquete #{package.tracking_code} reprogramado para #{package.reprogramed_to}"
 
-    when :devolucion
-      # TODO: Iniciar proceso de devolución, notificar al remitente
+    when :return
+      # TODO: Start return process, notify sender
       Rails.logger.info "Paquete #{package.tracking_code} marcado para devolución"
+    end
+  end
+
+  # Traduce el estado del paquete a español
+  # Reutiliza la misma lógica que el helper PackagesHelper#status_text
+  def translate_status(status)
+    status_sym = status.is_a?(String) ? status.to_sym : status
+
+    case status_sym
+    when :pending_pickup
+      "Pendiente Retiro"
+    when :in_warehouse
+      "Bodega"
+    when :in_transit
+      "En Camino"
+    when :rescheduled
+      "Reprogramado"
+    when :delivered
+      "Entregado"
+    when :picked_up
+      "Retirado"
+    when :return
+      "Devolución"
+    when :cancelled
+      "Cancelado"
+    else
+      status.to_s.humanize
     end
   end
 end

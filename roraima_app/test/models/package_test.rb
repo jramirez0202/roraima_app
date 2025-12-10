@@ -286,18 +286,19 @@ class PackageTest < ActiveSupport::TestCase
   # ====================
   # Status Enum
   # ====================
-  test "should default to active status" do
+  test "should default to pending_pickup status" do
     package = create(:package)
-    assert package.active?
-    assert_not package.cancelado?
+    assert_equal "pending_pickup", package.status
+    assert package.active? # active? means NOT terminal
+    assert_not package.cancelled?
   end
 
   test "should allow cancelling package" do
     package = create(:package)
-    user = create(:user)
+    user = create(:user, :customer)
     package.cancel!(user: user)
 
-    assert package.cancelado?
+    assert package.cancelled?
     assert_not package.active?
     assert_not_nil package.cancelled_at
   end
@@ -404,16 +405,19 @@ class PackageTest < ActiveSupport::TestCase
     assert_instance_of User, package.user
   end
 
-  test "user should be optional" do
+  test "user is required" do
     package = build(:package, user: nil)
-    assert package.valid?, "Package should be valid without user"
+    assert_not package.valid?, "Package should NOT be valid without user"
+    assert_includes package.errors[:user], "must exist"
   end
 
   # ====================
   # Edge Cases
   # ====================
   test "should handle package with all optional fields empty" do
+    # La factory :minimal omite campos opcionales pero user es requerido ahora
     package = build(:package, :minimal)
+    # Nota: :minimal ya no setea user a nil, usa el customer de la factory base
     assert package.valid?, "Package should be valid with only required fields"
   end
 
@@ -435,5 +439,117 @@ class PackageTest < ActiveSupport::TestCase
     # Pero si intenta cambiar a formato inválido, debe fallar
     package.phone = "+56 9 1234 5678"
     assert_not package.valid?, "Updating to invalid phone format should fail"
+  end
+
+  # ====================
+  # Filtering Scopes
+  # ====================
+  test "search_by_tracking filters by partial tracking code" do
+    package1 = create(:package)
+    package2 = create(:package)
+
+    # Extract unique part of tracking code
+    unique_part = package1.tracking_code.split('-').last[0..5]
+
+    results = Package.search_by_tracking(unique_part)
+    assert_includes results, package1
+    assert_not_includes results, package2
+  end
+
+  test "search_by_tracking is case insensitive" do
+    package = create(:package)
+    tracking = package.tracking_code
+
+    # Search with lowercase
+    results_lower = Package.search_by_tracking(tracking.downcase)
+    assert_includes results_lower, package
+
+    # Search with uppercase
+    results_upper = Package.search_by_tracking(tracking.upcase)
+    assert_includes results_upper, package
+  end
+
+  test "search_by_tracking returns empty when query blank" do
+    create(:package)
+    results = Package.search_by_tracking("")
+    assert_equal Package.count, results.count
+  end
+
+  test "by_communes filters by multiple commune IDs" do
+    commune1 = create(:commune)
+    commune2 = create(:commune)
+    commune3 = create(:commune)
+
+    package1 = create(:package, commune: commune1)
+    package2 = create(:package, commune: commune2)
+    package3 = create(:package, commune: commune3)
+
+    results = Package.by_communes([commune1.id, commune2.id])
+    assert_includes results, package1
+    assert_includes results, package2
+    assert_not_includes results, package3
+  end
+
+  test "by_communes returns all when array is empty" do
+    create(:package)
+    results = Package.by_communes([])
+    assert_equal Package.count, results.count
+  end
+
+  test "by_couriers filters by multiple courier IDs" do
+    driver1 = create(:driver)
+    driver2 = create(:driver)
+    driver3 = create(:driver)
+
+    package1 = create(:package, assigned_courier: driver1)
+    package2 = create(:package, assigned_courier: driver2)
+    package3 = create(:package, assigned_courier: driver3)
+
+    results = Package.by_couriers([driver1.id, driver2.id])
+    assert_includes results, package1
+    assert_includes results, package2
+    assert_not_includes results, package3
+  end
+
+  test "loading_date_between filters by date range" do
+    package1 = create(:package, loading_date: Date.today)
+    package2 = create(:package, loading_date: Date.today + 5.days)
+    package3 = create(:package, loading_date: Date.today + 10.days)
+
+    results = Package.loading_date_between(Date.today, Date.today + 6.days)
+    assert_includes results, package1
+    assert_includes results, package2
+    assert_not_includes results, package3
+  end
+
+  test "loading_date_between with only start_date" do
+    package1 = create(:package, loading_date: Date.today)
+    package2 = create(:package, loading_date: Date.today + 5.days)
+
+    results = Package.loading_date_between(Date.today + 2.days, nil)
+    assert_not_includes results, package1
+    assert_includes results, package2
+  end
+
+  test "loading_date_between with only end_date" do
+    package1 = create(:package, loading_date: Date.today)
+    package2 = create(:package, loading_date: Date.today + 10.days)
+
+    results = Package.loading_date_between(nil, Date.today + 5.days)
+    assert_includes results, package1
+    assert_not_includes results, package2
+  end
+
+  test "created_between filters by creation date range" do
+    package1 = create(:package)
+    package2 = create(:package)
+
+    # Simulate different creation times
+    package1.update_column(:created_at, 2.days.ago)
+    package2.update_column(:created_at, Time.current)
+
+    results = Package.created_between(1.day.ago.to_date, Date.today)
+    assert_not_includes results, package1
+    assert_includes results, package2
   end
 end

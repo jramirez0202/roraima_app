@@ -18,14 +18,27 @@
     <!-- Rol -->
     <div>
       <%= form.label :role, "Tipo de Usuario *", class: "block text-sm font-medium text-gray-700" %>
-      <%= form.select :role,
-          options_for_select([
-            ['Administrador', 'admin'],
-            ['Cliente', 'customer'],
-            ['Conductor', 'driver']
-          ], form.object.role),
-          { prompt: "Seleccione un tipo..." },
-          { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" } %>
+      <% if form.object.persisted? && form.object.is_a?(Driver) %>
+        <!-- Si es un Driver existente, mostrar como readonly y redirigir a drivers -->
+        <div class="mt-1 block w-full rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2">
+          <p class="text-sm text-yellow-800">
+            ⚠️ Este usuario es un <strong>Conductor</strong>.
+            <%= link_to "Editar desde Gestión de Conductores", edit_admin_driver_path(form.object), class: "text-yellow-900 underline font-medium" %>
+          </p>
+        </div>
+        <%= form.hidden_field :role, value: 'driver' %>
+      <% else %>
+        <%= form.select :role,
+            options_for_select([
+              ['Administrador', 'admin'],
+              ['Cliente', 'customer']
+            ], form.object.role),
+            { prompt: "Seleccione un tipo..." },
+            { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" } %>
+        <p class="mt-1 text-xs text-gray-500">
+          Para crear conductores, use <%= link_to "Gestión de Conductores", new_admin_driver_path, class: "text-indigo-600 hover:text-indigo-500 font-medium" %>
+        </p>
+      <% end %>
     </div>
 
     <!-- Email -->

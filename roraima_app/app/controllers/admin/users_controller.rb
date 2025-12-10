@@ -32,6 +32,12 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def create
+    # Prevenir creación de drivers desde este controlador
+    if params[:user][:role] == 'driver'
+      redirect_to new_admin_driver_path, alert: 'Los conductores deben crearse desde Gestión de Conductores'
+      return
+    end
+
     @user = User.new(user_params_for_role)
     @user.password = params[:user][:password] if params[:user][:password].present?
 
@@ -69,6 +75,12 @@ class Admin::UsersController < Admin::BaseController
 
   def set_user
     @user = User.find(params[:id])
+
+    # Si es un Driver, redirigir a DriversController
+    if @user.is_a?(Driver) && action_name != 'show'
+      redirect_to edit_admin_driver_path(@user),
+                  alert: 'Los conductores deben editarse desde Gestión de Conductores'
+    end
   end
 
   def authorize_user
@@ -97,7 +109,8 @@ class Admin::UsersController < Admin::BaseController
     when :driver
       params.require(:user).permit(
         :email, :password, :password_confirmation, :role, :active,
-        :rut, :phone
+        :rut, :phone,
+        :vehicle_plate, :vehicle_model, :vehicle_capacity, :assigned_zone_id
       )
     else
       params.require(:user).permit(:email, :password, :password_confirmation, :role)

@@ -1,15 +1,24 @@
 module Customers
   class PackagesController < ApplicationController
+    include FilterablePackages
+
     before_action :set_package, only: [:show, :edit, :update, :destroy]
     before_action :authorize_package, only: [:show, :edit, :update, :destroy]
 
     def index
-      packages = policy_scope(Package).includes(:region, :commune)
+      packages = policy_scope(Package).includes(:region, :commune, :assigned_courier)
 
-      # Filtrar por estado si se especifica
-      if params[:status].present? && Package.statuses.key?(params[:status])
-        packages = packages.where(status: params[:status])
-      end
+      # Cargar drivers activos para el dropdown de asignación
+      @drivers = Driver.active.includes(:assigned_zone).order(:email)
+
+      # Aplicar filtros (tracking code y rango de fechas)
+      packages = apply_package_filters(packages)
+
+      # Datos para filtros
+      @active_filters = active_filters
+      @active_filters_count = active_filters_count
+      @filtered_count = packages.count
+      @total_count = policy_scope(Package).count
 
       @pagy, @packages = pagy(packages.recent, items: 10)
       authorize Package
@@ -21,7 +30,8 @@ module Customers
     def new
       @package = current_user.packages.build
       @package.region_id = metropolitan_region.id
-      @package.company = current_user.email
+      @package.sender_email = current_user.email
+      @package.company_name = current_user.company
       authorize @package
       @communes = metropolitan_region.communes.order(:name)
     end
@@ -29,7 +39,8 @@ module Customers
     def create
       @package = current_user.packages.build(package_params)
       @package.region_id = metropolitan_region.id
-      @package.company = current_user.email
+      @package.sender_email = current_user.email
+      @package.company_name = current_user.company
       authorize @package
 
       if @package.save
@@ -47,7 +58,8 @@ module Customers
     def update
       @package.assign_attributes(package_params)
       @package.region_id = metropolitan_region.id
-      @package.company = current_user.email
+      @package.sender_email = current_user.email
+      @package.company_name = current_user.company
 
       if @package.save
         redirect_to customers_package_path(@package), notice: 'Paquete actualizado exitosamente.'
