@@ -96,7 +96,14 @@ class Driver < User
 
   # Business logic: Can driver start route?
   def can_start_route?
-    ready_for_route? &&
+    # Only validate authorization if system requires it
+    authorization_check = if Setting.require_driver_authorization?
+                           ready_for_route?
+                         else
+                           true
+                         end
+
+    authorization_check &&
     pending_deliveries.count > 0 &&
     (not_started? || ready?)
   end

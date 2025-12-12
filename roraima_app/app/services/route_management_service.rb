@@ -40,7 +40,7 @@ class RouteManagementService
   end
 
   # Completa ruta
-  def complete_route
+  def complete_route(notes: nil)
     return false unless validate_complete_route
 
     begin
@@ -59,10 +59,11 @@ class RouteManagementService
           current_route.update!(
             ended_at: Time.current,
             status: :completed,
-            packages_delivered: packages_count
+            packages_delivered: packages_count,
+            notes: notes
           )
 
-          log_route_event("Route completed - Route ID: #{current_route.id}, Packages: #{packages_count}")
+          log_route_event("Route completed - Route ID: #{current_route.id}, Packages: #{packages_count}, Notes: #{notes.present? ? 'Yes' : 'No'}")
         else
           Rails.logger.warn "No active route found for driver #{driver.id} on complete_route"
           log_route_event("Route completed")

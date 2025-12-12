@@ -30,7 +30,7 @@
 
   <%# Collapsible Panel %>
   <div data-filters-panel-target="panel" class="hidden border-t border-gray-200">
-    <%= form_with url: local_assigns[:form_url] || request.path, method: :get, class: "px-6 py-4" do |f| %>
+    <%= form_with url: local_assigns[:form_url] || request.path, method: :get, data:{ turbo: false}, class: "px-6 py-4" do |f| %>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <%# Filtro por Estado %>
         <div>
@@ -77,7 +77,6 @@
                                } %>
           </div>
           <p class="mt-1 text-xs text-gray-500">
-            <span class="font-medium text-indigo-600">Por defecto: Últimos 3 días (<%= (Date.current - 2.days).strftime('%d/%m') %> - <%= Date.current.strftime('%d/%m/%Y') %>)</span>
             <br>Especifica rango para cambiar
           </p>
         </div>

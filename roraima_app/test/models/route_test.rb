@@ -154,4 +154,35 @@ class RouteTest < ActiveSupport::TestCase
     assert_equal "En Curso", active.status_i18n
     assert_equal "Completada", completed.status_i18n
   end
+
+  # Notes field
+  test "should accept optional notes" do
+    route = create(:route)
+    route.notes = "Terminé temprano, todos los paquetes entregados"
+    assert route.save
+    assert_equal "Terminé temprano, todos los paquetes entregados", route.notes
+  end
+
+  test "should allow nil notes" do
+    route = create(:route, notes: nil)
+    assert route.valid?
+    assert_nil route.notes
+  end
+
+  test "notes_truncated returns full text if under limit" do
+    route = build(:route, notes: "Texto corto")
+    assert_equal "Texto corto", route.notes_truncated
+  end
+
+  test "notes_truncated truncates long text" do
+    route = build(:route, notes: "A" * 100)
+    truncated = route.notes_truncated(50)
+    assert_equal 53, truncated.length # 50 chars + "..."
+    assert truncated.end_with?("...")
+  end
+
+  test "notes_truncated returns nil if no notes" do
+    route = build(:route, notes: nil)
+    assert_nil route.notes_truncated
+  end
 end

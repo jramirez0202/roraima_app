@@ -24,7 +24,7 @@
 
   <%# Collapsible Panel %>
   <div data-filters-panel-target="panel" class="hidden border-t border-gray-200">
-    <%= form_with url: admin_packages_path, method: :get, class: "px-6 py-4" do |f| %>
+    <%= form_with url: admin_packages_path, method: :get, data: { turbo: false }, class: "px-6 py-4" do |f| %>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <%# Filtro por Estado %>
         <div>

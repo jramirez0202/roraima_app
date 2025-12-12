@@ -216,4 +216,46 @@ class RouteManagementServiceTest < ActiveSupport::TestCase
     route.reload
     assert_equal 2, route.packages_delivered
   end
+
+  # complete_route with notes tests
+  test "complete_route saves notes when provided" do
+    driver = create(:driver, route_status: :on_route, route_started_at: 2.hours.ago)
+    route = create(:route, driver: driver, status: :active, started_at: 2.hours.ago)
+
+    notes = "No pude entregar 2 paquetes por dirección incorrecta"
+    service = RouteManagementService.new(driver)
+
+    assert service.complete_route(notes: notes)
+
+    driver.reload
+    assert driver.completed?
+
+    route.reload
+    assert_equal notes, route.notes
+  end
+
+  test "complete_route works without notes" do
+    driver = create(:driver, route_status: :on_route, route_started_at: 2.hours.ago)
+    route = create(:route, driver: driver, status: :active, started_at: 2.hours.ago)
+
+    service = RouteManagementService.new(driver)
+
+    assert service.complete_route
+
+    route.reload
+    assert_nil route.notes
+  end
+
+  test "complete_route saves empty string notes" do
+    driver = create(:driver, route_status: :on_route, route_started_at: 2.hours.ago)
+    route = create(:route, driver: driver, status: :active, started_at: 2.hours.ago)
+
+    service = RouteManagementService.new(driver)
+
+    assert service.complete_route(notes: "")
+
+    route.reload
+    # Service saves what it receives; controller handles presence conversion
+    assert_equal "", route.notes
+  end
 end

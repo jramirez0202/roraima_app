@@ -67,6 +67,7 @@ Rails.application.routes.draw do
 
     # Route management
     post 'start_route', to: 'dashboard#start_route', as: :start_route
+    post 'complete_route', to: 'dashboard#complete_route', as: :complete_route
 
     root 'dashboard#index'
 

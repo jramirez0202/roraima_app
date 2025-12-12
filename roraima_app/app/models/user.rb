@@ -70,7 +70,15 @@ class User < ApplicationRecord
 
   # Retorna el nombre completo del usuario
   def full_name
-    company.present? ? company : rut
+    # Para drivers, retornar el campo name
+    return name if is_a?(Driver) && name.present?
+
+    # Para customers, preferir company, luego name, luego rut
+    return company if company.present?
+    return name if name.present?
+
+    # Fallback a RUT
+    rut
   end
 
   # Retorna el nombre del rol en español

@@ -14,16 +14,16 @@ module Drivers
       date_from = parse_date(filter_params[:date_from])
       date_to = parse_date(filter_params[:date_to])
 
-      # Lógica de fechas por defecto (últimos 3 días si no se especifica)
+      # Lógica de fechas por defecto (solo día actual si no se especifica)
       searching_by_tracking = filter_params[:tracking_query].present?
 
       if date_from.present? || date_to.present?
         # Usuario especificó fechas explícitamente
         date_to ||= Date.current if date_from.present?
-        date_from ||= Date.current - 2.days if date_to.present?
+        date_from ||= Date.current if date_to.present?
       elsif !searching_by_tracking
         # Solo aplicar filtro por defecto si NO está buscando por tracking
-        date_from = Date.current - 2.days
+        date_from = Date.current
         date_to = Date.current
       end
       # Si está buscando por tracking y no hay fechas explícitas, NO filtrar por fecha

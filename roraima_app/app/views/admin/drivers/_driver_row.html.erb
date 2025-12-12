@@ -90,9 +90,25 @@
         when :completed then "✓"
         else "—"
       end %>
+
+      <!-- Badge principal con timestamp si completado -->
       <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold <%= badge_class %>">
-        <%= icon %> <%= driver.route_status.humanize %>
+        <%= icon %>
+        <%= driver.route_status.humanize %>
+        <% if driver.completed? && driver.route_ended_at %>
+          <span class="ml-1 text-xs opacity-75">
+            <%= driver.route_ended_at.strftime("%H:%M") %>
+          </span>
+        <% end %>
       </span>
+
+      <!-- Indicador de comentario si existe -->
+      <% if driver.completed? && driver.current_route&.notes.present? %>
+        <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-purple-50 text-purple-700"
+              title="<%= driver.current_route.notes %>">
+          💬 Con nota
+        </span>
+      <% end %>
 
       <% if driver.ready_for_route? %>
         <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-green-50 text-green-700">

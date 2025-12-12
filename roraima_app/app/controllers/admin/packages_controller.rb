@@ -7,7 +7,9 @@ class Admin::PackagesController < Admin::BaseController
   before_action :load_couriers, only: [:index, :show, :assign_courier]
 
   def index
-    packages = policy_scope(Package).includes(:user, :region, :commune, :assigned_courier)
+    # packages = policy_scope(Package).includes(:user, :region, :commune, :assigned_courier)
+
+    packages = policy_scope(Package).includes(:region, :commune, assigned_courier: :assigned_zone,user: { company_logo_attachment: :blob })
 
     # Cargar drivers activos para el dropdown de asignación individual
     @drivers = Driver.active.includes(:assigned_zone).order(:email)
@@ -286,7 +288,7 @@ end
 
   def set_package
     # Optimización: Usar includes para evitar N+1 queries en las vistas
-    @package = Package.includes(:region, :commune, :user).find(params[:id])
+    @package = Package.includes(:region,:commune,assigned_courier: :assigned_zone,user: { company_logo_attachment: :blob }).find(params[:id])
   end
 
   def authorize_package

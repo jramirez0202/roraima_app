@@ -7,14 +7,14 @@ import { application } from "./application"
 import AutoDismissController from "./auto_dismiss_controller"
 application.register("auto-dismiss", AutoDismissController)
 
-import BulkRoutesController from "./bulk_routes_controller"
-application.register("bulk-routes", BulkRoutesController)
+import AutocompleteController from "./autocomplete_controller"
+application.register("autocomplete", AutocompleteController)
 
 import BulkPackagesController from "./bulk_packages_controller"
 application.register("bulk-packages", BulkPackagesController)
 
-import AutocompleteController from "./autocomplete_controller"
-application.register("autocomplete", AutocompleteController)
+import BulkRoutesController from "./bulk_routes_controller"
+application.register("bulk-routes", BulkRoutesController)
 
 import FiltersPanelController from "./filters_panel_controller"
 application.register("filters-panel", FiltersPanelController)
@@ -30,6 +30,9 @@ application.register("phone", PhoneController)
 
 import RegionCommuneController from "./region_commune_controller"
 application.register("region-commune", RegionCommuneController)
+
+import RouteCompleteController from "./route_complete_controller"
+application.register("route-complete", RouteCompleteController)
 
 import UserRoleController from "./user_role_controller"
 application.register("user-role", UserRoleController)

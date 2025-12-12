@@ -55,6 +55,12 @@ class Route < ApplicationRecord
     end
   end
 
+  # Truncate notes for display (max 50 chars)
+  def notes_truncated(limit = 50)
+    return nil unless notes.present?
+    notes.length > limit ? "#{notes[0...limit]}..." : notes
+  end
+
   private
 
   def ended_at_after_started_at
