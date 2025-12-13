@@ -213,10 +213,33 @@ export default class extends Controller {
       return
     }
 
-    const form = document.getElementById('labels-form')
-    if (form) {
-      form.submit()
-    }
+    // Crear un formulario temporal solo con los package_ids seleccionados
+    const tempForm = document.createElement('form')
+    tempForm.method = 'POST'
+    tempForm.action = '/admin/packages/generate_labels'
+    tempForm.target = '_blank' // Abrir PDF en nueva pestaña
+
+    // CSRF token
+    const csrfToken = document.querySelector('[name="csrf-token"]').content
+    const csrfInput = document.createElement('input')
+    csrfInput.type = 'hidden'
+    csrfInput.name = 'authenticity_token'
+    csrfInput.value = csrfToken
+    tempForm.appendChild(csrfInput)
+
+    // Agregar solo los package_ids seleccionados
+    selectedIds.forEach(id => {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = 'package_ids[]'
+      input.value = id
+      tempForm.appendChild(input)
+    })
+
+    // Submit el formulario temporal
+    document.body.appendChild(tempForm)
+    tempForm.submit()
+    document.body.removeChild(tempForm)
   }
 
   async assignDriver(event) {

@@ -7,8 +7,9 @@ Rails.application.routes.draw do
   end
 
   # Devise routes - Disabled registrations and password recovery for security
-  # Only admins can create users through /admin/users
-  devise_for :users, skip: [:registrations, :passwords]
+  devise_for :users, skip: [:registrations, :passwords], controllers: {
+    sessions: 'users/sessions'
+  }
 
   # Admin namespace
   namespace :admin do
@@ -21,11 +22,13 @@ Rails.application.routes.draw do
         post :bulk_start_routes
       end
     end
+
     resources :zones do
       collection do
         get 'communes_by_region/:region_id', to: 'zones#communes_by_region', as: 'communes_by_region'
       end
     end
+
     resources :packages do
       collection do
         post :generate_labels
@@ -37,8 +40,24 @@ Rails.application.routes.draw do
         get :status_history
       end
     end
+
     resources :bulk_uploads, only: [:new, :create, :show]
     resource :settings, only: [:show, :update]
+
+    #
+    # ✅ RUTAS SCANNER CORREGIDAS
+    #    Ya NO usamos `namespace :scanner` porque buscaba Admin::Scanner (inexistente)
+    #    Ahora apuntan directamente al controlador real: Admin::ScannersController
+    #
+    get  'scanner/warehouse',      to: 'scanners#warehouse_scanner'
+    post 'scanner/process',        to: 'scanners#process_scan'
+    get  'scanner/session_stats',  to: 'scanners#session_stats'
+    post 'scanner/reset_session',  to: 'scanners#reset_session'
+
+    # Ruta corta
+    get 'scanner', to: 'scanners#warehouse_scanner'
+
+    # Root admin
     root 'packages#index'
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
   end
@@ -65,19 +84,17 @@ Rails.application.routes.draw do
 
     resource :profile, only: [:show, :edit, :update]
 
-    # Route management
     post 'start_route', to: 'dashboard#start_route', as: :start_route
     post 'complete_route', to: 'dashboard#complete_route', as: :complete_route
 
     root 'dashboard#index'
-
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
   end
 
-  # Dashboard principal de customers (fuera del namespace)
+  # Customers dashboard root
   get 'customers', to: 'customers#index', as: :customers_dashboard
 
-  # Redirect root según rol del usuario
+  # Redirect root según rol
   authenticated :user do
     root to: redirect { |params, request|
       user = request.env['warden'].user
@@ -91,9 +108,9 @@ Rails.application.routes.draw do
     }, as: :authenticated_root
   end
 
-  # Root por defecto (usuarios no autenticados van al login)
+  # Not logged root
   root to: redirect('/users/sign_in')
-  #Eso le devuelve un No Content (204) y Chrome queda feliz, y no aparece como error.
-  get "/.well-known/appspecific/com.chrome.devtools.json", to: proc { [204, {}, []] }
 
+  # Chrome devtools fix
+  get "/.well-known/appspecific/com.chrome.devtools.json", to: proc { [204, {}, []] }
 end

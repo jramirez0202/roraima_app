@@ -12,36 +12,10 @@
   </head>
 
   <body class="bg-gray-50">
-    <nav class="bg-blue-900 shadow-lg" style="background-color: #1e3a8a !important;">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex">
-            <div class="flex-shrink-0 flex items-center">
-              <%= link_to drivers_root_path, class: "text-xl font-bold text-white hover:text-blue-200", style: "color: white !important;" do %>
-                🚚 Roraima Conductor
-              <% end %>
-            </div>
-            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <%= link_to "Dashboard", drivers_root_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-white border-b-2 #{current_page?(drivers_root_path) ? 'border-white' : 'border-transparent hover:border-blue-300'}", style: "color: white !important;" %>
-              <%= link_to "Mis Paquetes", drivers_packages_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-white border-b-2 #{request.path.start_with?('/drivers/packages') ? 'border-white' : 'border-transparent hover:border-blue-300'}", style: "color: white !important;" %>
-              <%= link_to "Mi Perfil", drivers_profile_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium text-white border-b-2 #{current_page?(drivers_profile_path) ? 'border-white' : 'border-transparent hover:border-blue-300'}", style: "color: white !important;" %>
-            </div>
-          </div>
-          <div class="flex items-center gap-4">
-            <!-- Driver Name -->
-            <span class="text-sm text-white mr-4" style="color: white !important;">
-              <%= current_driver.name %>
-              <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-blue-700 text-blue-100">
-                Conductor
-              </span>
-            </span>
-            <%= button_to "Cerrar sesión", destroy_user_session_path, method: :delete, class: "text-sm text-blue-200 hover:text-white font-medium", style: "color: #bfdbfe !important;" %>
-          </div>
-        </div>
-      </div>
-    </nav>
+    <%= render "shared/sidebar" %>
+    <%= render "shared/mobile_bottom_nav" %>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <main class="max-w-7xl mx-auto pt-6 pb-24 md:py-6 px-4 sm:px-6 lg:px-8">
       <!-- Flash Messages Container -->
       <div id="flash-container">
         <%= render partial: "shared/flash", locals: { notice: notice, alert: alert } %>

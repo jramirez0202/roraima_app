@@ -5,7 +5,11 @@ module Drivers
     def index
       @pending_packages = current_driver.pending_deliveries
                                         .includes(:region, :commune)
-                                        .order(loading_date: :asc)
+                                        .order(
+                                          Arel.sql("CASE WHEN status = #{Package.statuses[:rescheduled]} THEN 0 ELSE 1 END"),
+                                          Arel.sql("CASE WHEN status = #{Package.statuses[:rescheduled]} THEN assigned_at ELSE NULL END ASC"),
+                                          assigned_at: :desc
+                                        )
 
       @today_deliveries = current_driver.today_deliveries
                                         .includes(:region, :commune)
@@ -13,7 +17,8 @@ module Drivers
       @stats = {
         pending: current_driver.pending_deliveries.count,
         today: @today_deliveries.count,
-        total_assigned: current_driver.visible_packages.where(assigned_at: Date.current.all_day).count
+        total_assigned: current_driver.visible_packages.where(assigned_at: Date.current.all_day).count,
+        rescheduled: current_driver.persistent_rescheduled_count
       }
     end
 

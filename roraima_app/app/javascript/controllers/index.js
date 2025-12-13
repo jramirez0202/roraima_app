@@ -22,6 +22,9 @@ application.register("filters-panel", FiltersPanelController)
 import HelloController from "./hello_controller"
 application.register("hello", HelloController)
 
+import NavbarController from "./navbar_controller"
+application.register("navbar", NavbarController)
+
 import PackageStatusController from "./package_status_controller"
 application.register("package-status", PackageStatusController)
 
@@ -33,6 +36,12 @@ application.register("region-commune", RegionCommuneController)
 
 import RouteCompleteController from "./route_complete_controller"
 application.register("route-complete", RouteCompleteController)
+
+import ScannerController from "./scanner_controller"
+application.register("scanner", ScannerController)
+
+import SidebarController from "./sidebar_controller"
+application.register("sidebar", SidebarController)
 
 import UserRoleController from "./user_role_controller"
 application.register("user-role", UserRoleController)

@@ -38,6 +38,10 @@ export default class extends Controller {
 
   updateButtonState() {
     const button = document.getElementById('bulk-start-btn')
+
+    // Si el botón no existe en esta página, no hacer nada
+    if (!button) return
+
     const selectedCount = this.checkboxTargets.filter(cb => cb.checked).length
 
     if (selectedCount > 0) {

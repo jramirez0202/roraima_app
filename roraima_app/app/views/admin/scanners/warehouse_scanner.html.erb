@@ -1,0 +1,132 @@
+<%# Vista principal del escáner QR para bodega %>
+<%# Optimizada para Zebra TC15 y dispositivos móviles similares %>
+
+<div class="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-0" data-controller="scanner">
+  <%# Header con título y contador de sesión %>
+  <div class="sm:flex sm:items-center sm:justify-between mb-6 mt-2 sm:mt-0">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Escáner de Bodega</h1>
+      <p class="mt-1 text-sm text-gray-500">
+        Escanea paquetes para ingresarlos a bodega
+      </p>
+    </div>
+
+    <%# Estadísticas de sesión %>
+    <div class="mt-4 sm:mt-0">
+      <div class="flex items-center space-x-4">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-indigo-600" data-scanner-target="sessionCount">
+            <%= session[:scan_count] || 0 %>
+          </div>
+          <div class="text-xs text-gray-500">Escaneados</div>
+        </div>
+        <button type="button"
+                data-action="click->scanner#resetSession"
+                class="text-sm text-gray-600 hover:text-gray-900 underline">
+          Reiniciar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# Sección principal del escáner %>
+  <div class="bg-white shadow sm:rounded-lg mb-6">
+    <div class="px-4 py-6 sm:p-8">
+      <div class="max-w-2xl mx-auto">
+        <%# Indicador de estado %>
+        <div class="mb-4 flex items-center justify-center">
+          <div class="h-3 w-3 bg-green-500 rounded-full animate-pulse"
+               data-scanner-target="statusIndicator"></div>
+          <span class="ml-2 text-sm text-gray-600" data-scanner-target="statusText">
+            Listo para escanear
+          </span>
+        </div>
+
+        <%# Input principal para el escáner %>
+        <div class="relative">
+          <label for="scanner-input" class="sr-only">Código de seguimiento</label>
+          <input type="text"
+                 id="scanner-input"
+                 data-scanner-target="input"
+                 data-action="keydown.enter->scanner#processScan"
+                 autocomplete="off"
+                 autofocus
+                 placeholder="PKG-XXXXXXXXXXXXXX"
+                 class="block w-full text-center text-2xl font-mono rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200 transition-all py-4 px-6">
+
+          <%# Loading spinner (oculto por defecto) %>
+          <div class="hidden absolute right-4 top-1/2 -translate-y-1/2"
+               data-scanner-target="spinner">
+            <svg class="animate-spin h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <%# Contenedor del lector de cámara (oculto por defecto) %>
+        <div class="hidden mt-6" data-scanner-target="cameraContainer">
+          <div class="bg-gray-900 rounded-lg overflow-hidden">
+            <div id="qr-reader" class="w-full" style="border: none;"></div>
+          </div>
+          <p class="mt-2 text-center text-sm text-gray-600">
+            Apunta la cámara al código QR de la etiqueta
+          </p>
+        </div>
+
+        <%# Botón para entrada manual y activar cámara %>
+        <div class="mt-4 flex justify-center gap-4">
+          <button type="button"
+                  data-action="click->scanner#manualProcess"
+                  class="text-sm text-indigo-600 hover:text-indigo-800">
+            Procesar manualmente
+          </button>
+
+          <button type="button"
+                  data-scanner-target="cameraBtn"
+                  data-action="click->scanner#toggleCamera"
+                  class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span data-scanner-target="cameraBtnText">Activar Cámara QR</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# Área de feedback/mensajes (oculta por defecto) %>
+  <div class="hidden mb-6" data-scanner-target="feedback">
+    <div class="rounded-lg p-4" data-scanner-target="feedbackContent">
+      <%# Contenido dinámico inyectado por Stimulus %>
+    </div>
+  </div>
+
+  <%# Lista de escaneos recientes %>
+  <div class="bg-white shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">
+        Escaneos Recientes
+        <span class="text-sm font-normal text-gray-500">(últimos 20)</span>
+      </h3>
+
+      <div class="space-y-2" data-scanner-target="recentList">
+        <%# Estado vacío por defecto %>
+        <div class="text-center py-8 text-gray-400">
+          <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p>No hay escaneos en esta sesión</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# CSRF Token para AJAX requests %>
+  <meta name="csrf-token" content="<%= form_authenticity_token %>">
+
+  <%# Script de html5-qrcode desde CDN %>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</div>

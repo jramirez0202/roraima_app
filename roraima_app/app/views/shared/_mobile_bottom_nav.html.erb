@@ -1,0 +1,122 @@
+<%
+  # Determinar colores según el rol
+  if current_user.is_a?(Driver)
+    bg_color = "bg-blue-900"
+    text_color = "text-white"
+    inactive_color = "text-blue-300"
+    active_color = "text-white"
+    border_color = "border-blue-800"
+  elsif current_user.admin?
+    bg_color = "bg-white"
+    text_color = "text-gray-900"
+    inactive_color = "text-gray-500"
+    active_color = "text-indigo-600"
+    border_color = "border-gray-200"
+  else
+    bg_color = "bg-white"
+    text_color = "text-gray-900"
+    inactive_color = "text-gray-500"
+    active_color = "text-indigo-600"
+    border_color = "border-gray-200"
+  end
+%>
+
+<!-- Bottom Navigation - Solo visible en móvil (< md) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 <%= bg_color %> border-t <%= border_color %> shadow-lg">
+  <div class="flex justify-around items-center h-16">
+
+    <% if current_user.admin? %>
+      <!-- Admin: Paquetes -->
+      <%= link_to admin_packages_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(admin_packages_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Paquetes</span>
+      <% end %>
+
+      <!-- Admin: Escáner -->
+      <%= link_to admin_scanner_warehouse_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(admin_scanner_warehouse_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Escáner</span>
+      <% end %>
+
+      <!-- Admin: Usuarios -->
+      <%= link_to admin_users_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(admin_users_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Usuarios</span>
+      <% end %>
+
+      <!-- Admin: Conductores -->
+      <%= link_to admin_drivers_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(admin_drivers_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Drivers</span>
+      <% end %>
+
+      <!-- Admin: Configuración -->
+      <%= link_to admin_settings_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(admin_settings_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Config</span>
+      <% end %>
+
+    <% elsif current_user.is_a?(Driver) %>
+      <!-- Driver: Dashboard -->
+      <%= link_to drivers_root_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(drivers_root_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Dashboard</span>
+      <% end %>
+
+      <!-- Driver: Mis Paquetes -->
+      <%= link_to drivers_packages_path, class: "flex flex-col items-center justify-center flex-1 h-full #{request.path.start_with?('/drivers/packages') ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Paquetes</span>
+      <% end %>
+
+      <!-- Driver: Mi Perfil -->
+      <%= link_to drivers_profile_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(drivers_profile_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Perfil</span>
+      <% end %>
+
+    <% else %>
+      <!-- Customer: Dashboard -->
+      <%= link_to customers_dashboard_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(customers_dashboard_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Dashboard</span>
+      <% end %>
+
+      <!-- Customer: Mis Paquetes -->
+      <%= link_to customers_packages_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(customers_packages_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Paquetes</span>
+      <% end %>
+
+      <!-- Customer: Mi Perfil -->
+      <%= link_to customers_profile_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(customers_profile_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+        </svg>
+        <span class="text-xs mt-0.5 font-medium">Perfil</span>
+      <% end %>
+    <% end %>
+
+  </div>
+</nav>

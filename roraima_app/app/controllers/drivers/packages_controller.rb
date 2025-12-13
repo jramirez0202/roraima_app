@@ -30,7 +30,11 @@ module Drivers
 
       @packages = policy_scope(Package)
                     .includes(:region, :commune)
-                    .recent_assignments_first
+                    .order(
+                      Arel.sql("CASE WHEN status = #{Package.statuses[:rescheduled]} THEN 0 ELSE 1 END"),
+                      Arel.sql("CASE WHEN status = #{Package.statuses[:rescheduled]} THEN assigned_at ELSE NULL END ASC"),
+                      assigned_at: :desc
+                    )
 
       # Aplicar filtro por rango de fechas de asignación (si aplica)
       if date_from.present? && date_to.present?

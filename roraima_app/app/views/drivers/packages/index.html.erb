@@ -121,7 +121,7 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <% @packages.each do |package| %>
-              <tr class="hover:bg-gray-50">
+              <tr class="hover:bg-gray-50 <%= 'bg-orange-50' if package.rescheduled? %>">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">
                     <%= package.tracking_code %>
@@ -149,8 +149,16 @@
                     <% end %>
                   </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <%= package.assigned_at&.strftime('%d/%m/%Y %H:%M') || '-' %>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-500">
+                    <%= package.assigned_at&.strftime('%d/%m/%Y %H:%M') || '-' %>
+                  </div>
+                  <% if package.rescheduled? %>
+                    <% days_ago = (Date.current - package.assigned_at.to_date).to_i %>
+                    <div class="text-xs text-orange-600 font-semibold mt-1">
+                      📅 Hace <%= days_ago %> <%= days_ago == 1 ? 'día' : 'días' %>
+                    </div>
+                  <% end %>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <%= link_to "Ver", drivers_package_path(package), class: "text-blue-600 hover:text-blue-900" %>

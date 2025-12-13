@@ -76,4 +76,9 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # config.hosts << "192.168.1.4"   # tu IP local
+  # config.hosts << /.*\.local/     # opcional para otros dispositivos
+  config.hosts << "7f68e236f8b3.ngrok-free.app"  # ngrok HTTPS tunnel
+
 end

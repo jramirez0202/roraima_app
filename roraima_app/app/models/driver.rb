@@ -43,12 +43,26 @@ class Driver < User
     visible_packages.where(status: [:in_transit, :rescheduled])
   end
 
+  # Reprogramados persistentes (históricos) - NO filtra por fecha de asignación
+  def persistent_rescheduled
+    visible_packages.where(status: :rescheduled)
+  end
+
+  def persistent_rescheduled_count
+    persistent_rescheduled.count
+  end
+
   # Status counters for assigned packages by date
   def pending_count(date = Date.current)
-    visible_packages
-      .where(assigned_at: date.all_day)
-      .where(status: [:in_warehouse, :in_transit])
-      .count
+    # Incluye: nuevos del día + reprogramados históricos
+    new_today = visible_packages
+                  .where(assigned_at: date.all_day)
+                  .where(status: [:in_warehouse, :in_transit])
+                  .count
+
+    historic_rescheduled = persistent_rescheduled_count
+
+    new_today + historic_rescheduled
   end
 
   def delivered_count(date = Date.current)
@@ -59,6 +73,8 @@ class Driver < User
   end
 
   def rescheduled_count(date = Date.current)
+    # DEPRECATED: Usa persistent_rescheduled_count en su lugar
+    # Mantenido por compatibilidad
     visible_packages
       .where(assigned_at: date.all_day)
       .where(status: :rescheduled)
@@ -77,7 +93,7 @@ class Driver < User
     {
       pending: pending_count(date),
       delivered: delivered_count(date),
-      rescheduled: rescheduled_count(date),
+      rescheduled: persistent_rescheduled_count, # Usa contador persistente
       cancelled: cancelled_count(date)
     }
   end
