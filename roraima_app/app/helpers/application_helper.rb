@@ -7,7 +7,7 @@ module ApplicationHelper
 
     if user.admin?
       admin_root_path
-    elsif user.is_a?(Driver)
+    elsif user.driver?
       drivers_root_path
     else
       customers_dashboard_path

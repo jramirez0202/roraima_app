@@ -1,6 +1,6 @@
 <%
   # Determinar colores según el rol
-  if current_user.is_a?(Driver)
+  if current_user.driver?
     bg_color = "bg-blue-900"
     text_color = "text-white"
     hover_color = "hover:bg-blue-800"
@@ -19,14 +19,15 @@
     logout_color = "text-red-600 hover:text-red-800"
     border_color = "border-gray-200"
   else
-    bg_color = "bg-white"
-    text_color = "text-gray-900"
-    hover_color = "hover:bg-gray-100"
+    # Customer - Azul grisáceo (Slate) para transmitir confianza y profesionalismo
+    bg_color = "bg-slate-800"
+    text_color = "text-slate-100"
+    hover_color = "hover:bg-slate-700"
     logo_emoji = "📦"
     logo_text = "Paquetería"
-    badge_color = "bg-blue-100 text-blue-800"
-    logout_color = "text-red-600 hover:text-red-800"
-    border_color = "border-gray-200"
+    badge_color = "bg-slate-700 text-slate-100"
+    logout_color = "text-slate-200 hover:text-white"
+    border_color = "border-slate-700"
   end
 %>
 
@@ -83,7 +84,7 @@
               class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(admin_settings_path)}" %>
           </li>
 
-        <% elsif current_user.is_a?(Driver) %>
+        <% elsif current_user.driver? %>
           <li>
             <%= link_to "Dashboard", drivers_root_path,
               data: { turbo_prefetch: false, action: "click->navbar#close" },
@@ -121,7 +122,7 @@
         <li class="border-t <%= border_color %> md:border-t-0 mt-2 md:mt-0 pt-2 md:pt-0">
           <div class="flex flex-col md:flex-row md:items-center gap-2 py-2 px-3 md:p-0">
             <span class="text-sm <%= text_color %>">
-              <%= current_user.is_a?(Driver) ? current_user.name : current_user.email %>
+              <%= current_user.driver? ? current_user.name : current_user.email %>
               <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full <%= badge_color %>">
                 <%= current_user.role.titleize %>
               </span>

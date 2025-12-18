@@ -54,7 +54,7 @@ class PackageStatusService
     end
 
     # Validar que el courier sea un Driver
-    unless courier.is_a?(Driver)
+    unless courier.driver?
       @errors << "El usuario no es un conductor válido"
       return false
     end
@@ -98,21 +98,6 @@ class PackageStatusService
     change_status(
       :delivered,
       reason: "Entrega exitosa",
-      location: location,
-      proof: proof
-    )
-  end
-
-  # Marca como retirado con prueba
-  def mark_as_retirado(proof: nil, location: nil)
-    unless proof.present?
-      @errors << "Prueba de retiro (documento) es requerida"
-      return false
-    end
-
-    change_status(
-      :picked_up,
-      reason: "Retirado por cliente",
       location: location,
       proof: proof
     )
@@ -176,7 +161,7 @@ class PackageStatusService
         return false
       end
 
-    when :delivered, :picked_up
+    when :delivered
       unless params[:proof].present?
         status_text = translate_status(new_status)
         @errors << "Se requiere prueba (firma/foto/documento) para marcar como #{status_text}"
@@ -203,7 +188,7 @@ class PackageStatusService
       package.reprogramed_to = params[:reprogram_date]
       package.reprogram_motive = params[:motive]
 
-    when :delivered, :picked_up
+    when :delivered
       package.proof = params[:proof] if params[:proof].present?
 
     when :cancelled
@@ -214,13 +199,13 @@ class PackageStatusService
   # Actions executed after a successful transition
   def after_transition_actions(new_status)
     case new_status
-    when :delivered, :picked_up
+    when :delivered
       # TODO: Send delivery notification to customer
       # TODO: Send notification to sender
       Rails.logger.info "Paquete #{package.tracking_code} marcado como #{new_status}"
 
       # Auto-complete route if all packages delivered
-      if package.assigned_courier.is_a?(Driver) && package.assigned_courier.on_route?
+      if package.assigned_courier.driver? && package.assigned_courier.on_route?
         RouteManagementService.new(package.assigned_courier).auto_complete_if_finished
       end
 
@@ -254,8 +239,6 @@ class PackageStatusService
       "Reprogramado"
     when :delivered
       "Entregado"
-    when :picked_up
-      "Retirado"
     when :return
       "Devolución"
     when :cancelled

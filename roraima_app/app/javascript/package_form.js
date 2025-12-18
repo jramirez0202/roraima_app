@@ -26,7 +26,7 @@ document.addEventListener('turbo:load', function() {
     console.log('🔄 toggleFields called, status:', status);
 
     const needsReason = ['return', 'rescheduled'].includes(status);
-    const needsProof = ['delivered', 'picked_up'].includes(status);
+    const needsProof = status === 'delivered';
     const needsReschedulePhotos = status === 'rescheduled';
 
     console.log('needsReason:', needsReason, 'needsProof:', needsProof, 'needsReschedulePhotos:', needsReschedulePhotos);
@@ -173,7 +173,7 @@ document.addEventListener('turbo:load', function() {
       return false;
     }
 
-    if (status === 'delivered' || status === 'picked_up') {
+    if (status === 'delivered') {
       if (compressedPhotos.length === 0) {
         event.preventDefault();
         alert('Por favor, proporciona al menos una foto de evidencia antes de continuar.');

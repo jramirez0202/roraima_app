@@ -8,7 +8,7 @@ class PackagePolicy < ApplicationPolicy
   def show?
     user.admin? ||
     record.user_id == user.id ||
-    (user.is_a?(Driver) && record.assigned_courier_id == user.id)
+    (user.driver? && record.assigned_courier_id == user.id)
   end
 
   def create?
@@ -17,11 +17,21 @@ class PackagePolicy < ApplicationPolicy
   end
 
   def update?
-    user.admin? || record.user_id == user.id
+    # Admin puede editar siempre
+    return true if user.admin?
+
+    # Cliente solo puede editar si el paquete está en estado pending_pickup
+    # Una vez que está en bodega o más allá, ya no puede modificarlo
+    record.user_id == user.id && record.pending_pickup?
   end
 
   def destroy?
-    user.admin? || record.user_id == user.id
+    # Admin puede eliminar siempre
+    return true if user.admin?
+
+    # Cliente solo puede eliminar si el paquete está en estado pending_pickup
+    # Una vez que está en bodega o más allá, ya no puede eliminarlo
+    record.user_id == user.id && record.pending_pickup?
   end
 
   def cancel?
@@ -38,7 +48,7 @@ class PackagePolicy < ApplicationPolicy
     # Admin puede cambiar cualquier estado
     # Driver solo puede cambiar estado de paquetes asignados a él
     user.admin? ||
-    (user.is_a?(Driver) && record.assigned_courier_id == user.id)
+    (user.driver? && record.assigned_courier_id == user.id)
   end
 
   def assign_courier?
@@ -56,25 +66,20 @@ class PackagePolicy < ApplicationPolicy
   def mark_as_delivered?
     # Admin or assigned driver can mark as delivered
     user.admin? ||
-    (user.is_a?(Driver) && record.assigned_courier_id == user.id && record.in_transit?)
-  end
-
-  def mark_as_picked_up?
-    # Admin can mark as picked up from warehouse
-    user.admin? && record.in_warehouse?
+    (user.driver? && record.assigned_courier_id == user.id && record.in_transit?)
   end
 
   def reprogram?
     # Admin or assigned driver can reschedule
     user.admin? ||
-    (user.is_a?(Driver) && record.assigned_courier_id == user.id && record.in_transit?)
+    (user.driver? && record.assigned_courier_id == user.id && record.in_transit?)
   end
 
   def mark_as_return?
     # Admin can initiate return
     # Driver can mark for return if in transit or rescheduled
     user.admin? ||
-    (user.is_a?(Driver) && record.assigned_courier_id == user.id && (record.in_transit? || record.rescheduled?))
+    (user.driver? && record.assigned_courier_id == user.id && (record.in_transit? || record.rescheduled?))
   end
 
   def view_status_history?
@@ -89,7 +94,7 @@ class PackagePolicy < ApplicationPolicy
         scope.all
       elsif user.customer?
         scope.where(user_id: user.id)
-      elsif user.is_a?(Driver)
+      elsif user.driver?
         # Drivers see all packages assigned to them (from pending_pickup onwards)
         scope.where(assigned_courier_id: user.id)
       else

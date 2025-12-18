@@ -71,7 +71,7 @@ class User < ApplicationRecord
   # Retorna el nombre completo del usuario
   def full_name
     # Para drivers, retornar el campo name
-    return name if is_a?(Driver) && name.present?
+    return name if driver? && name.present?
 
     # Para customers, preferir company, luego name, luego rut
     return company if company.present?
@@ -103,6 +103,13 @@ class User < ApplicationRecord
   def admin?
     # Primero verifica el enum, luego el campo boolean legacy
     super rescue (read_attribute(:admin) == true)
+  end
+
+  # Sobrescribe enum driver? para usar STI en vez de role
+  # Esto permite una API consistente: admin?, customer?, driver?
+  # sin importar que Driver use STI mientras Admin/Customer usan enum
+  def driver?
+    is_a?(Driver)
   end
 
   def active_for_authentication?

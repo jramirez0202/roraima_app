@@ -18,7 +18,7 @@
     <!-- Rol -->
     <div>
       <%= form.label :role, "Tipo de Usuario *", class: "block text-sm font-medium text-gray-700" %>
-      <% if form.object.persisted? && form.object.is_a?(Driver) %>
+      <% if form.object.persisted? && form.object.driver? %>
         <!-- Si es un Driver existente, mostrar como readonly y redirigir a drivers -->
         <div class="mt-1 block w-full rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2">
           <p class="text-sm text-yellow-800">

@@ -16,25 +16,23 @@ class Package < ApplicationRecord
     in_transit: 2,          # In transit to delivery
     rescheduled: 3,         # Failed attempt, new date assigned
     delivered: 4,           # Delivery completed (terminal)
-    picked_up: 5,           # Customer picked up at point (terminal)
     return: 6,              # Return process to sender
     cancelled: 7            # Shipment cancelled (terminal)
   }
 
   # Allowed transitions matrix
   ALLOWED_TRANSITIONS = {
-    pending_pickup: [:in_warehouse, :cancelled, :picked_up],
-    in_warehouse: [:in_transit, :picked_up, :return,],
+    pending_pickup: [:in_warehouse, :cancelled],
+    in_warehouse: [:in_transit, :return],
     in_transit: [:delivered, :rescheduled, :return, :cancelled],
     rescheduled: [:in_transit, :return, :cancelled],
     delivered: [],  # Terminal
-    picked_up: [],  # Terminal
     return: [:in_warehouse, :cancelled],
     cancelled: []   # Terminal
   }.freeze
 
   # Terminal statuses (no more transitions allowed)
-  TERMINAL_STATUSES = [:delivered, :picked_up, :cancelled].freeze
+  TERMINAL_STATUSES = [:delivered, :cancelled].freeze
 
   # Validaciones
   validates :region, :commune, :loading_date, presence: true
@@ -46,7 +44,8 @@ class Package < ApplicationRecord
             on: [:create, :update]
 
   validates :loading_date, presence: true
-  validate :loading_date_cannot_be_in_past, if: :loading_date_changed?
+  validate :loading_date_cannot_be_in_past, if: -> { loading_date_changed? && !delivered? }
+  validate :loading_date_must_be_before_delivery
   validate :user_must_be_customer
 
   validates :amount, numericality: { greater_than_or_equal_to: 0 }
@@ -101,6 +100,13 @@ class Package < ApplicationRecord
   # Scopes by specific status
   scope :in_progress, -> { where(status: [:in_warehouse, :in_transit, :rescheduled]) }
   scope :needs_attention, -> { where(status: [:rescheduled, :return]) }
+
+  # Filtra paquetes con estados visibles para clientes
+  # Solo muestra paquetes cuyos estados estén configurados como visibles en Setting
+  scope :customer_visible_statuses, -> {
+    visible_statuses = Setting.customer_visible_statuses
+    where(status: visible_statuses)
+  }
 
   # === FILTRADO AVANZADO ===
 
@@ -221,7 +227,7 @@ class Package < ApplicationRecord
       self.picked_at = Time.current if picked_at.nil?
     when :in_transit
       self.shipped_at = Time.current if shipped_at.nil?
-    when :delivered, :picked_up
+    when :delivered
       self.delivered_at = Time.current
     when :cancelled
       self.cancelled_at = Time.current
@@ -303,11 +309,20 @@ class Package < ApplicationRecord
     end
   end
 
+  # Validación de coherencia temporal: loading_date debe ser anterior a delivered_at
+  def loading_date_must_be_before_delivery
+    return if loading_date.blank? || delivered_at.blank?
+
+    if loading_date > delivered_at.to_date
+      errors.add(:loading_date, "no puede ser posterior a la fecha de entrega (#{delivered_at.to_date.strftime('%d/%m/%Y')})")
+    end
+  end
+
   def user_must_be_customer
     return if user.nil?
 
     # Verificar que el usuario no sea un Driver ni un Admin
-    if user.is_a?(Driver)
+    if user.driver?
       errors.add(:user_id, "no puede ser un Driver. Debe ser un usuario Customer.")
     elsif user.admin?
       errors.add(:user_id, "no puede ser un Admin. Debe ser un usuario Customer.")

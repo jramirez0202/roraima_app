@@ -32,18 +32,18 @@ class DriverPolicy < ApplicationPolicy
   end
 
   def start_route?
-    user.is_a?(Driver) && record.id == user.id
+    user.driver? && record.id == user.id
   end
 
   def complete_route?
-    user.admin? || (user.is_a?(Driver) && record.id == user.id)
+    user.admin? || (user.driver? && record.id == user.id)
   end
 
   class Scope < Scope
     def resolve
       if user.admin?
         scope.all
-      elsif user.is_a?(Driver)
+      elsif user.driver?
         scope.where(id: user.id)
       else
         scope.none

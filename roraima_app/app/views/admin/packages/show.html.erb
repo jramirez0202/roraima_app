@@ -20,7 +20,7 @@
               <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full <%= status_badge_classes(@package.status) %>">
                 <%= status_text(@package.status) %>
               </span>
-              <% if (@package.delivered? || @package.picked_up?) && @package.delivered_at %>
+              <% if @package.delivered? && @package.delivered_at %>
                 <span class="mt-1 text-xs text-gray-600 pl-3">
                   <%= l(@package.delivered_at, format: :short) %>
                 </span>
@@ -61,29 +61,15 @@
               <dd class="mt-1 text-sm font-mono font-semibold text-gray-900"><%= @package.tracking_code %></dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-gray-500 uppercase">Intentos de Entrega</dt>
-              <dd class="mt-1 text-sm text-gray-900"><%= @package.attempts_count %></dd>
-            </div>
-            <div>
               <dt class="text-xs font-medium text-gray-500 uppercase">Courier Asignado</dt>
               <dd class="mt-1 text-sm text-gray-900">
                 <% if @package.assigned_courier %>
-                  <%= @package.assigned_courier.email %>
+                  <%= @package.assigned_courier.name %>
                 <% else %>
                   <span class="text-gray-400">Sin asignar</span>
                 <% end %>
               </dd>
             </div>
-            <div>
-              <dt class="text-xs font-medium text-gray-500 uppercase">Ubicación Actual</dt>
-              <dd class="mt-1 text-sm text-gray-900"><%= @package.location.presence || "—" %></dd>
-            </div>
-            <% if @package.picked_at %>
-              <div>
-                <dt class="text-xs font-medium text-gray-500 uppercase">Retirado Bodega</dt>
-                <dd class="mt-1 text-sm text-gray-900"><%= l(@package.picked_at, format: :long) %></dd>
-              </div>
-            <% end %>
             <% if @package.shipped_at %>
               <div>
                 <dt class="text-xs font-medium text-gray-500 uppercase">En Camino desde</dt>
@@ -357,7 +343,7 @@
                 <label for="courier_id" class="block text-sm font-medium text-gray-700 mb-2">
                   Asignar/Cambiar Driver
                   <% if @package.assigned_courier %>
-                    <span class="text-xs text-gray-500">(Actual: <%= @package.assigned_courier.email %>)</span>
+                    <span class="text-xs text-gray-500">(Actual: <%= @package.assigned_courier.name %>)</span>
                   <% end %>
                 </label>
                 <select name="courier_id" id="courier_id"
@@ -365,13 +351,13 @@
                   <option value="">Seleccionar driver...</option>
                   <% @couriers.each do |courier| %>
                     <option value="<%= courier.id %>" <%= 'selected' if @package.assigned_courier_id == courier.id %>>
-                      <%= courier.email %><%= " - #{courier.full_name}" if courier.full_name.present? %><%= " (#{courier.vehicle_model})" if courier.respond_to?(:vehicle_model) && courier.vehicle_model.present? %>
+                      <%= courier.name %><%= " (#{courier.vehicle_model})" if courier.respond_to?(:vehicle_model) && courier.vehicle_model.present? %>
                     </option>
                   <% end %>
                 </select>
                 <p class="mt-1 text-xs text-gray-500">
                   <% if @package.assigned_courier %>
-                    ⚠️ Al cambiar el driver, el anterior (<%= @package.assigned_courier.email %>) quedará registrado en el historial.
+                    ⚠️ Al cambiar el driver, el anterior (<%= @package.assigned_courier.name %>) quedará registrado en el historial.
                   <% else %>
                     Debe asignar un driver para marcar como "En Camino"
                   <% end %>
@@ -482,7 +468,7 @@
                           required>
                     <option value="">Seleccionar...</option>
                     <% @couriers.each do |courier| %>
-                      <option value="<%= courier.id %>"><%= courier.email %></option>
+                      <option value="<%= courier.id %>"><%= courier.name %><%= " (#{courier.vehicle_model})" if courier.vehicle_model.present? %></option>
                     <% end %>
                   </select>
                 </div>
@@ -515,7 +501,7 @@
                         <div>
                           <span class="h-8 w-8 rounded-full <%= status_badge_classes(entry['status']) %> flex items-center justify-center ring-8 ring-white">
                             <% case entry['status'] %>
-                            <% when 'delivered', 'picked_up' %>
+                            <% when 'delivered' %>
                               <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                               </svg>

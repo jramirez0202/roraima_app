@@ -100,7 +100,7 @@ Rails.application.routes.draw do
       user = request.env['warden'].user
       if user.admin?
         '/admin'
-      elsif user.is_a?(Driver)
+      elsif user.driver?
         '/drivers'
       else
         '/customers'

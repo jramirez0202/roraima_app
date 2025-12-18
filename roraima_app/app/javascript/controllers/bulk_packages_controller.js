@@ -99,7 +99,7 @@ export default class extends Controller {
   }
 
   renderStatusOptions() {
-    const statusKeys = ['in_warehouse', 'in_transit', 'delivered', 'picked_up', 'rescheduled', 'return', 'cancelled']
+    const statusKeys = ['in_warehouse', 'in_transit', 'delivered', 'rescheduled', 'return', 'cancelled']
     this.statusGridTarget.innerHTML = ''
 
     statusKeys.forEach(statusKey => {

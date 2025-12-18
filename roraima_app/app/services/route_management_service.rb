@@ -129,7 +129,7 @@ class RouteManagementService
     return 0 unless route.started_at
 
     driver.assigned_packages
-          .where(status: [:delivered, :picked_up])
+          .where(status: :delivered)
           .where('delivered_at >= ?', route.started_at)
           .count
   end

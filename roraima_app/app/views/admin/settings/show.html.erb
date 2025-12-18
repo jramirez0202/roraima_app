@@ -41,6 +41,60 @@
         </div>
       </div>
 
+      <!-- Sección: Gestión de Estados para Clientes -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">
+            Gestión de Estados para Clientes
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">
+            Controla qué estados opcionales son visibles en el dashboard del cliente.
+            Los estados ocultos se mostrarán como "En proceso".
+          </p>
+
+          <!-- Estados Core (siempre visibles) -->
+          <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h4 class="text-sm font-medium text-blue-800">Estados del Flujo Principal (Siempre Visibles)</h4>
+                <p class="mt-1 text-sm text-blue-700">
+                  Los siguientes estados son esenciales y siempre estarán visibles:
+                  <strong>Pendiente Retiro</strong>, <strong>Bodega</strong>, <strong>En Camino</strong> y <strong>Entregado</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estados Configurables -->
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Estados Opcionales Configurables</h4>
+          <div class="space-y-4">
+            <%
+              # Solo mostrar estados configurables (no core)
+              configurable_statuses = [:rescheduled, :return, :cancelled]
+              PackagesHelper::STATUS_TRANSLATIONS.select { |status, _| configurable_statuses.include?(status) }.each do |status, label|
+            %>
+              <div class="flex items-start">
+                <div class="flex h-6 items-center">
+                  <%= form.check_box "customer_visible_#{status}".to_sym,
+                      id: "customer_visible_#{status}",
+                      class: "h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" %>
+                </div>
+                <div class="ml-3 text-sm leading-6">
+                  <%= form.label "customer_visible_#{status}".to_sym, class: "font-medium text-gray-900" do %>
+                    Mostrar estado "<%= label %>"
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
       <!-- Sección de Información -->
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div class="flex">
@@ -72,4 +126,20 @@
       </div>
     </div>
   <% end %>
+
+  <script>
+    // Show warning if all checkboxes unchecked
+    document.addEventListener('DOMContentLoaded', function() {
+      const checkboxes = document.querySelectorAll('[id^="customer_visible_"]');
+      const warning = document.getElementById('visibility-warning');
+
+      function checkVisibility() {
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        warning.style.display = anyChecked ? 'none' : 'block';
+      }
+
+      checkboxes.forEach(cb => cb.addEventListener('change', checkVisibility));
+      checkVisibility(); // Initial check
+    });
+  </script>
 </div>

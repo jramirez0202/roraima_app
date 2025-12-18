@@ -6,21 +6,19 @@ module PackagesHelper
     in_transit: "En Camino",
     rescheduled: "Reprogramado",
     delivered: "Entregado",
-    picked_up: "Retirado",
     return: "Devolución",
     cancelled: "Cancelado"
   }.freeze
 
-  # Clases CSS para badges de estado
+  # Clases CSS para badges de estado (Usa clases centralizadas de colors.css)
 STATUS_BADGE_CLASSES = {
-  pending_pickup: "bg-yellow-500 text-white",       # Pendiente
-  in_warehouse:  "bg-blue-500 text-white",         # Bodega
-  in_transit:    "bg-blue-600 text-white",         # En camino
-  picked_up:     "bg-green-600 text-white",        # Retirado
-  rescheduled:   "bg-amber-500 text-white",        # Reprogramado
-  return:        "bg-orange-600 text-white",       # Devolución
-  cancelled:     "bg-red-600 text-white",          # Cancelado
-  delivered:     "bg-green-500 text-white"         # Entregado
+  pending_pickup: "badge-pending",       # Pendiente → usa var(--color-status-pending-bg/text)
+  in_warehouse:  "badge-warehouse",      # Bodega → usa var(--color-status-warehouse-bg/text)
+  in_transit:    "badge-transit",        # En camino → usa var(--color-status-transit-bg/text)
+  rescheduled:   "badge-rescheduled",    # Reprogramado → usa var(--color-status-rescheduled-bg/text)
+  return:        "badge-return",         # Devolución → usa var(--color-status-return-bg/text)
+  cancelled:     "badge-cancelled",      # Cancelado → usa var(--color-status-cancelled-bg/text)
+  delivered:     "badge-delivered"       # Entregado → usa var(--color-status-delivered-bg/text)
 }.freeze
 
 
@@ -29,7 +27,6 @@ TAB_ACTIVE_CLASSES = {
   pending_pickup: 'border-yellow-500 text-yellow-600',
   in_warehouse:  'border-blue-500 text-blue-600',
   in_transit:    'border-blue-600 text-blue-700',
-  picked_up:     'border-green-600 text-green-700',
   rescheduled:   'border-amber-500 text-amber-600',
   return:        'border-orange-600 text-orange-700',
   cancelled:     'border-red-600 text-red-700',
@@ -42,7 +39,6 @@ TAB_BADGE_ACTIVE_CLASSES = {
   pending_pickup: 'bg-yellow-200 text-yellow-700',
   in_warehouse:  'bg-blue-200 text-blue-700',
   in_transit:    'bg-blue-300 text-blue-800',
-  picked_up:     'bg-green-200 text-green-700',
   rescheduled:   'bg-amber-200 text-amber-700',
   return:        'bg-orange-200 text-orange-700',
   cancelled:     'bg-red-200 text-red-700',
@@ -61,6 +57,20 @@ TAB_BADGE_ACTIVE_CLASSES = {
   def status_text(status)
     status_sym = normalize_status(status)
     STATUS_TRANSLATIONS.fetch(status_sym, status.to_s.humanize)
+  end
+
+  # Returns customer-visible status text with visibility logic
+  # If status is hidden, returns generic "En proceso" text
+  # @param package [Package] The package instance
+  # @return [String] Translated status text (real or generic)
+  def customer_visible_status_text(package)
+    status = package.status.to_sym
+
+    if Setting.status_visible_for_customers?(status)
+      status_text(status)
+    else
+      "En proceso"
+    end
   end
 
   # Returns options for select of statuses (translated)

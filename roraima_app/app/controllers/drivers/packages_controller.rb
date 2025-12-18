@@ -37,8 +37,14 @@ module Drivers
                     )
 
       # Aplicar filtro por rango de fechas de asignación (si aplica)
+      # IMPORTANTE: Los paquetes reprogramados deben aparecer SIEMPRE (sin importar assigned_at)
       if date_from.present? && date_to.present?
-        @packages = @packages.where(assigned_at: date_from.beginning_of_day..date_to.end_of_day)
+        @packages = @packages.where(
+          'assigned_at BETWEEN ? AND ? OR status = ?',
+          date_from.beginning_of_day,
+          date_to.end_of_day,
+          Package.statuses[:rescheduled]
+        )
       end
 
       # Aplicar filtro por estado

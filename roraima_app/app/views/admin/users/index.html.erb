@@ -7,11 +7,23 @@
       </p>
     </div>
     <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-      <%= link_to new_admin_user_path, class: "inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700" do %>
+      <%
+        # Determinar ruta y texto según el filtro activo
+        if params[:role] == 'driver'
+          new_path = new_admin_driver_path
+          button_text = "Nuevo Conductor"
+          button_class = "bg-green-600 hover:bg-green-700"
+        else
+          new_path = new_admin_user_path
+          button_text = "Nuevo Usuario"
+          button_class = "bg-indigo-600 hover:bg-indigo-700"
+        end
+      %>
+      <%= link_to new_path, class: "inline-flex items-center justify-center gap-2 rounded-md #{button_class} px-4 py-2 text-sm font-medium text-white" do %>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Nuevo Usuario
+        <%= button_text %>
       <% end %>
     </div>
   </div>

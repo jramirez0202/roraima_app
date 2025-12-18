@@ -23,7 +23,16 @@ module Admin
     end
 
     def setting_params
-      params.require(:setting).permit(:require_driver_authorization)
+      params.require(:setting).permit(
+        :require_driver_authorization,
+        :customer_visible_pending_pickup,
+        :customer_visible_in_warehouse,
+        :customer_visible_in_transit,
+        :customer_visible_rescheduled,
+        :customer_visible_delivered,
+        :customer_visible_return,
+        :customer_visible_cancelled
+      )
     end
   end
 end

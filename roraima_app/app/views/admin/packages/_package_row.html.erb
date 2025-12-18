@@ -21,7 +21,7 @@
       <%= status_text(package.status) %>
     </span>
 
-    <% if (package.delivered? || package.picked_up?) && package.delivered_at %>
+    <% if package.delivered? && package.delivered_at %>
       <div class="mt-1 text-xs text-gray-500">
         <%= l(package.delivered_at, format: :short) %>
       </div>
@@ -80,7 +80,7 @@
       <% drivers.each do |driver| %>
         <option value="<%= driver.id %>"
                 <%= 'selected' if package.assigned_courier_id == driver.id %>>
-          <%= driver.name %><%= " (#{driver.assigned_zone&.name})" if driver.assigned_zone %>
+          <%= driver.name %>
         </option>
       <% end %>
     </select>

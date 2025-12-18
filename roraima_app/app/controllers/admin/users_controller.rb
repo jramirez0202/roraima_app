@@ -77,7 +77,7 @@ class Admin::UsersController < Admin::BaseController
     @user = User.find(params[:id])
 
     # Si es un Driver, redirigir a DriversController
-    if @user.is_a?(Driver) && action_name != 'show'
+    if @user.driver? && action_name != 'show'
       redirect_to edit_admin_driver_path(@user),
                   alert: 'Los conductores deben editarse desde Gestión de Conductores'
     end

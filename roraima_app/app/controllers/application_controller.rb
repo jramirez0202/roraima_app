@@ -21,7 +21,7 @@ class ApplicationController < ActionController::Base
     case
     when resource.admin?
       admin_root_path
-    when resource.is_a?(Driver)
+    when resource.driver?
       drivers_root_path
     else
       customers_dashboard_path

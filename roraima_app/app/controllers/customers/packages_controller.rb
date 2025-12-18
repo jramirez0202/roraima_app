@@ -6,7 +6,9 @@ module Customers
     before_action :authorize_package, only: [:show, :edit, :update, :destroy]
 
     def index
-      packages = policy_scope(Package).includes(:region, :commune, :assigned_courier)
+      packages = policy_scope(Package)
+                   .customer_visible_statuses  # Filtra por estados visibles configurados en admin
+                   .includes(:region, :commune, :assigned_courier)
 
       # Cargar drivers activos para el dropdown de asignación
       @drivers = Driver.active.includes(:assigned_zone).order(:email)
@@ -18,9 +20,10 @@ module Customers
       @active_filters = active_filters
       @active_filters_count = active_filters_count
       @filtered_count = packages.count
-      @total_count = policy_scope(Package).count
+      @total_count = policy_scope(Package).customer_visible_statuses.count
 
-      @pagy, @packages = pagy(packages.recent, items: 10)
+      # Ordenar por fecha de carga (más reciente primero)
+      @pagy, @packages = pagy(packages.order(loading_date: :desc), items: 10)
       authorize Package
     end
 

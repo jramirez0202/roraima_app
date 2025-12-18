@@ -22,7 +22,7 @@ class Users::SessionsController < Devise::SessionsController
     stored = stored_location_for(resource)
     return stored if stored
 
-    if resource.is_a?(Driver)
+    if resource.driver?
       drivers_root_path
     elsif resource.admin?
       admin_root_path

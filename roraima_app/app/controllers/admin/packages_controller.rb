@@ -49,7 +49,6 @@ class Admin::PackagesController < Admin::BaseController
     @in_transit_count = status_counts["in_transit"] || 0
     @rescheduled_count = status_counts["rescheduled"] || 0
     @delivered_count = status_counts["delivered"] || 0
-    @picked_up_count = status_counts["picked_up"] || 0
     @return_count = status_counts["return"] || 0
     @cancelled_count = status_counts["cancelled"] || 0
 

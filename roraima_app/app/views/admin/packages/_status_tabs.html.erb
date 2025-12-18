@@ -79,15 +79,6 @@
       </span>
     <% end %>
 
-    <%= link_to admin_packages_path(filter_params_with_status('picked_up')),
-        data: { turbo_prefetch: false },
-        class: "#{tab_classes(current_status, 'picked_up')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>
-      <%= status_text(:picked_up) %>
-      <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium <%= tab_badge_classes(current_status, 'picked_up') %>">
-        <%= status_counts[:picked_up] %>
-      </span>
-    <% end %>
-
     <%= link_to admin_packages_path(filter_params_with_status('cancelled')),
         data: { turbo_prefetch: false },
         class: "#{tab_classes(current_status, 'cancelled')} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" do %>

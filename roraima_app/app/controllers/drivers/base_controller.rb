@@ -10,7 +10,7 @@ module Drivers
     private
 
     def ensure_driver!
-      unless current_user.is_a?(Driver)
+      unless current_user.driver?
         redirect_to root_path, alert: 'Acceso solo para conductores'
       end
     end

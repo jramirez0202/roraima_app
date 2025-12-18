@@ -1,6 +1,6 @@
 <%
   # Determinar colores según el rol
-  if current_user.is_a?(Driver)
+  if current_user.driver?
     bg_color = "bg-blue-900"
     text_color = "text-white"
     inactive_color = "text-blue-300"
@@ -13,11 +13,12 @@
     active_color = "text-indigo-600"
     border_color = "border-gray-200"
   else
-    bg_color = "bg-white"
-    text_color = "text-gray-900"
-    inactive_color = "text-gray-500"
-    active_color = "text-indigo-600"
-    border_color = "border-gray-200"
+    # Customer - Azul grisáceo (Slate) para transmitir confianza y profesionalismo
+    bg_color = "bg-slate-800"
+    text_color = "text-slate-100"
+    inactive_color = "text-slate-400"
+    active_color = "text-white"
+    border_color = "border-slate-700"
   end
 %>
 
@@ -67,7 +68,7 @@
         <span class="text-xs mt-0.5 font-medium">Config</span>
       <% end %>
 
-    <% elsif current_user.is_a?(Driver) %>
+    <% elsif current_user.driver? %>
       <!-- Driver: Dashboard -->
       <%= link_to drivers_root_path, class: "flex flex-col items-center justify-center flex-1 h-full #{current_page?(drivers_root_path) ? active_color : inactive_color} hover:#{active_color} transition-colors" do %>
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

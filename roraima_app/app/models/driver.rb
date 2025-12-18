@@ -68,7 +68,7 @@ class Driver < User
   def delivered_count(date = Date.current)
     visible_packages
       .where(assigned_at: date.all_day)
-      .where(status: [:delivered, :picked_up])
+      .where(status: :delivered)
       .count
   end
 

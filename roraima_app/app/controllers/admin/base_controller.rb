@@ -7,7 +7,7 @@ module Admin
     def check_admin
       unless current_user&.admin?
         # Redirigir según tipo de usuario
-        redirect_path = if current_user.is_a?(Driver)
+        redirect_path = if current_user.driver?
                           drivers_root_path
                         elsif current_user&.customer?
                           customers_dashboard_path

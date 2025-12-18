@@ -102,7 +102,10 @@ User (base class)
 - `User.role` is an enum: `admin: 0, customer: 1, driver: 2`
 - Legacy `admin` boolean field exists for backward compatibility
 - Driver is STI subclass with additional fields: `vehicle_plate`, `vehicle_model`, `vehicle_capacity`, `assigned_zone_id`
-- Check user type: `user.admin?` or `user.is_a?(Driver)`
+- **Check user type:** Use consistent API → `user.admin?`, `user.customer?`, `user.driver?`
+  - `driver?` method overrides enum to use STI check (`is_a?(Driver)`)
+  - This provides a uniform interface regardless of implementation (enum vs STI)
+  - **Never use `is_a?(Driver)` in views/controllers** → always use `user.driver?`
 - Active status checked via `user.active?` (affects authentication)
 
 ### Package State Machine
@@ -261,7 +264,7 @@ Central normalization in `BulkPackageUploadService#normalize_phone`:
 From `PackageStatusService#assign_courier`:
 ```ruby
 # Must be Driver type (not admin/customer)
-unless courier.is_a?(Driver)
+unless courier.driver?
   @errors << "El usuario no es un conductor válido"
   return false
 end
@@ -291,6 +294,35 @@ bulk_upload.packages  # => All packages from that upload
 Package.where(bulk_upload_id: nil)  # Manual packages
 Package.where.not(bulk_upload_id: nil)  # Bulk uploaded
 ```
+
+### 7. Driver Packages Query - Rescheduled Visibility (IMPORTANT)
+
+**Context:** Drivers need to see all rescheduled packages regardless of assignment date.
+
+**Implementation in `Drivers::PackagesController#index`:**
+```ruby
+# Aplicar filtro por rango de fechas de asignación (si aplica)
+# IMPORTANTE: Los paquetes reprogramados deben aparecer SIEMPRE (sin importar assigned_at)
+if date_from.present? && date_to.present?
+  @packages = @packages.where(
+    'assigned_at BETWEEN ? AND ? OR status = ?',
+    date_from.beginning_of_day,
+    date_to.end_of_day,
+    Package.statuses[:rescheduled]
+  )
+end
+```
+
+**Why this matters:**
+- Rescheduled packages may have `assigned_at` from days/weeks ago
+- Without this logic, they would be hidden when filtering by date
+- Dashboard shows persistent rescheduled count → "Mis Paquetes" must be consistent
+- **Behavior:** Rescheduled packages always visible, other packages filtered by date
+
+**Consistency:**
+- Dashboard → `persistent_rescheduled` (no date filter)
+- Mis Paquetes → Now includes rescheduled via OR condition
+- Both views show same rescheduled packages ✓
 
 ## Status Translation Convention (IMPORTANT)
 
@@ -566,6 +598,68 @@ test/
 └── system/             # E2E browser tests
 ```
 
+## Code Conventions & Best Practices
+
+### User Type Checking
+
+**Always use the consistent method API:**
+```ruby
+# ✅ CORRECT - Unified API
+user.admin?
+user.customer?
+user.driver?
+
+# ❌ INCORRECT - Don't use in views/controllers/policies
+user.is_a?(Driver)
+```
+
+**Why:**
+- Provides uniform interface regardless of implementation (enum vs STI)
+- Encapsulates STI details in the model (Fat Model, Thin View)
+- Makes code easier to maintain and refactor
+- If implementation changes (e.g., remove STI), only `User#driver?` needs updating
+
+**Implementation:**
+```ruby
+# app/models/user.rb
+def driver?
+  is_a?(Driver)  # Delegates to STI check
+end
+```
+
+**Migration Guide:**
+If you see `is_a?(Driver)` in code, replace with `driver?`:
+```ruby
+# Before
+if current_user.is_a?(Driver)
+  drivers_root_path
+end
+
+# After
+if current_user.driver?
+  drivers_root_path
+end
+```
+
+### Driver Package Queries
+
+When querying packages for drivers, **always include rescheduled packages** regardless of date filters:
+
+```ruby
+# ✅ CORRECT - Includes persistent rescheduled
+@packages.where(
+  'assigned_at BETWEEN ? AND ? OR status = ?',
+  date_from.beginning_of_day,
+  date_to.end_of_day,
+  Package.statuses[:rescheduled]
+)
+
+# ❌ INCORRECT - Hides old rescheduled packages
+@packages.where(assigned_at: date_from..date_to)
+```
+
+This ensures consistency between Dashboard and "Mis Paquetes" views.
+
 ## Technology Stack
 
 **Backend:**
@@ -591,15 +685,20 @@ test/
 
 ## Current Project State
 
-Based on git status, recent work includes:
+**Recent Work (December 2025):**
+- ✅ **Unified User Type API:** Refactored to use consistent `driver?`/`admin?`/`customer?` methods
+  - Added `User#driver?` method that delegates to `is_a?(Driver)` for STI check
+  - Replaced 28 occurrences of `is_a?(Driver)` across codebase with `driver?`
+  - Improved encapsulation: views don't need to know about STI implementation
+  - Fat model, thin view principle applied
+- ✅ **Driver Packages Visibility Fix:** Rescheduled packages now always visible
+  - Fixed query in `Drivers::PackagesController` to include rescheduled packages regardless of `assigned_at`
+  - Dashboard and "Mis Paquetes" now show consistent rescheduled counts
 - Added STI for Driver model (type column)
 - Created Zone management system
 - Refactored package status to English
 - Added assignment audit fields (assigned_by, assigned_at, admin_override)
 - Implemented bulk upload traceability (bulk_upload_id)
-- Multiple documentation files created (ANALISIS, RESUMEN, SISTEMA_DRIVERS_ZONAS)
-
-Untracked files indicate ongoing development of Driver/Zone features.
 
 ## Important Configuration Notes
 

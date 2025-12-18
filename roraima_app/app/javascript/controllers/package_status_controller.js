@@ -35,7 +35,7 @@ export default class extends Controller {
     const status = this.statusSelectTarget.value
     console.log('🔄 toggleFields called, status:', status)
     const needsReason = ['cancelled', 'rescheduled'].includes(status)
-    const needsProof = ['delivered', 'picked_up'].includes(status)
+    const needsProof = status === 'delivered'
     console.log('needsProof:', needsProof, 'needsReason:', needsReason)
 
     this.reasonFieldTarget.style.display = needsReason ? 'block' : 'none'
@@ -46,8 +46,6 @@ export default class extends Controller {
     if (proofLabel) {
       if (status === 'delivered') {
         proofLabel.textContent = 'Fotos de Evidencia de Entrega (Máximo 4)'
-      } else if (status === 'picked_up') {
-        proofLabel.textContent = 'Fotos de Evidencia de Retiro (Máximo 4)'
       } else if (status === 'rescheduled') {
         proofLabel.textContent = 'Fotos de Evidencia de Visita (Máximo 4)'
       }
@@ -206,8 +204,8 @@ export default class extends Controller {
       return false
     }
 
-    // Validar fotos para "entregado" o "picked_up"
-    if (status === 'delivered' || status === 'picked_up') {
+    // Validar fotos para "entregado"
+    if (status === 'delivered') {
       if (this.compressedPhotos.length === 0) {
         event.preventDefault()
         alert('Por favor, proporciona al menos una foto de evidencia antes de continuar.')

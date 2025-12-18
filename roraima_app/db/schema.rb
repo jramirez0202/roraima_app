@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_10_230340) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_17_040453) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -151,6 +151,13 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_10_230340) do
     t.boolean "require_driver_authorization", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "customer_visible_pending_pickup", default: true, null: false
+    t.boolean "customer_visible_in_warehouse", default: true, null: false
+    t.boolean "customer_visible_in_transit", default: true, null: false
+    t.boolean "customer_visible_rescheduled", default: true, null: false
+    t.boolean "customer_visible_delivered", default: true, null: false
+    t.boolean "customer_visible_return", default: true, null: false
+    t.boolean "customer_visible_cancelled", default: true, null: false
   end
 
   create_table "users", force: :cascade do |t|

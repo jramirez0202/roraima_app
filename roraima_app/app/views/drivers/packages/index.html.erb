@@ -142,7 +142,7 @@
                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_class(package.status) %>">
                       <%= status_text(package.status) %>
                     </span>
-                    <% if (package.delivered? || package.picked_up?) && package.delivered_at %>
+                    <% if package.delivered? && package.delivered_at %>
                       <span class="mt-1 text-xs text-gray-500">
                         <%= package.delivered_at.strftime('%d/%m/%y %H:%M') %>
                       </span>
