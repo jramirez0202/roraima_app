@@ -63,11 +63,32 @@ class Admin::PackagesController < Admin::BaseController
     @active_filters_count = active_filters_count
     @filtered_count = packages.count
 
-    @pagy, @packages = pagy(packages.order(created_at: :desc), items: 20)
+    # Ordenar según si hay filtro de fecha
+    # Si hay filtro de fecha, ordenar por loading_date DESC (más recientes primero)
+    # Si no hay filtro, ordenar por created_at DESC (más recientes primero)
+    if filter_params[:date_from].present? || filter_params[:date_to].present?
+      @pagy, @packages = pagy(packages.order(loading_date: :desc, created_at: :desc), items: 20)
+    else
+      @pagy, @packages = pagy(packages.order(created_at: :desc), items: 20)
+    end
     authorize Package
+
+    # Preservar parámetros de filtro para links a show
+    @filter_params = @active_filters
   end
 
   def show
+    # Preservar parámetros de filtro para el botón "Volver"
+    @filter_params = {
+      status: params[:status],
+      commune_search: params[:commune_search],
+      commune_ids: params[:commune_ids],
+      courier_search: params[:courier_search],
+      courier_ids: params[:courier_ids],
+      tracking_query: params[:tracking_query],
+      date_from: params[:date_from],
+      date_to: params[:date_to]
+    }.compact
   end
 
   def new
@@ -95,6 +116,18 @@ class Admin::PackagesController < Admin::BaseController
 
   def edit
     @communes = metropolitan_region.communes.order(:name)
+
+    # Preservar parámetros de filtro para el botón "Volver"
+    @filter_params = {
+      status: params[:status],
+      commune_search: params[:commune_search],
+      commune_ids: params[:commune_ids],
+      courier_search: params[:courier_search],
+      courier_ids: params[:courier_ids],
+      tracking_query: params[:tracking_query],
+      date_from: params[:date_from],
+      date_to: params[:date_to]
+    }.compact
   end
 
   def update

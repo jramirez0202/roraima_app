@@ -1,6 +1,7 @@
 class Route < ApplicationRecord
   # Associations
   belongs_to :driver, class_name: 'Driver', foreign_key: :driver_id
+  belongs_to :closed_by, class_name: 'User', foreign_key: :closed_by_id, optional: true
 
   # Enum for route status
   enum status: {
@@ -22,6 +23,8 @@ class Route < ApplicationRecord
   scope :recent_first, -> { order(started_at: :desc) }
   scope :completed_routes, -> { where(status: :completed) }
   scope :active_routes, -> { where(status: :active) }
+  scope :old_active_routes, -> { active_routes.where.not('DATE(started_at) = ?', Date.current) }
+  scope :forced_closed, -> { where.not(forced_closed_at: nil) }
 
   # Business logic: Auto-rotate to keep only last 3 routes per driver
   def self.rotate_for_driver(driver_id)
@@ -59,6 +62,17 @@ class Route < ApplicationRecord
   def notes_truncated(limit = 50)
     return nil unless notes.present?
     notes.length > limit ? "#{notes[0...limit]}..." : notes
+  end
+
+  # Check if route was force-closed by admin
+  def forced_closed?
+    forced_closed_at.present?
+  end
+
+  # Human-readable forced close info
+  def forced_close_info
+    return nil unless forced_closed?
+    "Cerrada forzadamente por #{closed_by&.email || 'Admin'} el #{forced_closed_at.strftime('%d/%m/%Y %H:%M')}"
   end
 
   private

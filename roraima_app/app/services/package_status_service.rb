@@ -46,6 +46,36 @@ class PackageStatusService
 
   # Asigna un courier al paquete
   def assign_courier(courier_id)
+    # CASO 1: Desasignación (courier_id vacío o nil)
+    if courier_id.blank?
+      result = package.update(
+        assigned_courier_id: nil,
+        assigned_at: nil,
+        assigned_by_id: @user.id
+      )
+
+      # LÓGICA SIMÉTRICA: Si está en in_transit, regresar a in_warehouse
+      # (Asignación → in_transit, Desasignación → in_warehouse)
+      if result && package.status == 'in_transit'
+        begin
+          package.transition_to!(
+            :in_warehouse,
+            user: @user,
+            reason: "Desasignación automática por admin",
+            override: true
+          )
+          Rails.logger.info "Paquete #{package.tracking_code} regresado a in_warehouse tras desasignación"
+        rescue StandardError => e
+          Rails.logger.warn "No se pudo regresar a in_warehouse: #{e.message}"
+          # No fallar la desasignación por esto
+        end
+      end
+
+      Rails.logger.info "Paquete #{package.tracking_code} desasignado por #{@user.email}"
+      return result
+    end
+
+    # CASO 2: Asignación a un conductor
     courier = User.find_by(id: courier_id)
 
     unless courier
@@ -65,12 +95,54 @@ class PackageStatusService
       return false
     end
 
+    # CRÍTICO: Validar que el driver NO tenga una ruta activa de otro día
+    if courier.on_route?
+      # Buscar CUALQUIER ruta activa de otro día (no solo la primera)
+      old_active_route = courier.routes.active_routes
+                                .where.not('DATE(started_at) = ?', Date.current)
+                                .order(started_at: :asc)
+                                .first
+
+      if old_active_route
+        @errors << "⚠️ #{courier.name} tiene una ruta abierta desde el #{old_active_route.started_at.strftime('%d/%m/%Y')}. Debe cerrar esa ruta antes de asignar nuevos paquetes."
+        return false
+      end
+    end
+
     # Actualizar con campos de auditoría
-    package.update(
+    result = package.update(
       assigned_courier_id: courier_id,
       assigned_at: Time.current,
       assigned_by_id: @user.id
     )
+
+    # LÓGICA CRÍTICA: Cambiar automáticamente a in_transit tras asignación
+    # Esto evita que el driver quede bloqueado con paquetes en pending_pickup/in_warehouse
+    # Aplica tanto para admins como para drivers que se auto-asignan mediante escaneo
+    if result && package.status != 'in_transit'
+      begin
+        assign_reason = if @user.admin?
+                         "Asignación automática por admin"
+                       elsif @user.driver?
+                         "Asignación por escaneo del driver"
+                       else
+                         "Asignación automática"
+                       end
+
+        package.transition_to!(
+          :in_transit,
+          user: @user,
+          reason: assign_reason,
+          override: true
+        )
+        Rails.logger.info "Paquete #{package.tracking_code} cambiado automáticamente a in_transit tras asignación por #{@user.role}"
+      rescue StandardError => e
+        Rails.logger.warn "No se pudo cambiar automáticamente a in_transit: #{e.message}"
+        # No fallar la asignación por esto
+      end
+    end
+
+    result
   end
 
   # Marca como reprogramado con nueva fecha
@@ -154,6 +226,12 @@ class PackageStatusService
 
   # Validates specific requirements according to destination status
   def validate_requirements(new_status, params)
+    # RESTRICCIÓN: Drivers deben tener ruta iniciada para cambiar estados
+    if user.driver? && !user.on_route?
+      @errors << "Debes iniciar tu ruta antes de cambiar estados de paquetes"
+      return false
+    end
+
     case new_status
     when :in_transit
       unless package.assigned_courier_id.present?

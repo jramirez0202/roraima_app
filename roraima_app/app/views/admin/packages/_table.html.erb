@@ -36,7 +36,7 @@
 
             <tbody class="divide-y divide-gray-200">
               <% packages.each do |package| %>
-                <%= render 'package_row', package: package, drivers: drivers %>
+                <%= render 'package_row', package: package, drivers: drivers, filter_params: @filter_params %>
               <% end %>
             </tbody>
           </table>

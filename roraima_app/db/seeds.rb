@@ -275,6 +275,7 @@ puts "\n🚗 Creando conductores..."
 
 driver1 = Driver.find_or_create_by!(email: "driver1@example.com") do |u|
   u.password = 'password123'
+  u.name = "Juan Pérez"
   u.role = :driver
   u.admin = false
   u.rut = "56.789.012-3"
@@ -289,6 +290,7 @@ puts "   ✅ Driver 1 creado: driver1@example.com (#{driver1.vehicle_model}, Zon
 
 driver2 = Driver.find_or_create_by!(email: "driver2@example.com") do |u|
   u.password = 'password123'
+  u.name = "María González"
   u.role = :driver
   u.admin = false
   u.rut = "67.890.123-4"
@@ -303,6 +305,7 @@ puts "   ✅ Driver 2 creado: driver2@example.com (#{driver2.vehicle_model}, Zon
 
 driver3 = Driver.find_or_create_by!(email: "driver3@example.com") do |u|
   u.password = 'password123'
+  u.name = "Carlos Rodríguez"
   u.role = :driver
   u.admin = false
   u.rut = "78.901.234-5"
@@ -387,27 +390,7 @@ puts "   ✅ 3 paquetes creados para customer2@example.com en Región Metropolit
 end
 puts "   ✅ 2 paquetes creados para customer3@example.com en Región Metropolitana"
 
-# Crear algunos paquetes adicionales asignados al admin
-5.times do |i|
-  commune = metropolitan_communes.sample
-
-  Package.create!(
-    customer_name: "Cliente Admin #{i + 1}",
-    sender_email: admin.email,
-    company_name: admin.company,
-    phone: "+569#{sprintf('%08d', rand(10000000..99999999))}",
-    address: "#{['Calle', 'Avenida', 'Paseo'].sample} #{rand(1..50)} Norte #{rand(100..9999)}",
-    region_id: metropolitan_region.id,
-    commune_id: commune.id,
-    description: "Paquete gestionado por admin",
-    exchange: [true, false].sample,
-    loading_date: Date.today + rand(0..10).days,
-    user_id: admin.id
-  )
-end
-puts "   ✅ 5 paquetes creados para admin en Región Metropolitana"
-
-puts "\n✅ #{Package.count} paquetes creados en total"
+puts "\n✅ #{Package.count} paquetes creados en total (solo customers pueden tener paquetes)"
 puts "\n🎉 Seeds completados exitosamente!"
 puts "\n" + "="*60
 puts "🔑 CREDENCIALES DE ACCESO"
@@ -415,8 +398,7 @@ puts "="*60
 puts "\n👤 ADMIN:"
 puts "   Email: admin@paqueteria.com"
 puts "   Password: password123"
-puts "   Role: Administrador"
-puts "   Paquetes: #{admin.packages.count}"
+puts "   Role: Administrador (gestiona todos los paquetes)"
 
 puts "\n👤 CUSTOMER 1:"
 puts "   Email: customer1@example.com"

@@ -1,62 +1,198 @@
 # syntax = docker/dockerfile:1
 
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
-ARG RUBY_VERSION=3.2.2
-FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim as base
+# ============================================
+# RORAIMA DELIVERY APP - Dockerfile
+# ============================================
+# Este Dockerfile usa "multi-stage build" para crear imágenes optimizadas
+# tanto para desarrollo como para producción.
+#
+# STAGES (etapas):
+# 1. base       → Dependencias del sistema comunes
+# 2. builder    → Compilación de gemas y assets
+# 3. development → Imagen para desarrollo local
+# 4. production → Imagen optimizada para producción
+#
+# USO:
+# - Desarrollo:  docker compose build (usa target: development)
+# - Producción:  docker build --target production -t roraima_app .
+# ============================================
 
-# Rails app lives here
+# ------------------------------------------
+# ARGUMENTOS GLOBALES
+# ------------------------------------------
+# ARG define variables que se pueden usar en el build
+# Asegúrate que coincida con .ruby-version y Gemfile
+ARG RUBY_VERSION=3.2.2
+
+# ============================================
+# STAGE 1: BASE - Dependencias del Sistema
+# ============================================
+# Este stage instala las dependencias a nivel de sistema operativo
+# que necesita Rails para funcionar. Se reutiliza en development y production.
+
+FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim AS base
+
+# Directorio de trabajo: toda la aplicación vivirá en /rails
 WORKDIR /rails
 
-# Set production environment
-ENV RAILS_ENV="production" \
-    BUNDLE_DEPLOYMENT="1" \
-    BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development"
+# Variables de entorno comunes a todos los stages
+# BUNDLE_PATH: Dónde Bundler instala las gemas
+# BUNDLE_WITHOUT: Por ahora vacío (se sobrescribe en cada stage)
+ENV BUNDLE_PATH="/usr/local/bundle" \
+    BUNDLE_WITHOUT=""
 
-
-# Throw-away build stage to reduce size of final image
-FROM base as build
-
-# Install packages needed to build gems
+# Instalar dependencias del sistema
+# ¿Por qué un solo RUN? Cada RUN crea una "capa" en la imagen.
+# Combinarlos ahorra espacio (~30-40% más pequeña)
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev libvips pkg-config
-
-# Install application gems
-COPY Gemfile Gemfile.lock ./
-RUN bundle install && \
-    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
-    bundle exec bootsnap precompile --gemfile
-
-# Copy application code
-COPY . .
-
-# Precompile bootsnap code for faster boot times
-RUN bundle exec bootsnap precompile app/ lib/
-
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
-
-
-# Final stage for app image
-FROM base
-
-# Install packages needed for deployment
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libvips postgresql-client && \
+    apt-get install --no-install-recommends -y \
+    # PostgreSQL: cliente y librerías de desarrollo para compilar la gema 'pg'
+    postgresql-client \
+    libpq-dev \
+    # ImageMagick/libvips: Procesamiento de imágenes (Active Storage)
+    libvips \
+    # Compilación de gemas nativas (nokogiri, pg, etc.)
+    build-essential \
+    git \
+    pkg-config \
+    # Utilidades
+    curl && \
+    # CRÍTICO: Limpiar cache de apt para reducir tamaño de imagen
+    # Sin esto, la imagen pesa 100+ MB más
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Copy built artifacts: gems, application
-COPY --from=build /usr/local/bundle /usr/local/bundle
-COPY --from=build /rails /rails
+# ============================================
+# STAGE 2: BUILDER - Compilación de Gemas
+# ============================================
+# Este stage compila e instala todas las gemas.
+# Es temporal: solo copiamos los archivos resultantes a los stages finales.
 
-# Run and own only the runtime files as a non-root user for security
-RUN useradd rails --create-home --shell /bin/bash && \
-    chown -R rails:rails db log storage tmp
+FROM base AS builder
+
+# Copiar SOLO Gemfile y Gemfile.lock primero
+# ¿Por qué no copiar todo el código aquí?
+# Docker cachea cada instrucción. Si solo cambias código (no gemas),
+# esta capa se reutiliza y NO ejecuta bundle install de nuevo.
+# Esto ahorra 5-10 minutos en cada build!
+COPY Gemfile Gemfile.lock ./
+
+# Instalar gemas
+RUN bundle install && \
+    # Limpiar archivos innecesarios para reducir tamaño
+    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
+    # Precompilar Bootsnap (acelera arranque de Rails)
+    bundle exec bootsnap precompile --gemfile
+
+# Ahora sí, copiar TODO el código de la aplicación
+COPY . .
+
+# Precompilar Bootsnap para archivos de la app (app/ y lib/)
+# Bootsnap cachea la carga de archivos Ruby para arranques más rápidos
+RUN bundle exec bootsnap precompile app/ lib/
+
+# ============================================
+# STAGE 3: DEVELOPMENT - Para Desarrollo Local
+# ============================================
+# Este stage se usa con docker-compose para desarrollo.
+# Características:
+# - Hot-reload (código se monta como volumen)
+# - No precompila assets (Tailwind watch lo hace en vivo)
+# - Healthcheck para verificar que Rails responde
+# - Logs detallados
+
+FROM base AS development
+
+# Copiar gemas instaladas desde el stage builder
+# --from=builder permite copiar archivos de OTRO stage
+COPY --from=builder /usr/local/bundle /usr/local/bundle
+
+# Variables de entorno para desarrollo
+ENV RAILS_ENV="development" \
+    BUNDLE_WITHOUT=""
+
+# Crear usuario no-root para seguridad
+# Aunque estemos en desarrollo, es buena práctica NO ejecutar como root
+RUN useradd rails --create-home --shell /bin/bash
+
+# Crear directorios necesarios y dar permisos al usuario rails
+RUN mkdir -p /rails/tmp /rails/log /rails/storage && \
+    chown -R rails:rails /rails
+
+# A partir de aquí, todos los comandos se ejecutan como usuario 'rails'
 USER rails:rails
 
-# Entrypoint prepares the database.
+# HEALTHCHECK: Docker ejecuta este comando cada 30s para verificar que la app funciona
+# Si falla 3 veces seguidas, marca el contenedor como "unhealthy"
+# El endpoint /up es nuevo en Rails 7+ y responde 200 OK si la app está viva
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3000/up || exit 1
+
+# ENTRYPOINT se ejecuta ANTES del CMD
+# Este script prepara la base de datos (migraciones, etc.)
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Start the server by default, this can be overwritten at runtime
+# Comando por defecto: iniciar servidor Rails
+# -b 0.0.0.0 hace que escuche en TODAS las interfaces (necesario para Docker)
+# Sin esto, solo escucharía en localhost y no sería accesible desde el host
+CMD ["./bin/rails", "server", "-b", "0.0.0.0"]
+
+# ============================================
+# STAGE 4: PRODUCTION - Imagen Final Optimizada
+# ============================================
+# Este stage crea la imagen para producción.
+# Características:
+# - Assets precompilados
+# - Solo dependencias de producción
+# - Imagen más pequeña (~500 MB vs ~1.5 GB)
+# - Usuario no-root (seguridad)
+
+FROM base AS production
+
+# Instalar SOLO las dependencias de runtime (no las de compilación)
+# curl: Para healthchecks
+# libvips: Procesamiento de imágenes en runtime
+# postgresql-client: Para ejecutar comandos de DB
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+    curl \
+    libvips \
+    postgresql-client && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Variables de entorno para producción
+ENV RAILS_ENV="production" \
+    BUNDLE_DEPLOYMENT="1" \
+    BUNDLE_WITHOUT="development:test" \
+    RAILS_SERVE_STATIC_FILES="true" \
+    RAILS_LOG_TO_STDOUT="true"
+
+# Copiar gemas instaladas desde builder
+COPY --from=builder /usr/local/bundle /usr/local/bundle
+
+# Copiar código de la aplicación desde builder
+COPY --from=builder /rails /rails
+
+# Precompilar assets para producción
+# SECRET_KEY_BASE_DUMMY permite precompilar sin tener el secret real
+# (el secret real se pasa como variable de entorno en runtime)
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+
+# Crear usuario rails y ajustar permisos
+RUN useradd rails --create-home --shell /bin/bash && \
+    chown -R rails:rails db log storage tmp
+
+# Cambiar a usuario no-root
+USER rails:rails
+
+# Healthcheck para producción
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3000/up || exit 1
+
+# Entrypoint prepara la base de datos
+ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+
+# Exponer puerto 3000 (informativo, no abre el puerto automáticamente)
 EXPOSE 3000
+
+# Comando por defecto: servidor Rails
 CMD ["./bin/rails", "server"]

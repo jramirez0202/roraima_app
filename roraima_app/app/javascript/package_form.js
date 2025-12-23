@@ -4,7 +4,6 @@ document.addEventListener('turbo:load', function() {
   const form = document.getElementById('package-status-form');
   if (!form) return; // Solo ejecutar en la página del formulario
 
-  const statusSelect = document.getElementById('new_status');
   const reasonField = document.getElementById('reason-field');
   const proofField = document.getElementById('proof-field');
   const reschedulePhotosField = document.getElementById('reschedule-photos-field');
@@ -13,19 +12,25 @@ document.addEventListener('turbo:load', function() {
   const compressionStatus = document.getElementById('compression-status');
   const proofData = document.getElementById('proof-data');
 
-  if (!statusSelect || !reasonField) return;
+  if (!reasonField) return;
 
   let compressedPhotos = [];
   const MAX_PHOTOS = 4;
 
   console.log('📦 Package form script loaded');
 
+  // Obtener el estado seleccionado de los radio buttons
+  function getSelectedStatus() {
+    const radioButton = document.querySelector('input[name="new_status"]:checked');
+    return radioButton ? radioButton.value : '';
+  }
+
   // Toggle de campos al cambiar el estado
   function toggleFields() {
-    const status = statusSelect.value;
+    const status = getSelectedStatus();
     console.log('🔄 toggleFields called, status:', status);
 
-    const needsReason = ['return', 'rescheduled'].includes(status);
+    const needsReason = ['return', 'rescheduled', 'cancelled'].includes(status);
     const needsProof = status === 'delivered';
     const needsReschedulePhotos = status === 'rescheduled';
 
@@ -45,6 +50,12 @@ document.addEventListener('turbo:load', function() {
       reasonTextarea.required = needsReason;
     }
   }
+
+  // Función global para manejar cambio de estado desde radio buttons
+  window.handleStatusChange = function(status) {
+    console.log('📻 Status changed to:', status);
+    toggleFields();
+  };
 
   // Manejar selección de fotos
   function handlePhotoInput(event) {
@@ -165,7 +176,7 @@ document.addEventListener('turbo:load', function() {
 
   // Validar formulario antes de enviar
   function validateForm(event) {
-    const status = statusSelect.value;
+    const status = getSelectedStatus();
 
     if (!status) {
       event.preventDefault();
@@ -181,7 +192,7 @@ document.addEventListener('turbo:load', function() {
       }
     }
 
-    if (status === 'return' || status === 'rescheduled') {
+    if (status === 'return' || status === 'rescheduled' || status === 'cancelled') {
       const reason = document.getElementById('reason').value;
       if (!reason || reason.trim() === '') {
         event.preventDefault();
@@ -194,19 +205,22 @@ document.addEventListener('turbo:load', function() {
   }
 
   // Event listeners
-  statusSelect.addEventListener('change', toggleFields);
-  photoInput.addEventListener('change', handlePhotoInput);
+  if (photoInput) {
+    photoInput.addEventListener('change', handlePhotoInput);
+  }
   form.addEventListener('submit', validateForm);
 
   // Event delegation para botones de eliminar foto
-  photosContainer.addEventListener('click', function(e) {
-    if (e.target.classList.contains('photo-remove-btn') || e.target.closest('.photo-remove-btn')) {
-      const btn = e.target.classList.contains('photo-remove-btn') ? e.target : e.target.closest('.photo-remove-btn');
-      const index = parseInt(btn.dataset.photoIndex);
-      removePhoto(index);
-    }
-  });
+  if (photosContainer) {
+    photosContainer.addEventListener('click', function(e) {
+      if (e.target.classList.contains('photo-remove-btn') || e.target.closest('.photo-remove-btn')) {
+        const btn = e.target.classList.contains('photo-remove-btn') ? e.target : e.target.closest('.photo-remove-btn');
+        const index = parseInt(btn.dataset.photoIndex);
+        removePhoto(index);
+      }
+    });
+  }
 
-  // Inicializar
+  // Inicializar - toggle fields con el estado seleccionado por defecto (delivered)
   toggleFields();
 });

@@ -86,6 +86,59 @@ class RouteManagementService
     complete_route
   end
 
+  # Fuerza el cierre de una ruta antigua (solo admins)
+  # @param route [Route] La ruta a cerrar
+  # @param admin [User] El admin que realiza el cierre
+  # @param reason [String] Motivo obligatorio del cierre forzado
+  def self.force_close_route(route, admin, reason)
+    errors = []
+
+    # Validaciones
+    unless admin.admin?
+      errors << "Solo los administradores pueden forzar el cierre de rutas"
+      return { success: false, errors: errors }
+    end
+
+    unless reason.present?
+      errors << "El motivo es obligatorio para cerrar una ruta forzadamente"
+      return { success: false, errors: errors }
+    end
+
+    unless route.active?
+      errors << "La ruta ya está cerrada"
+      return { success: false, errors: errors }
+    end
+
+    begin
+      route.transaction do
+        # Cerrar la ruta
+        route.update!(
+          status: :completed,
+          ended_at: Time.current,
+          closed_by_id: admin.id,
+          forced_close_reason: reason,
+          forced_closed_at: Time.current
+        )
+
+        # Actualizar estado del driver si esta era su ruta activa
+        if route.driver.on_route? && route.driver.current_route&.id == route.id
+          route.driver.update!(
+            route_status: :completed,
+            route_ended_at: Time.current
+          )
+        end
+
+        Rails.logger.info "[RouteManagement] Force close - Route #{route.id} closed by admin #{admin.id} (#{admin.email}). Reason: #{reason}"
+      end
+
+      { success: true, errors: [] }
+    rescue StandardError => e
+      errors << "Error al cerrar ruta: #{e.message}"
+      Rails.logger.error "[RouteManagement] Force close failed: #{e.message}"
+      { success: false, errors: errors }
+    end
+  end
+
   private
 
   def validate_start_route
@@ -102,8 +155,10 @@ class RouteManagementService
       return false
     end
 
-    unless driver.not_started? || driver.ready?
-      @errors << "La ruta ya está en progreso o completada"
+    # Solo bloquear si YA está en ruta activa
+    # Permitir iniciar nueva ruta desde: not_started, ready, o completed
+    if driver.on_route?
+      @errors << "Ya tienes una ruta activa en progreso"
       return false
     end
 
@@ -120,6 +175,19 @@ class RouteManagementService
       @errors << "El conductor no tiene una ruta activa"
       return false
     end
+
+    # Verificar que todos los paquetes estén en estado final
+    # Estados finales: delivered, cancelled, return
+    # Reprogramados NO bloquean el cierre (son flexibles)
+    pending_packages = driver.assigned_packages
+                             .where.not(status: [:delivered, :cancelled, :return, :rescheduled])
+
+    if pending_packages.any?
+      count = pending_packages.count
+      @errors << "⚠️ Tienes #{count} paquete#{count > 1 ? 's' : ''} sin finalizar. Marca cada paquete como entregado, cancelado o devuelto antes de cerrar la ruta."
+      return false
+    end
+
     true
   end
 

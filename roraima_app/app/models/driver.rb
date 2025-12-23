@@ -17,17 +17,17 @@ class Driver < User
   validates :name, presence: true
 
   validates :vehicle_plate,
-            presence: true,
             uniqueness: true,
             format: {
               with: /\A[A-Z]{2}\d{4}|[A-Z]{4}\d{2}\z/,
               message: "debe ser formato chileno (ABCD12 o AB1234)"
-            }
+            },
+            allow_blank: true
 
-  validates :vehicle_model, presence: true
+  validates :vehicle_model, presence: false
   validates :vehicle_capacity,
             numericality: { greater_than: 0 },
-            allow_nil: false
+            allow_nil: true
 
   # Scope: All assigned packages (from pending_pickup onwards)
   def visible_packages
@@ -39,8 +39,9 @@ class Driver < User
     visible_packages.where(delivered_at: Date.current.all_day)
   end
 
+  # Paquetes pendientes de entrega (todos los que están en proceso)
   def pending_deliveries
-    visible_packages.where(status: [:in_transit, :rescheduled])
+    visible_packages.where(status: [:pending_pickup, :in_warehouse, :in_transit, :rescheduled])
   end
 
   # Reprogramados persistentes (históricos) - NO filtra por fecha de asignación
@@ -54,22 +55,41 @@ class Driver < User
 
   # Status counters for assigned packages by date
   def pending_count(date = Date.current)
-    # Incluye: nuevos del día + reprogramados históricos
-    new_today = visible_packages
-                  .where(assigned_at: date.all_day)
-                  .where(status: [:in_warehouse, :in_transit])
-                  .count
+    # Si está en ruta, cuenta TODOS los paquetes pendientes actuales
+    # (sin importar cuándo fueron asignados - pueden ser asignados durante la ruta)
+    if on_route?
+      # Paquetes actualmente pendientes
+      in_process = visible_packages
+                    .where(status: [:in_warehouse, :in_transit])
+                    .count
 
-    historic_rescheduled = persistent_rescheduled_count
+      historic_rescheduled = persistent_rescheduled_count
+      in_process + historic_rescheduled
+    else
+      # Lógica normal: paquetes del día + reprogramados históricos
+      new_today = visible_packages
+                    .where(assigned_at: date.all_day)
+                    .where(status: [:in_warehouse, :in_transit])
+                    .count
 
-    new_today + historic_rescheduled
+      historic_rescheduled = persistent_rescheduled_count
+      new_today + historic_rescheduled
+    end
   end
 
   def delivered_count(date = Date.current)
-    visible_packages
-      .where(assigned_at: date.all_day)
-      .where(status: :delivered)
-      .count
+    # Si está en ruta, cuenta solo los entregados DESPUÉS de iniciar la ruta
+    if on_route? && route_started_at.present?
+      visible_packages
+        .where('delivered_at >= ?', route_started_at)
+        .where(status: :delivered)
+        .count
+    else
+      visible_packages
+        .where(assigned_at: date.all_day)
+        .where(status: :delivered)
+        .count
+    end
   end
 
   def rescheduled_count(date = Date.current)
@@ -82,10 +102,18 @@ class Driver < User
   end
 
   def cancelled_count(date = Date.current)
-    visible_packages
-      .where(assigned_at: date.all_day)
-      .where(status: :cancelled)
-      .count
+    # Si está en ruta, cuenta solo los cancelados DESPUÉS de iniciar la ruta
+    if on_route? && route_started_at.present?
+      visible_packages
+        .where('cancelled_at >= ?', route_started_at)
+        .where(status: :cancelled)
+        .count
+    else
+      visible_packages
+        .where(assigned_at: date.all_day)
+        .where(status: :cancelled)
+        .count
+    end
   end
 
   # Status summary for specific date
@@ -119,9 +147,13 @@ class Driver < User
                            true
                          end
 
+    # Puede iniciar si:
+    # 1. Está autorizado (si se requiere)
+    # 2. Tiene paquetes pendientes (pending_pickup, in_warehouse, in_transit, rescheduled)
+    # 3. NO está actualmente en ruta (puede estar en not_started, ready, o completed)
     authorization_check &&
     pending_deliveries.count > 0 &&
-    (not_started? || ready?)
+    !on_route?
   end
 
   # Progress tracking for navbar counter

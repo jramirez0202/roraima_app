@@ -79,10 +79,22 @@ module Drivers
 
       @filtered_count = @packages.count
       @total_count = policy_scope(Package).count
+
+      # Preservar parámetros de filtro para links a show
+      @filter_params = @active_filters
     end
 
     def show
       authorize @package
+
+      # Preservar parámetros de filtro para el botón "Volver"
+      @filter_params = {
+        status: params[:status],
+        tracking_query: params[:tracking_query],
+        commune_id: params[:commune_id],
+        date_from: params[:date_from],
+        date_to: params[:date_to]
+      }.compact
     end
 
     def change_status
@@ -105,7 +117,7 @@ module Drivers
           end
         end
 
-        redirect_to drivers_package_path(@package),
+        redirect_to drivers_root_path,
                     notice: 'Estado actualizado correctamente'
       else
         redirect_to drivers_package_path(@package),

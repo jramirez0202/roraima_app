@@ -248,6 +248,7 @@ export default class extends Controller {
     const courierId = select.value
     const assignUrl = select.dataset.assignUrl
     const csrfToken = select.dataset.csrfToken
+    const originalValue = select.dataset.originalValue || ''
 
     select.disabled = true
     select.style.opacity = '0.5'
@@ -266,11 +267,18 @@ export default class extends Controller {
       if (response.ok) {
         window.location.reload()
       } else {
-        throw new Error('Error al asignar conductor')
+        // Obtener el mensaje de error del servidor
+        const data = await response.json()
+        const errorMessage = data.errors ? data.errors.join(', ') : 'Error al asignar conductor'
+        throw new Error(errorMessage)
       }
     } catch (error) {
       console.error('Error:', error)
-      alert('Error al asignar conductor')
+      // Mostrar el mensaje de error específico del servidor
+      alert(error.message)
+
+      // IMPORTANTE: Resetear el select a "Sin asignar"
+      select.value = ''
       select.disabled = false
       select.style.opacity = '1'
     }

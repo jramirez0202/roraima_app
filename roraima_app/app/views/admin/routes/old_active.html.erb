@@ -1,0 +1,200 @@
+<div class="px-4 sm:px-6 lg:px-8">
+  <div class="sm:flex sm:items-center sm:justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Rutas Antiguas Abiertas</h1>
+      <p class="mt-2 text-sm text-gray-700">
+        Gestiona rutas activas de días anteriores que necesitan ser cerradas
+      </p>
+    </div>
+  </div>
+
+  <% if @old_routes.empty? %>
+    <!-- Estado vacío -->
+    <div class="text-center py-12">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No hay rutas antiguas abiertas</h3>
+      <p class="mt-1 text-sm text-gray-500">
+        Todas las rutas están al día. ¡Excelente!
+      </p>
+    </div>
+  <% else %>
+    <!-- Alerta informativa -->
+    <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h4 class="text-sm font-medium text-yellow-800">
+            <%= pluralize(@old_routes.count, 'ruta antigua abierta', 'rutas antiguas abiertas') %>
+          </h4>
+          <p class="mt-1 text-sm text-yellow-700">
+            Estas rutas deben cerrarse para permitir nuevas asignaciones a los conductores.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de rutas -->
+    <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-lg overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-300">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Conductor</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Fecha Inicio</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Días Abierta</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Paquetes</th>
+            <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">
+              <span class="sr-only">Acciones</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+          <% @old_routes.each do |route| %>
+            <tr>
+              <!-- Conductor -->
+              <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm">
+                <div class="flex items-center">
+                  <div class="h-10 w-10 flex-shrink-0">
+                    <div class="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
+                      <span class="text-white font-medium text-sm">
+                        <%= route.driver.name.split.map(&:first).join.upcase[0..1] %>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="ml-4">
+                    <div class="font-medium text-gray-900"><%= route.driver.name %></div>
+                    <div class="text-gray-500"><%= route.driver.email %></div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Fecha Inicio -->
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <div class="text-gray-900"><%= l(route.started_at, format: :short) %></div>
+                <div class="text-gray-500"><%= route.started_at.strftime('%d/%m/%Y') %></div>
+              </td>
+
+              <!-- Días Abierta -->
+              <td class="whitespace-nowrap px-3 py-4 text-sm">
+                <% days_open = (Date.current - route.started_at.to_date).to_i %>
+                <span class="inline-flex items-center rounded-md <%= days_open > 3 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700' %> px-2 py-1 text-xs font-medium">
+                  <%= pluralize(days_open, 'día') %>
+                </span>
+              </td>
+
+              <!-- Paquetes -->
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <%= route.driver.assigned_packages.count %> asignados
+              </td>
+
+              <!-- Acciones -->
+              <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                <button type="button"
+                        onclick="openForceCloseModal(<%= route.id %>, '<%= j route.driver.name %>', '<%= j route.started_at.strftime('%d/%m/%Y') %>')"
+                        class="inline-flex items-center gap-2 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  Cerrar Forzadamente
+                </button>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>
+
+<!-- Modal para cerrar ruta forzadamente -->
+<div id="forceCloseModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-50">
+  <div class="fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+      <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+        <%= form_with url: "#", method: :post, id: "forceCloseForm", class: "bg-white" do |f| %>
+          <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+            <div class="sm:flex sm:items-start">
+              <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left flex-1">
+                <h3 class="text-base font-semibold leading-6 text-gray-900" id="modal-title">
+                  Cerrar Ruta Forzadamente
+                </h3>
+                <div class="mt-2">
+                  <p class="text-sm text-gray-500">
+                    ¿Estás seguro de cerrar forzadamente la ruta de <span id="modalDriverName" class="font-medium text-gray-900"></span>?
+                  </p>
+                  <p class="text-sm text-gray-500 mt-1">
+                    Iniciada el <span id="modalStartDate" class="font-medium"></span>
+                  </p>
+                </div>
+
+                <div class="mt-4">
+                  <label for="reason" class="block text-sm font-medium text-gray-700">
+                    Motivo del cierre forzado <span class="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    id="reason"
+                    name="reason"
+                    rows="3"
+                    required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="Ejemplo: Driver olvidó cerrar ruta del día anterior"></textarea>
+                  <p class="mt-1 text-xs text-gray-500">
+                    Este motivo quedará registrado en el sistema con tu usuario y timestamp.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+            <button
+              type="submit"
+              class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto">
+              Cerrar Ruta
+            </button>
+            <button
+              type="button"
+              onclick="closeForceCloseModal()"
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">
+              Cancelar
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openForceCloseModal(routeId, driverName, startDate) {
+    document.getElementById('modalDriverName').textContent = driverName;
+    document.getElementById('modalStartDate').textContent = startDate;
+
+    const form = document.getElementById('forceCloseForm');
+    form.action = `/admin/routes/${routeId}/force_close`;
+
+    document.getElementById('forceCloseModal').classList.remove('hidden');
+  }
+
+  function closeForceCloseModal() {
+    document.getElementById('forceCloseModal').classList.add('hidden');
+    document.getElementById('reason').value = '';
+  }
+
+  // Cerrar modal con ESC
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      closeForceCloseModal();
+    }
+  });
+</script>

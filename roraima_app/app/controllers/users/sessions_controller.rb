@@ -20,14 +20,31 @@ class Users::SessionsController < Devise::SessionsController
 
   def get_redirect_url_for(resource)
     stored = stored_location_for(resource)
-    return stored if stored
 
+    # Validar que la ubicación almacenada sea apropiada para el rol del usuario
+    if stored && valid_path_for_role?(stored, resource)
+      return stored
+    end
+
+    # Redirigir según el rol
     if resource.driver?
       drivers_root_path
     elsif resource.admin?
       admin_root_path
     else
       customers_dashboard_path
+    end
+  end
+
+  def valid_path_for_role?(path, resource)
+    return true if resource.admin? # Los admins pueden acceder a cualquier ruta
+
+    if resource.driver?
+      path.start_with?('/drivers')
+    elsif resource.customer?
+      path.start_with?('/customers')
+    else
+      false
     end
   end
 end

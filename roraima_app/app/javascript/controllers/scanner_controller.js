@@ -28,8 +28,10 @@ export default class extends Controller {
   connect() {
     console.log('🔍 Scanner Controller connected')
     this.recentScans = []
+    this.scannedCodes = new Set() // Track códigos ya escaneados
     this.isProcessing = false
     this.lastScanTime = 0
+    this.lastScanCode = null // Último código escaneado
     this.html5QrCode = null
     this.isCameraActive = false
 
@@ -70,15 +72,7 @@ export default class extends Controller {
       return
     }
 
-    // === DEBOUNCE: Prevenir escaneos dobles rápidos ===
-    const now = Date.now()
-    if (now - this.lastScanTime < 500) { // 500ms debounce
-      console.log('⏱️ Debounced: Escaneo demasiado rápido')
-      return
-    }
-    this.lastScanTime = now
-
-    // Procesar el escaneo
+    // Procesar el escaneo (las validaciones de duplicados están en performScan)
     this.performScan(input)
   }
 
@@ -102,6 +96,8 @@ export default class extends Controller {
       if (response.success) {
         this.sessionCountTarget.textContent = '0'
         this.recentScans = []
+        this.scannedCodes.clear() // Limpiar códigos escaneados
+        this.lastScanCode = null // Reset último código
         this.renderRecentScans()
         this.showSuccess('Sesión reiniciada')
       }
@@ -118,6 +114,32 @@ export default class extends Controller {
       return
     }
 
+    // === VALIDACIÓN DE DUPLICADOS (aplica a todos los modos de escaneo) ===
+    const now = Date.now()
+
+    // 1. Prevenir escaneos del mismo código en < 2 segundos
+    if (trackingInput === this.lastScanCode && (now - this.lastScanTime < 2000)) {
+      console.log('🚫 Código duplicado exacto detectado (<2s), ignorando')
+      return
+    }
+
+    // 2. Extraer tracking code y verificar si ya está en sesión
+    const trackingCode = this.extractTrackingCode(trackingInput)
+    if (trackingCode && this.scannedCodes.has(trackingCode)) {
+      console.log('⚠️ Código ya escaneado en esta sesión:', trackingCode)
+      this.showDuplicateError(trackingCode)
+      return
+    }
+
+    // 3. Debounce general
+    if (now - this.lastScanTime < 500) {
+      console.log('⏱️ Debounced: Escaneo demasiado rápido')
+      return
+    }
+
+    this.lastScanTime = now
+    this.lastScanCode = trackingInput
+
     this.isProcessing = true
     this.setLoading(true)
 
@@ -128,6 +150,11 @@ export default class extends Controller {
       })
 
       if (response.success) {
+        // Agregar código al Set de escaneados (usar tracking_code normalizado del servidor)
+        if (!response.warning && response.package && response.package.tracking_code) {
+          this.scannedCodes.add(response.package.tracking_code)
+        }
+
         if (response.warning) {
           this.showWarning(response.message, response.package)
         } else {
@@ -155,7 +182,10 @@ export default class extends Controller {
     } finally {
       this.isProcessing = false
       this.setLoading(false)
-      this.clearAndFocus()
+      // Solo limpiar input si viene de escaneo manual/keyboard (no cámara)
+      if (this.inputTarget && this.inputTarget.value === trackingInput) {
+        this.clearAndFocus()
+      }
     }
   }
 
@@ -222,6 +252,19 @@ export default class extends Controller {
     }, 4000)
   }
 
+  showDuplicateError(trackingCode) {
+    this.feedbackTarget.classList.remove('hidden')
+    this.feedbackContentTarget.className = 'rounded-lg p-4 bg-red-50 border-l-4 border-red-500'
+    this.feedbackContentTarget.innerHTML = this.duplicateErrorHTML(trackingCode)
+
+    // Sonido de error
+    this.playErrorSound()
+
+    setTimeout(() => {
+      this.feedbackTarget.classList.add('hidden')
+    }, 3000)
+  }
+
   successHTML(message, pkg) {
     if (!pkg) return `<p class="text-green-800 font-medium">${message}</p>`
 
@@ -269,6 +312,22 @@ export default class extends Controller {
         </div>
         <div class="ml-3">
           <p class="text-sm font-medium text-red-800">${message}</p>
+        </div>
+      </div>
+    `
+  }
+
+  duplicateErrorHTML(trackingCode) {
+    return `
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <svg class="h-6 w-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium text-red-800">❌ Código duplicado</p>
+          <p class="mt-1 text-sm text-red-700">${trackingCode} ya fue escaneado en esta sesión</p>
         </div>
       </div>
     `
@@ -529,6 +588,37 @@ export default class extends Controller {
       // Re-enfocar input
       this.focusInput()
     }
+  }
+
+  // === TRACKING CODE EXTRACTION ===
+
+  extractTrackingCode(input) {
+    if (!input) return null
+
+    const cleaned = input.trim()
+
+    // Caso 1: Tracking code plano
+    if (cleaned.match(/^PKG-\d{14}$/)) {
+      return cleaned
+    }
+
+    // Caso 2: JSON del QR code
+    if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
+      try {
+        const jsonData = JSON.parse(cleaned)
+        const data = Array.isArray(jsonData) ? jsonData[0] : jsonData
+        const tracking = data.tracking || data['tracking']
+        if (tracking && tracking.match(/^PKG-\d{14}$/)) {
+          return tracking
+        }
+      } catch (e) {
+        // Fall through
+      }
+    }
+
+    // Caso 3: Buscar patrón PKG- en cualquier parte
+    const match = cleaned.match(/PKG-\d{14}/)
+    return match ? match[0] : null
   }
 
   // === HELPERS ===

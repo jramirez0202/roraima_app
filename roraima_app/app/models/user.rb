@@ -27,7 +27,7 @@ class User < ApplicationRecord
             uniqueness: true,
             format: { with: /\A\d{1,2}\.\d{3}\.\d{3}-[\dkK]\z/,
                       message: "debe tener formato válido (ej: 12.345.678-9)" },
-            unless: :admin?
+            unless: -> { admin? || driver? }
 
   # Phone obligatorio para customers y drivers
   validates :phone,

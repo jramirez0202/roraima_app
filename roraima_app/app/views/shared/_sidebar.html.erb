@@ -141,6 +141,20 @@
           <span class="font-medium">Conductores</span>
         <% end %>
 
+        <%= link_to admin_old_active_routes_path,
+          data: { action: "click->sidebar#handleLinkClick" },
+          class: "flex items-center px-4 py-3 rounded-lg #{text_color} #{hover_color} #{current_page?(admin_old_active_routes_path) ? active_color : ''}" do %>
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span class="font-medium">Rutas Antiguas</span>
+          <% if Route.old_active_routes.any? %>
+            <span class="ml-auto inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">
+              <%= Route.old_active_routes.count %>
+            </span>
+          <% end %>
+        <% end %>
+
         <%= link_to admin_settings_path,
           data: { action: "click->sidebar#handleLinkClick" },
           class: "flex items-center px-4 py-3 rounded-lg #{text_color} #{hover_color} #{current_page?(admin_settings_path) ? active_color : ''}" do %>
@@ -169,6 +183,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
           </svg>
           <span class="font-medium">Mis Paquetes</span>
+        <% end %>
+
+        <%= link_to drivers_scanner_path,
+          data: { action: "click->sidebar#handleLinkClick" },
+          class: "flex items-center px-4 py-3 rounded-lg #{text_color} #{hover_color} #{current_page?(drivers_scanner_path) ? active_color : ''}" do %>
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+          </svg>
+          <span class="font-medium">Escanear Paquetes</span>
         <% end %>
 
         <%= link_to drivers_profile_path,

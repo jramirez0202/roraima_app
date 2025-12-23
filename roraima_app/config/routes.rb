@@ -11,6 +11,9 @@ Rails.application.routes.draw do
     sessions: 'users/sessions'
   }
 
+  # Healthcheck endpoint for Docker
+  get '/up', to: proc { [200, {}, ['OK']] }
+
   # Admin namespace
   namespace :admin do
     resources :users
@@ -57,6 +60,14 @@ Rails.application.routes.draw do
     # Ruta corta
     get 'scanner', to: 'scanners#warehouse_scanner'
 
+    # Gestión de rutas antiguas
+    get 'routes/old_active', to: 'routes#old_active', as: :old_active_routes
+    resources :routes, only: [] do
+      member do
+        post :force_close
+      end
+    end
+
     # Root admin
     root 'packages#index'
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'
@@ -86,6 +97,12 @@ Rails.application.routes.draw do
 
     post 'start_route', to: 'dashboard#start_route', as: :start_route
     post 'complete_route', to: 'dashboard#complete_route', as: :complete_route
+
+    # Scanner routes
+    get  'scanner',              to: 'scanners#warehouse_scanner', as: :scanner
+    post 'scanner/process',      to: 'scanners#process_scan', as: :scanner_process
+    get  'scanner/session_stats', to: 'scanners#session_stats', as: :scanner_session_stats
+    post 'scanner/reset_session', to: 'scanners#reset_session', as: :scanner_reset_session
 
     root 'dashboard#index'
     get 'communes/by_region/:region_id', to: 'communes#by_region', as: 'communes_by_region'

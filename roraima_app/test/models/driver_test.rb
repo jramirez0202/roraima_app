@@ -33,24 +33,21 @@ class DriverTest < ActiveSupport::TestCase
   end
 
   # ====================
-  # Vehicle Validations
+  # Vehicle Validations (Ahora opcionales)
   # ====================
-  test "should require vehicle_plate" do
+  test "vehicle_plate is optional" do
     driver = build(:driver, vehicle_plate: nil)
-    assert_not driver.valid?
-    assert_includes driver.errors[:vehicle_plate], "can't be blank"
+    assert driver.valid?, "Driver should be valid without vehicle_plate"
   end
 
-  test "should require vehicle_model" do
+  test "vehicle_model is optional" do
     driver = build(:driver, vehicle_model: nil)
-    assert_not driver.valid?
-    assert_includes driver.errors[:vehicle_model], "can't be blank"
+    assert driver.valid?, "Driver should be valid without vehicle_model"
   end
 
-  test "should require vehicle_capacity" do
+  test "vehicle_capacity is optional" do
     driver = build(:driver, vehicle_capacity: nil)
-    assert_not driver.valid?
-    assert_includes driver.errors[:vehicle_capacity], "is not a number"
+    assert driver.valid?, "Driver should be valid without vehicle_capacity"
   end
 
   test "vehicle_capacity should be greater than 0" do
@@ -196,19 +193,29 @@ class DriverTest < ActiveSupport::TestCase
     end
   end
 
-  test "pending_deliveries returns packages in transit or rescheduled" do
+  test "pending_deliveries returns packages ready for delivery (pending_pickup, in_warehouse, in_transit, rescheduled)" do
     driver = create(:driver)
 
+    pending_pickup = create(:package, assigned_courier: driver, status: :pending_pickup)
+    in_warehouse = create(:package, assigned_courier: driver, status: :in_warehouse)
     in_transit = create(:package, assigned_courier: driver, status: :in_transit)
     rescheduled = create(:package, assigned_courier: driver, status: :rescheduled)
-    delivered = create(:package, assigned_courier: driver, status: :delivered, delivered_at: Time.current)
+    delivered = create(:package, assigned_courier: driver, status: :delivered, delivered_at: 1.day.ago)
+    cancelled = create(:package, assigned_courier: driver, status: :cancelled)
 
     pending = driver.pending_deliveries
 
+    # Debe incluir todos los estados "en proceso"
+    assert_includes pending, pending_pickup
+    assert_includes pending, in_warehouse
     assert_includes pending, in_transit
     assert_includes pending, rescheduled
+
+    # NO debe incluir estados terminales
     assert_not_includes pending, delivered
-    assert_equal 2, pending.count
+    assert_not_includes pending, cancelled
+
+    assert_equal 4, pending.count
   end
 
   # ====================
@@ -302,10 +309,16 @@ class DriverTest < ActiveSupport::TestCase
   end
 
   test "can_start_route? returns false without authorization" do
+    # Habilitar el requisito de autorización para este test
+    Setting.instance.update!(require_driver_authorization: true)
+
     driver = create(:driver, ready_for_route: false)
     create(:package, assigned_courier: driver, status: :in_transit)
 
     assert_not driver.can_start_route?
+  ensure
+    # Restaurar configuración original
+    Setting.instance.update!(require_driver_authorization: false)
   end
 
   test "can_start_route? returns false without packages" do

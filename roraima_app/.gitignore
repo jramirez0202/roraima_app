@@ -11,6 +11,9 @@
 /.env*
 !/.env*.erb
 
+# Docker environment file (contains secrets)
+/.env.docker
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*

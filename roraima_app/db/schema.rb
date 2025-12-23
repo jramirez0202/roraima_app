@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_17_040453) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_18_212924) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -141,9 +141,14 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_17_040453) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "notes"
+    t.integer "closed_by_id"
+    t.text "forced_close_reason"
+    t.datetime "forced_closed_at"
+    t.index ["closed_by_id"], name: "index_routes_on_closed_by_id"
     t.index ["driver_id", "started_at"], name: "index_routes_on_driver_and_started"
     t.index ["driver_id", "status"], name: "index_routes_on_driver_and_status"
     t.index ["driver_id"], name: "index_routes_on_driver_id"
+    t.index ["forced_closed_at"], name: "index_routes_on_forced_closed_at"
     t.index ["status"], name: "index_routes_on_status"
   end
 
@@ -222,6 +227,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_17_040453) do
   add_foreign_key "packages", "users"
   add_foreign_key "packages", "users", column: "assigned_by_id"
   add_foreign_key "packages", "users", column: "assigned_courier_id"
+  add_foreign_key "routes", "users", column: "closed_by_id"
   add_foreign_key "routes", "users", column: "driver_id"
   add_foreign_key "users", "zones", column: "assigned_zone_id"
   add_foreign_key "zones", "regions"

@@ -6,25 +6,12 @@ export default class extends Controller {
   }
 
   showModal() {
-    const pendingCount = this.pendingCountValue
-
-    // Mensaje de confirmación basado en paquetes pendientes
-    let message = "¿Estás seguro de que deseas finalizar la ruta?"
-    if (pendingCount > 0) {
-      message = `⚠️ Aún tienes ${pendingCount} paquete${pendingCount > 1 ? 's' : ''} sin entregar.\n\n¿Deseas continuar y finalizar la ruta?`
-    }
-
-    const confirmed = confirm(message)
+    // Solo una alerta de confirmación
+    const confirmed = confirm("¿Estás seguro de que deseas finalizar la ruta?")
 
     if (confirmed) {
-      // Solicitar comentario opcional
-      const notes = prompt("Comentario opcional (presiona Enter para omitir):", "")
-
-      // Si el usuario cancela el prompt, no hacer nada
-      if (notes === null) return
-
-      // Enviar POST a complete_route
-      this.submitCompleteRoute(notes)
+      // Enviar POST a complete_route sin comentarios
+      this.submitCompleteRoute('')
     }
   }
 

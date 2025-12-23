@@ -1,0 +1,112 @@
+<%
+  # Expected local variables:
+  # - packages: ActiveRecord collection of packages
+%>
+
+<div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+  <% if packages.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+              Estado
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Tracking
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Dirección
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Destinatario
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Fecha Asignación
+            </th>
+            <!-- <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Acciones
+            </th> -->
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% packages.each do |package| %>
+            <tr class="hover:bg-gray-50 cursor-pointer <%= 'bg-orange-50' if package.rescheduled? %>"
+                onclick="window.location='<%= drivers_package_path(package, @filter_params || {}) %>'"
+              <!-- Estado -->
+              <td class="px-6 py-4">
+                <div class="flex flex-col items-start">
+                  <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_class(package.status) %>">
+                    <%= status_text(package.status) %>
+                  </span>
+                  <% if package.delivered? && package.delivered_at %>
+                    <span class="mt-1 text-xs text-gray-500">
+                      <%= package.delivered_at.strftime('%d/%m/%y %H:%M') %>
+                    </span>
+                  <% end %>
+                </div>
+              </td>
+
+              <!-- Tracking -->
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">
+                  <%= package.tracking_code %>
+                </div>
+              </td>
+
+              <!-- Dirección + Comuna -->
+              <td class="px-6 py-4 text-sm max-w-xs">
+                <div class="text-gray-900"><%= package.address.present? ? package.address : "—" %></div>
+                <div class="text-xs text-gray-500 mt-1"><%= package.commune&.name || "—" %></div>
+              </td>
+
+              <!-- Destinatario -->
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900"><%= package.customer_name %></div>
+                <div class="text-xs text-gray-500"><%= package.phone %></div>
+              </td>
+
+              <!-- Fecha Asignación -->
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-500">
+                  <%= package.assigned_at&.strftime('%d/%m/%Y %H:%M') || '-' %>
+                </div>
+                <% if package.rescheduled? %>
+                  <% days_ago = (Date.current - package.assigned_at.to_date).to_i %>
+                  <div class="text-xs text-orange-600 font-semibold mt-1">
+                    📅 Hace <%= days_ago %> <%= days_ago == 1 ? 'día' : 'días' %>
+                  </div>
+                <% end %>
+              </td>
+
+              <!-- Acciones -->
+              <!-- <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onclick="event.stopPropagation()">
+                <%= link_to "Ver", drivers_package_path(package), class: "text-blue-600 hover:text-blue-900" %>
+              </td> -->
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-6 py-12 text-center">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No hay paquetes</h3>
+      <p class="mt-1 text-sm text-gray-500">
+        <% if params[:status].present? || params[:commune_id].present? %>
+          No se encontraron paquetes con los filtros aplicados.
+        <% else %>
+          No tienes paquetes asignados en este momento.
+        <% end %>
+      </p>
+    </div>
+  <% end %>
+</div>
+
+<% if packages.any? %>
+  <div class="mt-4 text-sm text-gray-600">
+    Total: <%= packages.count %> paquete(s)
+  </div>
+<% end %>

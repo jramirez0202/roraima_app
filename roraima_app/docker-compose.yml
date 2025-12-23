@@ -1,0 +1,364 @@
+# ============================================
+# RORAIMA DELIVERY APP - Docker Compose
+# ============================================
+# Este archivo define y conecta todos los servicios necesarios para
+# ejecutar la aplicación Roraima Delivery en Docker.
+#
+# SERVICIOS:
+# - postgres:    Base de datos PostgreSQL con extensión pg_trgm
+# - redis:       Cache y backend de colas para Sidekiq
+# - web:         Aplicación Rails con Puma
+# - sidekiq:     Procesador de trabajos en background
+# - tailwindcss: Compilador de CSS en tiempo real (solo desarrollo)
+#
+# COMANDOS BÁSICOS:
+# - docker compose up -d           → Iniciar todos los servicios
+# - docker compose down            → Detener y eliminar contenedores
+# - docker compose logs -f web     → Ver logs del servicio web
+# - docker compose exec web bash   → Abrir shell en contenedor web
+# - docker compose ps              → Ver estado de servicios
+#
+# PRIMEROS PASOS:
+# 1. Copiar .env.docker.example a .env.docker
+# 2. Ejecutar: ./bin/docker-setup (hace todo automáticamente)
+# O manualmente:
+# 2. docker compose build
+# 3. docker compose up -d postgres redis
+# 4. docker compose run --rm web rails db:create db:migrate
+# 5. docker compose up -d
+# ============================================
+# NETWORKS - Redes Virtuales
+# ============================================
+# Docker crea una red interna donde todos los servicios pueden comunicarse.
+# Ejemplo: el servicio "web" puede conectarse a "postgres:5432" por nombre.
+# ¿Por qué? Aislamiento y seguridad. Los contenedores no usan localhost,
+# sino nombres de servicios que Docker resuelve automáticamente.
+
+networks:
+  roraima_network:
+    driver: bridge
+
+# ============================================
+# VOLUMES - Almacenamiento Persistente
+# ============================================
+# Los contenedores son efímeros (se borran con 'docker compose down').
+# Los volúmenes persisten datos importantes incluso después de eliminar contenedores.
+#
+# TIPOS DE VOLÚMENES:
+# - Named volumes (postgres_data, redis_data): Gestionados por Docker, persisten datos
+# - Bind mounts (.:/rails): Sincroniza carpeta del host con contenedor (hot-reload)
+# - Anonymous volumes (/rails/tmp): Temporales, se borran con el contenedor
+
+volumes:
+  postgres_data:
+    # Almacena tablas, índices y todos los datos de PostgreSQL
+    # SIN ESTO perderías la base de datos cada vez que reinicias
+
+  redis_data:
+    # Almacena datos de Redis (colas de Sidekiq)
+    # Opcional: Redis puede funcionar solo en memoria
+
+  storage_data:
+    # Active Storage: logos de empresas, CSVs, PDFs generados
+    # CRÍTICO para producción
+
+  bundle_cache:
+    # Cache de gemas instaladas
+    # Acelera rebuilds (no reinstala gemas si no cambiaron)
+
+# ============================================
+# SERVICES - Definición de Servicios
+# ============================================
+
+services:
+
+  # ------------------------------------------
+  # POSTGRES - Base de Datos
+  # ------------------------------------------
+  # PostgreSQL es la base de datos principal de la aplicación.
+  # Almacena usuarios, paquetes, zonas, comunas, etc.
+
+  postgres:
+    # Imagen oficial de PostgreSQL versión 16, variante Alpine (más ligera)
+    image: postgres:16-alpine
+
+    # Nombre del contenedor (más fácil de identificar en 'docker ps')
+    container_name: roraima_postgres
+
+    # Variables de entorno para configurar PostgreSQL
+    environment:
+      # Usuario administrador de la base de datos
+      POSTGRES_USER: postgres
+      # Contraseña del usuario (⚠️ cambiar en producción)
+      POSTGRES_PASSWORD: password
+      # Base de datos por defecto que se crea al iniciar
+      POSTGRES_DB: roraima_app_development
+      # Encoding UTF-8 (importante para textos en español: tildes, ñ, etc.)
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+
+    # Volúmenes: qué carpetas persisten o se montan
+    volumes:
+      # Volume persistente para datos de PostgreSQL
+      # Formato: nombre_volume:ruta_en_contenedor
+      - postgres_data:/var/lib/postgresql/data
+
+      # Script de inicialización (habilita extensión pg_trgm)
+      # :ro = read-only (solo lectura)
+      # PostgreSQL ejecuta automáticamente archivos en /docker-entrypoint-initdb.d/
+      - ./docker/postgres/init-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
+
+    # Mapeo de puertos: host:contenedor
+    # Ahora usamos puerto estándar 5432 (antes era 5433 en desarrollo local)
+    ports:
+      - "5432:5432"
+
+    # Healthcheck: ¿Está PostgreSQL listo para recibir conexiones?
+    # Docker ejecuta este comando cada 10 segundos
+    healthcheck:
+      # pg_isready es una utilidad de Postgres para verificar estado
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s        # Ejecutar cada 10 segundos
+      timeout: 5s          # Esperar máximo 5 segundos por respuesta
+      retries: 5           # Intentar 5 veces antes de marcar como unhealthy
+      start_period: 10s    # Dar 10 segundos de gracia al iniciar
+
+    # Política de reinicio: reiniciar siempre excepto si se detuvo manualmente
+    restart: unless-stopped
+
+    # Red virtual a la que pertenece
+    networks:
+      - roraima_network
+
+  # ------------------------------------------
+  # REDIS - Cache y Backend de Colas
+  # ------------------------------------------
+  # Redis es usado por Sidekiq para encolar trabajos en background
+  # (bulk uploads, envío de emails, procesamiento de PDFs, etc.)
+
+  redis:
+    image: redis:7-alpine
+    container_name: roraima_redis
+
+    # Comando personalizado: ejecutar Redis con persistencia AOF
+    # AOF (Append Only File) guarda cada operación en disco
+    # Sin esto, Redis solo guarda datos en memoria (se pierden al reiniciar)
+    command: redis-server --appendonly yes
+
+    volumes:
+      # Persistir datos de Redis en volumen
+      - redis_data:/data
+
+    ports:
+      - "6379:6379"
+
+    # Healthcheck: verificar que Redis responde
+    healthcheck:
+      # redis-cli ping responde "PONG" si está funcionando
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+    restart: unless-stopped
+
+    networks:
+      - roraima_network
+
+  # ------------------------------------------
+  # WEB - Aplicación Rails
+  # ------------------------------------------
+  # Este es el servicio principal: la aplicación Rails con Puma.
+  # Sirve la interfaz web en http://localhost:3000
+
+  web:
+    # Construir imagen desde Dockerfile usando stage "development"
+    build:
+      context: .              # Directorio actual (donde está el Dockerfile)
+      dockerfile: Dockerfile
+      target: development     # ← Usar stage "development" del Dockerfile
+      # Argumentos opcionales de build
+      args:
+        RUBY_VERSION: 3.2.2
+
+    container_name: roraima_web
+
+    # Dependencias: esperar a que postgres y redis estén saludables
+    # condition: service_healthy espera a que el healthcheck pase
+    # ¿Por qué? Rails intentaría conectarse antes de que Postgres esté listo → falla
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    # Cargar variables de entorno desde archivo .env.docker
+    env_file:
+      - .env.docker
+
+    # Variables de entorno adicionales (sobrescriben las del .env)
+    environment:
+      # IMPORTANTE: Usar NOMBRES DE SERVICIOS, NO "localhost"
+      # "postgres" se resuelve a la IP del contenedor postgres dentro de Docker
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/roraima_app_development
+      REDIS_URL: redis://redis:6379/0
+      RAILS_ENV: development
+
+    # Volúmenes
+    volumes:
+      # BIND MOUNT: Sincroniza código del host con el contenedor
+      # Formato: ruta_host:ruta_contenedor:modo
+      # :cached = optimización de rendimiento en macOS
+      # Esto permite HOT-RELOAD: cambias un archivo → se refleja inmediatamente
+      - .:/rails:cached
+
+      # NAMED VOLUMES: Persistencia de datos
+      - storage_data:/rails/storage      # Active Storage
+      - bundle_cache:/usr/local/bundle   # Cache de gemas
+
+      # ANONYMOUS VOLUMES: Evita sincronizar tmp/ y log/
+      # Formato: solo ruta del contenedor (sin :)
+      # Esto mejora rendimiento al no sincronizar archivos temporales
+      - /rails/tmp
+      - /rails/log
+
+    # Mapeo de puertos
+    ports:
+      - "3000:3000"
+
+    # stdin_open y tty: Permiten usar 'binding.pry' y otros debuggers interactivos
+    stdin_open: true
+    tty: true
+
+    restart: unless-stopped
+
+    networks:
+      - roraima_network
+
+  # ------------------------------------------
+  # SIDEKIQ - Procesador de Trabajos Background
+  # ------------------------------------------
+  # Sidekiq procesa trabajos en segundo plano:
+  # - Bulk uploads de paquetes (CSVs)
+  # - Envío de emails
+  # - Generación de PDFs
+  # - Cualquier tarea asíncrona
+
+  sidekiq:
+    # Usa la MISMA imagen que web (mismo código, mismas gemas)
+    # No necesita rebuild separado
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+
+    container_name: roraima_sidekiq
+
+    # Comando personalizado: ejecutar Sidekiq en lugar de Rails server
+    # -C config/sidekiq.yml: archivo de configuración (concurrency, queues, etc.)
+    command: bundle exec sidekiq -C config/sidekiq.yml
+
+    # Dependencias: Sidekiq necesita Postgres, Redis Y que web esté iniciado
+    # ¿Por qué depende de web? Para asegurar que las migraciones ya corrieron
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+    env_file:
+      - .env.docker
+
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/roraima_app_development
+      REDIS_URL: redis://redis:6379/0
+      RAILS_ENV: development
+
+    # Comparte los MISMOS volúmenes que web
+    # ¿Por qué? Sidekiq necesita acceso a los mismos archivos:
+    # - Código de la aplicación
+    # - Archivos subidos vía Active Storage
+    volumes:
+      - .:/rails:cached
+      - storage_data:/rails/storage
+      - bundle_cache:/usr/local/bundle
+      - /rails/tmp
+      - /rails/log
+
+    # Deshabilitar healthcheck para Sidekiq
+    # Sidekiq es un worker, no un servidor web, por lo que el healthcheck
+    # HTTP del Dockerfile no aplica aquí
+    healthcheck:
+      disable: true
+
+    restart: unless-stopped
+
+    networks:
+      - roraima_network
+
+  # ------------------------------------------
+  # TAILWINDCSS - Compilador de CSS en Tiempo Real
+  # ------------------------------------------
+  # Este servicio vigila cambios en archivos CSS/HTML/ERB
+  # y recompila Tailwind automáticamente.
+  # Equivalente a ejecutar: bin/rails tailwindcss:watch
+
+  tailwindcss:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+
+    container_name: roraima_tailwind
+
+    # Comando: watch de Tailwind
+    # Detecta cambios en app/views/, app/helpers/, etc. y recompila CSS
+    command: bin/rails tailwindcss:watch
+
+    # Depende de que web esté corriendo
+    depends_on:
+      web:
+        condition: service_started
+
+    volumes:
+      # Mismo bind mount que web para detectar cambios en vivo
+      - .:/rails:cached
+
+    # PROFILES: Este servicio solo corre si se activa explícitamente
+    # Uso: docker compose --profile development up
+    # Sin el flag --profile, este servicio NO inicia (útil para producción)
+    profiles:
+      - development
+
+    networks:
+      - roraima_network
+
+# ============================================
+# NOTAS FINALES
+# ============================================
+#
+# DESARROLLO vs PRODUCCIÓN:
+# - Este docker-compose.yml está optimizado para DESARROLLO
+# - Para producción, crear docker-compose.prod.yml con:
+#   * target: production en builds
+#   * Sin bind mounts (código copiado en imagen)
+#   * Sin tailwindcss service
+#   * Secrets gestionados de forma segura
+#
+# COMANDOS ÚTILES:
+# - Logs en tiempo real:  docker compose logs -f
+# - Consola de Rails:     docker compose exec web rails console
+# - Ejecutar migraciones: docker compose exec web rails db:migrate
+# - Conectar a Postgres:  docker compose exec postgres psql -U postgres -d roraima_app_development
+# - Conectar a Redis:     docker compose exec redis redis-cli
+# - Ver uso de recursos:  docker stats
+#
+# TROUBLESHOOTING:
+# - Si un servicio no inicia: docker compose logs <servicio>
+# - Si hay problemas de permisos: sudo chown -R $USER:$USER .
+# - Para reset completo: docker compose down -v (⚠️ borra volúmenes)
+# - Si cambias Gemfile: docker compose build --no-cache web
+#
+# ============================================

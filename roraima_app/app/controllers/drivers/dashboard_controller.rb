@@ -11,15 +11,9 @@ module Drivers
                                           assigned_at: :desc
                                         )
 
-      @today_deliveries = current_driver.today_deliveries
-                                        .includes(:region, :commune)
-
-      @stats = {
-        pending: current_driver.pending_deliveries.count,
-        today: @today_deliveries.count,
-        total_assigned: current_driver.visible_packages.where(assigned_at: Date.current.all_day).count,
-        rescheduled: current_driver.persistent_rescheduled_count
-      }
+      @stats = current_driver.status_summary(Date.current).merge(
+        total_assigned: current_driver.visible_packages.where(assigned_at: Date.current.all_day).count
+      )
     end
 
     def start_route
