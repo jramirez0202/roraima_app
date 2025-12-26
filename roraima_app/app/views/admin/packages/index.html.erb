@@ -1,4 +1,4 @@
-<div class="max-w-7xl lg:max-w-[90%] xl:max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8"
+<div class="max-w-7xl lg:max-w-full xl:max-w-full mx-auto px-4 sm:px-6 lg:px-8"
      data-controller="bulk-packages"
      data-bulk-packages-translations-value='<%= status_translations_json %>'
      data-bulk-packages-badge-classes-value='<%= PackagesHelper::STATUS_BADGE_CLASSES.transform_keys(&:to_s).to_json %>'>
@@ -24,6 +24,9 @@
 
   <%# Bulk action buttons %>
   <%= render 'bulk_actions' %>
+
+  <%# Global summary counter %>
+  <%= render 'global_summary' %>
 
   <%# Packages table %>
   <%= render 'table', packages: @packages, drivers: @drivers, pagy: @pagy %>

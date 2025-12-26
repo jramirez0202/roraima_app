@@ -6,13 +6,35 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
-# Use bin/rails credentials:edit to set the AWS secrets (as aws:access_key_id|secret_access_key)
-# amazon:
-#   service: S3
-#   access_key_id: <%= Rails.application.credentials.dig(:aws, :access_key_id) %>
-#   secret_access_key: <%= Rails.application.credentials.dig(:aws, :secret_access_key) %>
-#   region: us-east-1
-#   bucket: your_own_bucket-<%= Rails.env %>
+# =========================================
+# AWS S3 Configuration
+# =========================================
+# IMPORTANTE: En ECS/EC2, las credenciales se obtienen automáticamente del rol IAM
+# No es necesario configurar access_key_id/secret_access_key explícitamente
+
+# Staging environment (checkpoint-active-storage-dev)
+amazon_staging:
+  service: S3
+  region: us-east-1
+  bucket: checkpoint-active-storage-dev
+  http_open_timeout: 5
+  http_read_timeout: 5
+
+# Production environment (crear bucket cuando vayas a prod)
+amazon_production:
+  service: S3
+  region: us-east-1
+  bucket: roraima-delivery-production
+  http_open_timeout: 5
+  http_read_timeout: 5
+
+# Alias genérico (usa amazon_staging o amazon_production según Rails.env)
+amazon:
+  service: S3
+  region: us-east-1
+  bucket: <%= Rails.env.production? ? 'roraima-delivery-production' : 'checkpoint-active-storage-dev' %>
+  http_open_timeout: 5
+  http_read_timeout: 5
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:
@@ -28,7 +50,9 @@ local:
 #   storage_access_key: <%= Rails.application.credentials.dig(:azure_storage, :storage_access_key) %>
 #   container: your_container_name-<%= Rails.env %>
 
-# mirror:
-#   service: Mirror
-#   primary: local
-#   mirrors: [ amazon, google, microsoft ]
+# Mirror service for zero-downtime migration (writes to both local and S3)
+mirror:
+  service: Mirror
+  primary: local
+  mirrors:
+    - amazon

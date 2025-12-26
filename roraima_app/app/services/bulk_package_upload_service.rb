@@ -5,7 +5,6 @@ class BulkPackageUploadService
 
   # Mapeo de columnas esperadas en el archivo
   EXPECTED_HEADERS = {
-    'FECHA' => :loading_date,
     'DESTINATARIO' => :customer_name,
     'TELÉFONO' => :phone,
     'TELEFONO' => :phone, # Alternativa sin tilde
@@ -110,7 +109,7 @@ class BulkPackageUploadService
   end
 
   def valid_headers?(headers)
-    required_fields = [:loading_date, :customer_name, :phone, :address, :commune, :description, :amount, :exchange, :sender_email]
+    required_fields = [:customer_name, :phone, :address, :commune, :description, :amount, :exchange, :sender_email]
     required_fields.all? { |field| headers.include?(field) }
   end
 
@@ -118,7 +117,10 @@ class BulkPackageUploadService
     begin
       # Transformar datos
       package_params = build_package_params(row_number, row_data)
-      return unless package_params # Si hubo errores en la construcción, ya se registraron
+      if package_params.nil?
+        @failed_rows += 1
+        return # Si hubo errores en la construcción, ya se registraron
+      end
 
       # Crear el package con user_id explícito
       package = Package.new(package_params)
@@ -141,32 +143,7 @@ class BulkPackageUploadService
     params = {}
     has_errors = false
 
-    # FECHA -> loading_date
-    begin
-      date_value = row_data[:loading_date]
-      if date_value.blank?
-        add_error(row_number, 'FECHA', date_value, 'no puede estar vacío')
-        has_errors = true
-      elsif date_value.is_a?(Date) || date_value.is_a?(DateTime)
-        params[:loading_date] = date_value.to_date
-      elsif date_value.is_a?(String)
-        params[:loading_date] = Date.parse(date_value) rescue nil
-        if params[:loading_date].nil?
-          add_error(row_number, 'FECHA', date_value, 'formato de fecha inválido')
-          has_errors = true
-        end
-      else
-        # Puede ser un número de Excel (días desde 1900-01-01)
-        params[:loading_date] = Date.new(1899, 12, 30) + date_value.to_i rescue nil
-        if params[:loading_date].nil?
-          add_error(row_number, 'FECHA', date_value, 'formato de fecha inválido')
-          has_errors = true
-        end
-      end
-    rescue => e
-      add_error(row_number, 'FECHA', date_value, "error al procesar fecha: #{e.message}")
-      has_errors = true
-    end
+    # loading_date se establece automáticamente por el callback del modelo
 
     # customer_name
     customer_name = row_data[:customer_name].to_s.strip
@@ -321,9 +298,35 @@ class BulkPackageUploadService
     region = Region.find_by('LOWER(name) = ?', 'región metropolitana')
     return nil unless region
 
+    # Normalizar nombre de comuna (mapear aliases comunes)
+    normalized_name = normalize_commune_name(commune_name)
+
     Commune.where(region_id: region.id)
-           .where('LOWER(name) = ?', commune_name.downcase)
+           .where('LOWER(name) = ?', normalized_name.downcase)
            .first
+  end
+
+  def normalize_commune_name(name)
+    # Mapeo de aliases comunes a nombres oficiales
+    aliases = {
+      'santiago centro' => 'santiago',
+      'stgo' => 'santiago',
+      'stgo centro' => 'santiago',
+      'estacion central' => 'estación central',
+      'ñunoa' => 'ñuñoa',
+      'nunoa' => 'ñuñoa',
+      'peñalolen' => 'peñalolén',
+      'penalolen' => 'peñalolén',
+      'maipu' => 'maipú',
+      'conchali' => 'conchalí',
+      'huechuraba' => 'huechuraba',
+      'la florida' => 'la florida',
+      'puente alto' => 'puente alto',
+      'san bernardo' => 'san bernardo'
+    }
+
+    normalized = name.strip.downcase
+    aliases[normalized] || name
   end
 
   def find_customer_by_email(email)

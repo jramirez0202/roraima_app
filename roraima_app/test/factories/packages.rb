@@ -7,7 +7,7 @@ FactoryBot.define do
     description { "Paquete de prueba" }
     sequence(:phone) { |n| "+569#{sprintf('%08d', 10000000 + n)}" }
     exchange { false }
-    loading_date { Date.tomorrow }
+    # loading_date will be set automatically by model callback
 
     # Required associations
     association :region

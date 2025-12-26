@@ -38,7 +38,7 @@ module Customers
     private
 
     def user_params
-      params.require(:user).permit(:email, :password, :password_confirmation, :company_logo, :show_logo_on_labels)
+      params.require(:user).permit(:email, :name, :company, :phone, :password, :password_confirmation, :company_logo, :show_logo_on_labels)
     end
   end
 end

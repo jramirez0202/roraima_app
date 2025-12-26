@@ -129,7 +129,6 @@ module Customers
         :description,
         :phone,
         :exchange,
-        :loading_date,
         :commune_id,
         :amount
       )

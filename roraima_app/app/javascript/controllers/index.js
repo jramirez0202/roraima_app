@@ -43,5 +43,8 @@ application.register("scanner", ScannerController)
 import SidebarController from "./sidebar_controller"
 application.register("sidebar", SidebarController)
 
+import SidebarMenuController from "./sidebar_menu_controller"
+application.register("sidebar-menu", SidebarMenuController)
+
 import UserRoleController from "./user_role_controller"
 application.register("user-role", UserRoleController)

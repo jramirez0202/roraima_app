@@ -10,7 +10,10 @@
 
   <div class="bg-white shadow-md rounded-lg">
     <div class="px-6 py-4 border-b border-gray-200">
-      <h1 class="text-2xl font-bold text-gray-900">Editar Perfil</h1>
+      <div class="flex items-center gap-4">
+        <%= render 'shared/customer_logo_header' %>
+        <h1 class="text-2xl font-bold text-gray-900">Editar Perfil</h1>
+      </div>
     </div>
 
     <div class="px-6 py-6">
@@ -33,6 +36,33 @@
         <div>
           <%= form.label :email, "Email", class: "block text-sm font-medium text-gray-700" %>
           <%= form.email_field :email, autocomplete: "email", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        </div>
+
+        <div>
+          <%= form.label :name, "Nombre Personal", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :name, autocomplete: "name", class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          <p class="mt-1 text-xs text-gray-500">Tu nombre completo</p>
+        </div>
+
+        <div>
+          <%= form.label :company, "Nombre de la Empresa", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :company, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          <p class="mt-1 text-xs text-gray-500">Nombre de tu empresa o negocio</p>
+        </div>
+
+        <div data-controller="phone">
+          <%= form.label :phone, "Teléfono", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.telephone_field :phone,
+              value: form.object.phone.presence || "+569",
+              placeholder: "+56987654321",
+              pattern: "^\\+569\\d{8}$",
+              maxlength: "12",
+              data: {
+                phone_target: "input",
+                action: "focus->phone#focus input->phone#input keydown->phone#keydown paste->phone#paste"
+              },
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+          <p class="mt-1 text-xs text-gray-500">Formato: +569XXXXXXXX (12 caracteres)</p>
         </div>
 
         <div class="pt-6 border-t border-gray-200">

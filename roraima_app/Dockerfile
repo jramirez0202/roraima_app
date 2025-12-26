@@ -38,7 +38,10 @@ WORKDIR /rails
 # Variables de entorno comunes a todos los stages
 # BUNDLE_PATH: Dónde Bundler instala las gemas
 # BUNDLE_WITHOUT: Por ahora vacío (se sobrescribe en cada stage)
-ENV BUNDLE_PATH="/usr/local/bundle" \
+ENV BUNDLE_PATH="/rails/vendor/bundle" \
+    BUNDLE_BIN="/rails/vendor/bundle/bin" \
+    GEM_HOME="/rails/vendor/bundle" \
+    PATH="/rails/vendor/bundle/bin:${PATH}" \
     BUNDLE_WITHOUT=""
 
 # Instalar dependencias del sistema
@@ -104,7 +107,8 @@ FROM base AS development
 
 # Copiar gemas instaladas desde el stage builder
 # --from=builder permite copiar archivos de OTRO stage
-COPY --from=builder /usr/local/bundle /usr/local/bundle
+COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
+
 
 # Variables de entorno para desarrollo
 ENV RAILS_ENV="development" \
@@ -167,7 +171,7 @@ ENV RAILS_ENV="production" \
     RAILS_LOG_TO_STDOUT="true"
 
 # Copiar gemas instaladas desde builder
-COPY --from=builder /usr/local/bundle /usr/local/bundle
+COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
 
 # Copiar código de la aplicación desde builder
 COPY --from=builder /rails /rails

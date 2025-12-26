@@ -166,15 +166,15 @@ class BulkPackageUploadServiceTest < ActiveSupport::TestCase
   # ====================
   # Field Mapping Tests
   # ====================
-  test "should map FECHA to loading_date" do
+  test "should auto-assign loading_date to today during CSV upload" do
     bulk_upload = create(:bulk_upload, :with_csv, user: @user)
     service = BulkPackageUploadService.new(bulk_upload)
 
     service.process
 
     package = Package.last
-    assert_not_nil package.loading_date
-    assert_instance_of Date, package.loading_date
+    assert_not_nil package.loading_date, "loading_date should be set automatically"
+    assert_equal Date.current, package.loading_date, "loading_date should default to today"
   end
 
   test "should map DESTINATARIO to customer_name" do

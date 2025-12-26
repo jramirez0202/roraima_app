@@ -44,7 +44,6 @@ class Package < ApplicationRecord
             on: [:create, :update]
 
   validates :loading_date, presence: true
-  validate :loading_date_cannot_be_in_past, if: -> { loading_date_changed? && !delivered? }
   validate :loading_date_must_be_before_delivery
   validate :user_must_be_customer
 
@@ -67,6 +66,7 @@ class Package < ApplicationRecord
 
   # Callbacks
   before_validation :generate_tracking_code, on: :create
+  before_validation :set_loading_date_default, on: :create
 
   # Scopes optimizados para usar índices compuestos
   # Usa index_packages_on_created_at
@@ -300,13 +300,9 @@ class Package < ApplicationRecord
 
   private
 
-  # Validación personalizada para fecha de carga
-  def loading_date_cannot_be_in_past
-    return if loading_date.blank?
-
-    if loading_date < Date.current
-      errors.add(:loading_date, "debe ser hoy o posterior")
-    end
+  # Establece loading_date automáticamente si está vacío
+  def set_loading_date_default
+    self.loading_date ||= Date.current
   end
 
   # Validación de coherencia temporal: loading_date debe ser anterior a delivered_at

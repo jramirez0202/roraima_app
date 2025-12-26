@@ -71,8 +71,8 @@
       <h2 class="text-lg font-semibold text-gray-900 mb-3">Detalles del Paquete</h2>
       <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <dt class="text-sm font-medium text-gray-500">Fecha de Carga</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= @package.loading_date&.strftime('%d/%m/%Y') || '-' %></dd>
+          <dt class="text-sm font-medium text-gray-500">Fecha de Asigancion</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @package.assigned_at&.strftime('%d/%m/%Y %H:%M') || '-' %></dd>
         </div>
         <div>
           <dt class="text-sm font-medium text-gray-500">Monto</dt>

@@ -19,7 +19,8 @@
     <!-- FECHA CARGA -->
     <div>
       <%= form.label :loading_date, "Fecha de Carga", class: "block text-sm font-medium text-gray-700" %>
-      <%= form.date_field :loading_date, min: Date.current, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+      <%= form.date_field :loading_date, value: form.object.loading_date || Date.current, min: Date.current, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+      <p class="mt-1 text-xs text-gray-500">Por defecto se asigna hoy, pero puedes cambiarlo si es necesario</p>
     </div>
 
     <!-- CLIENTE -->

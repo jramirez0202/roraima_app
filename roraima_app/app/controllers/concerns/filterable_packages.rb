@@ -34,11 +34,18 @@ module FilterablePackages
       date_from = parse_date(filter_params[:date_from])
       date_to = parse_date(filter_params[:date_to])
 
-      # Si solo especifica "Desde" sin "Hasta", usar HOY como fecha final
-      date_to ||= Date.current if date_from.present?
+      # Si solo especifica "Desde" sin "Hasta", usar HOY como fecha final (o date_from si está en el futuro)
+      if date_from.present? && date_to.nil?
+        date_to = date_from > Date.current ? date_from : Date.current
+      end
 
       # Si solo especifica "Hasta" sin "Desde", usar hace 3 días como fecha inicial
       date_from ||= Date.current - 2.days if date_to.present?
+
+      # Validar que date_from <= date_to, si no, intercambiar
+      if date_from && date_to && date_from > date_to
+        date_from, date_to = date_to, date_from
+      end
 
       scope = scope.loading_date_between(date_from, date_to)
     elsif !searching_by_tracking
@@ -86,7 +93,7 @@ module FilterablePackages
   def filter_params
     # Permitir commune_ids y courier_ids tanto como scalar (autocomplete) como array (multi-select)
     @filter_params ||= begin
-      permitted = params.permit(:status, :tracking_query, :date_from, :date_to, :page, :commune_ids, :courier_ids)
+      permitted = params.permit(:status, :tracking_query, :date_from, :date_to, :page, :commune_ids, :courier_ids, :button)
 
       # Normalizar commune_ids a array si viene como scalar
       if permitted[:commune_ids].present? && !permitted[:commune_ids].is_a?(Array)

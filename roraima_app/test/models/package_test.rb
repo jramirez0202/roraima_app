@@ -192,21 +192,15 @@ class PackageTest < ActiveSupport::TestCase
     assert_includes package.errors[:commune], "can't be blank"
   end
 
-  test "should require loading_date" do
+  test "should set loading_date automatically when nil" do
     package = build(:package, loading_date: nil)
-    assert_not package.valid?
-    assert_includes package.errors[:loading_date], "can't be blank"
+    assert package.valid?
+    assert_equal Date.current, package.loading_date
   end
 
   # ====================
   # Loading Date Validation
   # ====================
-  test "should not allow past loading_date" do
-    package = build(:package, :past_date)
-    assert_not package.valid?
-    assert_includes package.errors[:loading_date], "debe ser hoy o posterior"
-  end
-
   test "should allow today as loading_date" do
     package = build(:package, loading_date: Date.today)
     assert package.valid?
@@ -215,6 +209,13 @@ class PackageTest < ActiveSupport::TestCase
   test "should allow future loading_date" do
     package = build(:package, loading_date: Date.tomorrow)
     assert package.valid?
+  end
+
+  test "should not override loading_date if provided" do
+    future_date = Date.tomorrow
+    package = build(:package, loading_date: future_date)
+    package.valid?
+    assert_equal future_date, package.loading_date
   end
 
   # ====================
@@ -354,16 +355,11 @@ class PackageTest < ActiveSupport::TestCase
     assert_not package.ready_for_label?, "Package should not be ready without address"
   end
 
-  test "ready_for_label? should return false when loading_date is missing" do
-    package = build(:package,
-      tracking_code: "PKG-12345678901234",
-      customer_name: "Test Customer",
-      address: "Test Address",
-      phone: "+56912345678",
-      loading_date: nil
-    )
-
-    assert_not package.ready_for_label?, "Package should not be ready without loading_date"
+  test "should set loading_date automatically for label readiness" do
+    package = build(:package, loading_date: nil)
+    package.valid? # Trigger callback
+    assert package.ready_for_label?
+    assert_equal Date.current, package.loading_date
   end
 
   # ====================

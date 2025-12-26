@@ -28,7 +28,8 @@
       <ul class="list-disc list-inside space-y-2 text-blue-800">
         <li>El archivo debe ser formato <strong>CSV</strong> o <strong>XLSX</strong></li>
         <li>La primera fila debe contener los nombres de las columnas exactos</li>
-        <li>Todas las columnas son <strong>obligatorias</strong></li>
+        <li>Todas las columnas son <strong>obligatorias</strong>, excepto NRO DE PEDIDO</li>
+        <li><strong>Fecha de carga:</strong> Se asignará automáticamente al día de hoy. <strong>NO incluyas columna FECHA</strong></li>
         <li>Los teléfonos se normalizarán automáticamente al formato +569XXXXXXXX</li>
         <li>Las comunas deben existir en el sistema (Región Metropolitana)</li>
         <li><strong>EMPRESA:</strong> Debe ser el <strong>email</strong> de un customer existente. Los paquetes se asignarán a ese customer.</li>
@@ -55,9 +56,9 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">FECHA</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Fecha</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">2024-01-15</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">NRO DE PEDIDO</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Texto (opcional)</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ORD-001</td>
             </tr>
             <tr class="bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DESTINATARIO</td>

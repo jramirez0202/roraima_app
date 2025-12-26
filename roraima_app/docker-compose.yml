@@ -214,7 +214,7 @@ services:
 
       # NAMED VOLUMES: Persistencia de datos
       - storage_data:/rails/storage      # Active Storage
-      - bundle_cache:/usr/local/bundle   # Cache de gemas
+      - bundle_cache:/rails/vendor/bundle # Cache de gemas
 
       # ANONYMOUS VOLUMES: Evita sincronizar tmp/ y log/
       # Formato: solo ruta del contenedor (sin :)
@@ -275,6 +275,8 @@ services:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/roraima_app_development
       REDIS_URL: redis://redis:6379/0
       RAILS_ENV: development
+      AWS_REGION: us-east-1
+      AWS_S3_BUCKET: checkpoint-active-storage-dev
 
     # Comparte los MISMOS volúmenes que web
     # ¿Por qué? Sidekiq necesita acceso a los mismos archivos:
@@ -283,7 +285,7 @@ services:
     volumes:
       - .:/rails:cached
       - storage_data:/rails/storage
-      - bundle_cache:/usr/local/bundle
+      - bundle_cache:/rails/vendor/bundle
       - /rails/tmp
       - /rails/log
 

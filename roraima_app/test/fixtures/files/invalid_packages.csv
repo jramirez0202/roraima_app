@@ -1,6 +1,6 @@
-FECHA,NRO DE PEDIDO,DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA
-2025-12-15,INV-001,Juan Pérez,123,Av. Providencia 123,Providencia,Paquete con ropa,15000,NO,Test Corp
-2025-12-16,INV-002,María González,987654321,Los Leones 456,ComunaInexistente,Electrónicos,25000,SI,Tech Store
-2020-01-01,INV-003,Pedro Ramírez,+56956781234,Santa Rosa 789,La Florida,Libros,abc,NO,Librería Central
-,INV-004,Ana López,+56912345678,Dirección 100,Providencia,Productos,5000,NO,Store
-2025-12-20,,+56987654321,Calle Falsa 123,Las Condes,Mercadería,10000,SI,Company
+NRO DE PEDIDO,DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA
+INV-001,Juan Pérez,123,Av. Providencia 123,Providencia,Paquete con ropa,15000,NO,Test Corp
+INV-002,María González,987654321,Los Leones 456,ComunaInexistente,Electrónicos,25000,SI,Tech Store
+INV-003,Pedro Ramírez,+56956781234,Santa Rosa 789,La Florida,Libros,abc,NO,Librería Central
+INV-004,Ana López,+56912345678,Dirección 100,Providencia,Productos,5000,NO,Store
+,,+56987654321,Calle Falsa 123,Las Condes,Mercadería,10000,SI,Company

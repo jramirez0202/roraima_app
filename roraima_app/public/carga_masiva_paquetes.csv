@@ -1,4 +1,4 @@
-FECHA,DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA
-2025-12-15,Juan Pérez,912345678,Av. Providencia 123,Providencia,Paquete con ropa,15000,NO,
-2025-12-16,María González,987654321,Los Leones 456,Las Condes,Electrónicos,25000,SI,
-2025-12-17,Pedro Ramírez,956781234,Santa Rosa 789,La Florida,Libros,8000,NO,
+DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA
+Juan Pérez,912345678,Av. Providencia 123,Providencia,Paquete con ropa,15000,NO,
+María González,987654321,Los Leones 456,Las Condes,Electrónicos,25000,SI,
+Pedro Ramírez,956781234,Santa Rosa 789,La Florida,Libros,8000,NO,

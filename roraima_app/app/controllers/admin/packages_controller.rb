@@ -27,13 +27,13 @@ class Admin::PackagesController < Admin::BaseController
       # Si solo especifica "Desde" sin "Hasta", usar HOY como fecha final
       date_to ||= Date.current if date_from.present?
 
-      # Si solo especifica "Hasta" sin "Desde", usar hace 3 días como fecha inicial
-      date_from ||= Date.current - 2.days if date_to.present?
+      # Si solo especifica "Hasta" sin "Desde", usar HOY como fecha inicial
+      date_from ||= Date.current if date_to.present?
 
       packages_with_date = packages.loading_date_between(date_from, date_to)
     elsif !searching_by_tracking
-      # Por defecto: últimos 3 días (solo si NO busca por tracking)
-      date_from = Date.current - 2.days
+      # Por defecto: solo el día actual (solo si NO busca por tracking)
+      date_from = Date.current
       date_to = Date.current
       packages_with_date = packages.loading_date_between(date_from, date_to)
     else
@@ -51,6 +51,13 @@ class Admin::PackagesController < Admin::BaseController
     @delivered_count = status_counts["delivered"] || 0
     @return_count = status_counts["return"] || 0
     @cancelled_count = status_counts["cancelled"] || 0
+
+    # Contador de reprogramados persistentes (sin filtro de fecha - para resumen global)
+    @persistent_rescheduled_count = Package.where(status: :rescheduled).count
+
+    # Exponer variables de fecha para la vista
+    @date_from = date_from
+    @date_to = date_to
 
     # === APLICAR TODOS LOS FILTROS (incluyendo estado, comuna, driver) ===
     packages = apply_package_filters(packages)
@@ -143,8 +150,9 @@ class Admin::PackagesController < Admin::BaseController
   end
 
   def destroy
-    @package.destroy
-    redirect_to admin_packages_path, notice: 'Paquete eliminado exitosamente.'
+    # DESHABILITADO: Eliminación de paquetes desactivada por seguridad
+    # Los paquetes no deben eliminarse, solo cambiar su estado a "cancelled"
+    redirect_to admin_packages_path, alert: 'La eliminación de paquetes está deshabilitada. Use cambio de estado a "Cancelado" en su lugar.'
   end
 
   def generate_labels

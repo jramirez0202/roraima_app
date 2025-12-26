@@ -26,12 +26,9 @@ class PackagePolicy < ApplicationPolicy
   end
 
   def destroy?
-    # Admin puede eliminar siempre
-    return true if user.admin?
-
-    # Cliente solo puede eliminar si el paquete está en estado pending_pickup
-    # Una vez que está en bodega o más allá, ya no puede eliminarlo
-    record.user_id == user.id && record.pending_pickup?
+    # DESHABILITADO: Eliminación de paquetes desactivada por seguridad
+    # Los paquetes no deben eliminarse, solo cambiar su estado a "cancelled"
+    false
   end
 
   def cancel?

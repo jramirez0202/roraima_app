@@ -85,7 +85,15 @@
       <%# Action Buttons %>
       <div class="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
         <div class="text-sm text-gray-600">
-          <% if local_assigns[:filtered_count] && local_assigns[:total_count] %>
+          <% if local_assigns[:pagy] %>
+            <%# Usar datos de Pagy para mostrar rango correcto %>
+            <% if pagy.count > 0 %>
+              Mostrando <span class="font-semibold"><%= pagy.from %>-<%= pagy.to %></span> de <span class="font-semibold"><%= pagy.count %></span> paquete<%= pagy.count != 1 ? 's' : '' %>
+            <% else %>
+              No hay paquetes
+            <% end %>
+          <% elsif local_assigns[:filtered_count] && local_assigns[:total_count] %>
+            <%# Fallback para vistas que no usan Pagy %>
             <% if filtered_count == total_count %>
               Mostrando <span class="font-semibold"><%= total_count %></span> paquete<%= total_count != 1 ? 's' : '' %>
             <% else %>

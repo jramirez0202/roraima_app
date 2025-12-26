@@ -127,8 +127,8 @@
     </div>
   <% end %>
 
-  <!-- Botón Cerrar Sesión - Visible especialmente en móvil -->
-  <div class="mt-8 mb-20 md:mb-8">
+  <!-- Botón Cerrar Sesión - Solo visible en móvil -->
+  <div class="mt-8 mb-20 md:hidden">
     <%= button_to destroy_user_session_path,
       method: :delete,
       data: { turbo: false, confirm: "¿Estás seguro de que deseas cerrar sesión?" },

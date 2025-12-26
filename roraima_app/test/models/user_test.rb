@@ -333,4 +333,127 @@ class UserTest < ActiveSupport::TestCase
     admin = build(:user, role: :admin, company: nil)
     assert admin.valid?, "Admin should not require company"
   end
+
+  # ====================
+  # ActiveStorage Attachments
+  # ====================
+  test "should allow company_logo attachment" do
+    user = create(:user, :customer)
+    assert_respond_to user, :company_logo
+  end
+
+  test "should attach company_logo successfully" do
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    assert user.company_logo.attached?, "Company logo should be attached"
+    assert_equal 'test_logo.png', user.company_logo.filename.to_s
+    assert_equal 'image/png', user.company_logo.content_type
+  end
+
+  test "should generate thumb variant for company_logo" do
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    assert user.company_logo.attached?
+    assert_respond_to user.company_logo, :variant
+
+    # Verify variant can be generated
+    thumb_variant = user.company_logo.variant(:thumb)
+    assert_not_nil thumb_variant
+  end
+
+  test "should generate medium variant for company_logo" do
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    medium_variant = user.company_logo.variant(:medium)
+    assert_not_nil medium_variant
+  end
+
+  test "should generate large variant for company_logo" do
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    large_variant = user.company_logo.variant(:large)
+    assert_not_nil large_variant
+  end
+
+  test "should purge company_logo attachment" do
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+    assert user.company_logo.attached?
+
+    user.company_logo.purge
+    assert_not user.company_logo.attached?
+  end
+
+  # ====================
+  # S3 Storage Tests (when using :amazon service)
+  # ====================
+  test "company_logo should upload to configured storage service" do
+    skip "Skipped: Run only when AWS credentials are configured" unless Rails.application.credentials.dig(:aws, :access_key_id).present?
+
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    assert user.company_logo.attached?
+
+    # Verify blob was created
+    blob = user.company_logo.blob
+    assert_not_nil blob
+    assert_not_nil blob.key
+    assert blob.byte_size > 0
+  end
+
+  test "company_logo URL should be accessible after upload" do
+    skip "Skipped: Run only when AWS credentials are configured" unless Rails.application.credentials.dig(:aws, :access_key_id).present?
+
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    url = user.company_logo.url
+    assert_not_nil url
+    assert url.is_a?(String)
+    assert url.length > 0
+  end
+
+  test "company_logo should use amazon service when configured" do
+    skip "Skipped: Run only when using :amazon service" unless Rails.configuration.active_storage.service == :amazon
+
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    assert user.company_logo.attached?
+    assert_equal 'amazon', user.company_logo.service_name
+    assert user.company_logo.url.include?('amazonaws.com')
+  end
+
+  test "company_logo should use mirror service during migration" do
+    skip "Skipped: Run only when using :mirror service" unless Rails.configuration.active_storage.service == :mirror
+
+    user = create(:user, :customer)
+    file = fixture_file_upload('files/test_logo.png', 'image/png')
+
+    user.company_logo.attach(file)
+
+    assert user.company_logo.attached?
+    assert_equal 'mirror', user.company_logo.service_name
+  end
 end

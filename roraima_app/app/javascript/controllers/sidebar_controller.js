@@ -6,6 +6,13 @@ export default class extends Controller {
   connect() {
     console.log('🎯 Sidebar Controller connected')
 
+    // Restaurar estado del sidebar desde localStorage
+    const sidebarClosed = localStorage.getItem('sidebarClosed') === 'true'
+    if (sidebarClosed) {
+      // Si el usuario cerró el sidebar previamente, mantenerlo cerrado
+      this.sidebarTarget.classList.add('-translate-x-full')
+    }
+
     // Cerrar con tecla ESC
     this.escapeHandler = this.handleEscape.bind(this)
     document.addEventListener('keydown', this.escapeHandler)
@@ -44,6 +51,9 @@ export default class extends Controller {
     // Slide in sidebar
     this.sidebarTarget.classList.remove('-translate-x-full')
 
+    // Guardar estado en localStorage
+    localStorage.setItem('sidebarClosed', 'false')
+
     console.log('Clases DESPUÉS de abrir:', this.sidebarTarget.className)
     console.log('¿Tiene -translate-x-full después de remover?', this.sidebarTarget.classList.contains('-translate-x-full'))
 
@@ -66,6 +76,9 @@ export default class extends Controller {
     // Slide out sidebar
     this.sidebarTarget.classList.add('-translate-x-full')
 
+    // Guardar estado en localStorage
+    localStorage.setItem('sidebarClosed', 'true')
+
     console.log('Clases DESPUÉS:', this.sidebarTarget.className)
     console.log('¿Tiene -translate-x-full?', this.sidebarTarget.classList.contains('-translate-x-full'))
 
@@ -73,8 +86,4 @@ export default class extends Controller {
     document.body.style.overflow = ''
   }
 
-  // Cerrar al hacer click en un link
-  handleLinkClick() {
-    this.close()
-  }
 }

@@ -18,7 +18,12 @@ class User < ApplicationRecord
            foreign_key: 'assigned_by_id',
            dependent: :nullify
 
-  has_one_attached :company_logo
+  # Company logo with variants for performance optimization
+  has_one_attached :company_logo do |attachable|
+    attachable.variant :thumb, resize_to_limit: [100, 100]
+    attachable.variant :medium, resize_to_limit: [300, 300]
+    attachable.variant :large, resize_to_limit: [600, 600]
+  end
 
   # Validaciones obligatorias básicas
   validates :email, presence: true, uniqueness: true

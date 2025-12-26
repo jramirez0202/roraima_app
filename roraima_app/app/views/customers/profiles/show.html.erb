@@ -1,7 +1,10 @@
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <div class="bg-white shadow-md rounded-lg overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900">Mi Perfil</h1>
+      <div class="flex items-center gap-4">
+        <%= render 'shared/customer_logo_header' %>
+        <h1 class="text-2xl font-bold text-gray-900">Mi Perfil</h1>
+      </div>
       <%= link_to edit_customers_profile_path, class: "inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
         <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -47,6 +50,27 @@
           <dd class="mt-1 text-sm text-gray-900"><%= @user.email %></dd>
         </div>
 
+        <% if @user.name.present? %>
+          <div class="sm:col-span-1">
+            <dt class="text-sm font-medium text-gray-500">Nombre</dt>
+            <dd class="mt-1 text-sm text-gray-900"><%= @user.name %></dd>
+          </div>
+        <% end %>
+
+        <% if @user.company.present? %>
+          <div class="sm:col-span-1">
+            <dt class="text-sm font-medium text-gray-500">Empresa</dt>
+            <dd class="mt-1 text-sm text-gray-900"><%= @user.company %></dd>
+          </div>
+        <% end %>
+
+        <% if @user.phone.present? %>
+          <div class="sm:col-span-1">
+            <dt class="text-sm font-medium text-gray-500">Teléfono</dt>
+            <dd class="mt-1 text-sm text-gray-900"><%= @user.phone %></dd>
+          </div>
+        <% end %>
+
         <div class="sm:col-span-1">
           <dt class="text-sm font-medium text-gray-500">Rol</dt>
           <dd class="mt-1">
@@ -77,18 +101,5 @@
         <%= link_to "Cambiar Contraseña", edit_customers_profile_path, class: "text-sm text-indigo-600 hover:text-indigo-900" %>
       </div>
     </div>
-  </div>
-
-  <!-- Botón Cerrar Sesión - Visible especialmente en móvil -->
-  <div class="mt-6 mb-20 md:mb-6">
-    <%= button_to destroy_user_session_path,
-      method: :delete,
-      data: { turbo: false, confirm: "¿Estás seguro de que deseas cerrar sesión?" },
-      class: "w-full flex items-center justify-center px-6 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors shadow-sm" do %>
-      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-      </svg>
-      <span class="font-semibold">Cerrar Sesión</span>
-    <% end %>
   </div>
 </div>

@@ -5,7 +5,6 @@ class BulkPackageValidatorService
 
   # Mapeo de columnas esperadas en el archivo (reutilizado de BulkPackageUploadService)
   EXPECTED_HEADERS = {
-    'FECHA' => :loading_date,
     'DESTINATARIO' => :customer_name,
     'TELÉFONO' => :phone,
     'TELEFONO' => :phone, # Alternativa sin tilde
@@ -106,13 +105,12 @@ class BulkPackageValidatorService
   end
 
   def valid_headers?(headers)
-    required_fields = [:loading_date, :customer_name, :phone, :address, :commune, :description, :amount, :exchange, :sender_email]
+    required_fields = [:customer_name, :phone, :address, :commune, :description, :amount, :exchange, :sender_email]
     required_fields.all? { |field| headers.include?(field) }
   end
 
   def validate_row(row_number, row_data)
-    # FECHA -> loading_date
-    validate_loading_date(row_number, row_data[:loading_date])
+    # loading_date se establece automáticamente por el callback del modelo
 
     # DESTINATARIO -> customer_name
     validate_customer_name(row_number, row_data[:customer_name])
@@ -134,32 +132,6 @@ class BulkPackageValidatorService
 
     # EMPRESA -> sender_email
     validate_sender_email(row_number, row_data[:sender_email])
-  end
-
-  def validate_loading_date(row_number, date_value)
-    if date_value.blank?
-      add_error(row_number, 'FECHA', date_value, 'no puede estar vacío')
-      return
-    end
-
-    begin
-      if date_value.is_a?(Date) || date_value.is_a?(DateTime)
-        # Fecha válida
-      elsif date_value.is_a?(String)
-        parsed_date = Date.parse(date_value) rescue nil
-        if parsed_date.nil?
-          add_error(row_number, 'FECHA', date_value, 'formato de fecha inválido. Use formato YYYY-MM-DD (ejemplo: 2025-12-31)')
-        end
-      else
-        # Puede ser un número de Excel (días desde 1900-01-01)
-        parsed_date = Date.new(1899, 12, 30) + date_value.to_i rescue nil
-        if parsed_date.nil?
-          add_error(row_number, 'FECHA', date_value, 'formato de fecha inválido. Use formato YYYY-MM-DD (ejemplo: 2025-12-31)')
-        end
-      end
-    rescue => e
-      add_error(row_number, 'FECHA', date_value, "error al procesar fecha: #{e.message}")
-    end
   end
 
   def validate_customer_name(row_number, customer_name)
@@ -277,9 +249,35 @@ class BulkPackageValidatorService
     region = Region.find_by('LOWER(name) = ?', 'región metropolitana')
     return nil unless region
 
+    # Normalizar nombre de comuna (mapear aliases comunes)
+    normalized_name = normalize_commune_name(commune_name)
+
     Commune.where(region_id: region.id)
-           .where('LOWER(name) = ?', commune_name.downcase)
+           .where('LOWER(name) = ?', normalized_name.downcase)
            .first
+  end
+
+  def normalize_commune_name(name)
+    # Mapeo de aliases comunes a nombres oficiales
+    aliases = {
+      'santiago centro' => 'santiago',
+      'stgo' => 'santiago',
+      'stgo centro' => 'santiago',
+      'estacion central' => 'estación central',
+      'ñunoa' => 'ñuñoa',
+      'nunoa' => 'ñuñoa',
+      'peñalolen' => 'peñalolén',
+      'penalolen' => 'peñalolén',
+      'maipu' => 'maipú',
+      'conchali' => 'conchalí',
+      'huechuraba' => 'huechuraba',
+      'la florida' => 'la florida',
+      'puente alto' => 'puente alto',
+      'san bernardo' => 'san bernardo'
+    }
+
+    normalized = name.strip.downcase
+    aliases[normalized] || name
   end
 
   def find_customer_by_email(email)
