@@ -204,12 +204,16 @@ export default class extends Controller {
       return false
     }
 
-    // Validar fotos para "entregado"
-    if (status === 'delivered') {
+    // Validar fotos para "entregado" (solo si existe el sistema de compresión base64)
+    if (status === 'delivered' && this.hasTarget('proofData')) {
       if (this.compressedPhotos.length === 0) {
-        event.preventDefault()
-        alert('Por favor, proporciona al menos una foto de evidencia antes de continuar.')
-        return false
+        // Verificar si hay fotos seleccionadas en el file input multipart
+        const proofPhotosInput = document.getElementById('proof_photos')
+        if (!proofPhotosInput || proofPhotosInput.files.length === 0) {
+          event.preventDefault()
+          alert('Por favor, proporciona al menos una foto de evidencia antes de continuar.')
+          return false
+        }
       }
     }
 

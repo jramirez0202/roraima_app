@@ -10,8 +10,7 @@ Rails.application.config.after_initialize do
   # By default, Rails serves these as binary (downloads instead of displaying)
   ActiveStorage.content_types_to_serve_as_binary -= ['image/png', 'image/gif', 'image/jpeg', 'image/jpg']
 
-  # Replace attachments when using has_many_attached
-  # When reassigning to a has_many_attached, this will replace existing attachments
-  # rather than appending to them
-  ActiveStorage.replace_on_assign_to_many = true
+  # NOTE: replace_on_assign_to_many is deprecated in Rails 7.1+
+  # The behavior is now the default, so this line is no longer needed
+  # ActiveStorage.replace_on_assign_to_many = true
 end

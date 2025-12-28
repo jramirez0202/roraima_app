@@ -102,12 +102,19 @@ module Drivers
 
       service = PackageStatusService.new(@package, current_user)
 
+      # Adjuntar fotos de evidencia (delivered) si se proporcionaron
+      if params[:new_status] == 'delivered' && params[:proof_photos].present?
+        params[:proof_photos].each do |photo|
+          @package.proof_photos.attach(photo)
+        end
+      end
+
       if service.change_status(
         params[:new_status],
         reason: params[:reason],
         location: params[:location],
         override: false,
-        proof: params[:proof],
+        proof: @package.proof_photos.attached? ? 'attached' : nil,
         motive: params[:reason]
       )
         # Adjuntar fotos de reprogramación si se proporcionaron

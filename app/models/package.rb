@@ -8,6 +8,7 @@ class Package < ApplicationRecord
 
   # Active Storage attachments
   has_many_attached :reschedule_photos
+  has_many_attached :proof_photos
 
   # Enum for package status (tracking flow)
   enum status: {

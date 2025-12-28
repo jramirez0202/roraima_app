@@ -223,9 +223,16 @@ end
       end
     end
 
+    # Adjuntar fotos de evidencia (delivered) si se proporcionaron
+    if new_status == 'delivered' && params[:proof_photos].present?
+      params[:proof_photos].each do |photo|
+        @package.proof_photos.attach(photo)
+      end
+    end
+
     # Parámetros adicionales según el tipo de cambio
     additional_params = {}
-    additional_params[:proof] = params[:proof] if params[:proof].present?
+    additional_params[:proof] = @package.proof_photos.attached? ? 'attached' : nil
     additional_params[:reprogram_date] = params[:reprogram_date] if params[:reprogram_date].present?
     additional_params[:motive] = params[:motive] if params[:motive].present?
 

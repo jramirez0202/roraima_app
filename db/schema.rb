@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_18_212924) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_28_194358) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -94,7 +94,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_18_212924) do
     t.string "location"
     t.integer "attempts_count", default: 0
     t.bigint "assigned_courier_id"
-    t.text "proof"
+    t.text "proof", comment: "DEPRECATED: Use proof_photos Active Storage attachment instead. This column stored base64 JSON (inefficient). Will be removed in future version after data migration."
     t.datetime "reprogramed_to"
     t.text "reprogram_motive"
     t.datetime "picked_at"

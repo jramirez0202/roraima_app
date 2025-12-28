@@ -57,8 +57,13 @@ document.addEventListener('turbo:load', function() {
     toggleFields();
   };
 
-  // Manejar selección de fotos
+  // Manejar selección de fotos (solo si el sistema de compresión existe)
   function handlePhotoInput(event) {
+    // Si no existe el sistema de compresión base64, no hacer nada
+    if (!photoInput || !photosContainer || !compressionStatus || !proofData) {
+      return;
+    }
+
     const files = Array.from(event.target.files);
 
     if (compressedPhotos.length + files.length > MAX_PHOTOS) {
@@ -184,7 +189,8 @@ document.addEventListener('turbo:load', function() {
       return false;
     }
 
-    if (status === 'delivered') {
+    // Solo validar fotos comprimidas si existe el sistema de compresión base64
+    if (status === 'delivered' && proofData) {
       if (compressedPhotos.length === 0) {
         event.preventDefault();
         alert('Por favor, proporciona al menos una foto de evidencia antes de continuar.');
@@ -193,8 +199,8 @@ document.addEventListener('turbo:load', function() {
     }
 
     if (status === 'return' || status === 'rescheduled' || status === 'cancelled') {
-      const reason = document.getElementById('reason').value;
-      if (!reason || reason.trim() === '') {
+      const reason = document.getElementById('reason');
+      if (reason && (!reason.value || reason.value.trim() === '')) {
         event.preventDefault();
         alert('Por favor, proporciona un motivo antes de continuar.');
         return false;
@@ -208,9 +214,12 @@ document.addEventListener('turbo:load', function() {
   if (photoInput) {
     photoInput.addEventListener('change', handlePhotoInput);
   }
-  form.addEventListener('submit', validateForm);
 
-  // Event delegation para botones de eliminar foto
+  if (form) {
+    form.addEventListener('submit', validateForm);
+  }
+
+  // Event delegation para botones de eliminar foto (solo si existe el contenedor)
   if (photosContainer) {
     photosContainer.addEventListener('click', function(e) {
       if (e.target.classList.contains('photo-remove-btn') || e.target.closest('.photo-remove-btn')) {
