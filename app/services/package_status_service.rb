@@ -160,19 +160,36 @@ class PackageStatusService
     )
   end
 
-  # Marca como entregado con prueba
-  def mark_as_delivered(proof: nil, location: nil)
-    unless proof.present?
-      @errors << "Prueba de entrega (firma/foto) es requerida"
-      return false
+  # Marca como entregado (con o sin fotos inmediatas)
+  def mark_as_delivered(location: nil, with_photos: false)
+    # Si tiene fotos adjuntas, delivery normal
+    if package.proof_photos.attached? && package.proof_photos.count >= 1
+      return change_status(
+        :delivered,
+        reason: "Entrega exitosa con evidencia fotográfica",
+        location: location,
+        proof: 'attached'
+      )
     end
 
-    change_status(
-      :delivered,
-      reason: "Entrega exitosa",
-      location: location,
-      proof: proof
-    )
+    # Si NO tiene fotos, marcar como pending_photos
+    unless with_photos
+      begin
+        package.mark_delivered_pending_photos!(user: user, location: location)
+        Rails.logger.info "📦 Package #{package.tracking_code} marked as delivered, pending photos"
+        return true
+      rescue StandardError => e
+        @errors << e.message
+        return false
+      end
+    end
+
+    # Si with_photos es true pero no hay fotos, error
+    @errors << "Debe adjuntar fotos antes de marcar como entregado"
+    false
+  rescue StandardError => e
+    @errors << e.message
+    false
   end
 
   # Marca como devolucion
@@ -240,9 +257,10 @@ class PackageStatusService
       end
 
     when :delivered
-      unless params[:proof].present?
+      # Solo validar si NO se permite pending_photos Y no hay fotos adjuntas
+      unless params[:allow_pending_photos] || package.proof_photos.attached?
         status_text = translate_status(new_status)
-        @errors << "Se requiere prueba (firma/foto/documento) para marcar como #{status_text}"
+        @errors << "Se requiere evidencia fotográfica para marcar como #{status_text}"
         return false
       end
 

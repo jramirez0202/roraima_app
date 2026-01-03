@@ -9,6 +9,7 @@ class Package < ApplicationRecord
   # Active Storage attachments
   has_many_attached :reschedule_photos
   has_many_attached :proof_photos
+  has_many_attached :cancelled_photos
 
   # Enum for package status (tracking flow)
   enum status: {
@@ -47,6 +48,9 @@ class Package < ApplicationRecord
   validates :loading_date, presence: true
   validate :loading_date_must_be_before_delivery
   validate :user_must_be_customer
+
+  # Validación: delivered debe tener fotos O pending_photos (excepto con override)
+  validate :must_have_photos_or_pending, if: -> { delivered? && !admin_override }
 
   validates :amount, numericality: { greater_than_or_equal_to: 0 }
 
@@ -102,6 +106,17 @@ class Package < ApplicationRecord
   scope :in_progress, -> { where(status: [:in_warehouse, :in_transit, :rescheduled]) }
   scope :needs_attention, -> { where(status: [:rescheduled, :return]) }
 
+  # === SCOPES PARA SISTEMA DE FOTOS ===
+  # Paquetes delivered que están esperando evidencia fotográfica
+  scope :pending_photo_upload, -> {
+    where(status: :delivered, pending_photos: true)
+  }
+
+  # Paquetes con fotos pendientes más antiguos que X horas
+  scope :pending_photos_older_than, ->(hours) {
+    pending_photo_upload.where("packages.delivered_at < ?", hours.hours.ago)
+  }
+
   # Filtra paquetes con estados visibles para clientes
   # Solo muestra paquetes cuyos estados estén configurados como visibles en Setting
   scope :customer_visible_statuses, -> {
@@ -154,6 +169,34 @@ class Package < ApplicationRecord
   # Verifica si el paquete está activo (no terminal)
   def active?
     !terminal?
+  end
+
+  # === MÉTODOS PARA SISTEMA DE FOTOS ===
+
+  # Verifica si está esperando fotos de evidencia
+  def awaiting_photos?
+    delivered? && pending_photos? && !proof_photos.attached?
+  end
+
+  # Verifica si las fotos fueron confirmadas en S3
+  def photos_confirmed?
+    proof_photos.attached? && photos_confirmed_at.present?
+  end
+
+  # Marca como entregado pendiente de fotos (sin evidencia aún)
+  def mark_delivered_pending_photos!(user:, location: nil)
+    transaction do
+      self.pending_photos = true
+      transition_to!(:delivered, user: user, location: location, override: false)
+    end
+  end
+
+  # Confirma las fotos y completa la entrega
+  def confirm_photos!
+    update!(
+      pending_photos: false,
+      photos_confirmed_at: Time.current
+    )
   end
 
   # Verifica si una transición es permitida
@@ -323,6 +366,13 @@ class Package < ApplicationRecord
       errors.add(:user_id, "no puede ser un Driver. Debe ser un usuario Customer.")
     elsif user.admin?
       errors.add(:user_id, "no puede ser un Admin. Debe ser un usuario Customer.")
+    end
+  end
+
+  # Validación: delivered debe tener fotos O pending_photos
+  def must_have_photos_or_pending
+    unless proof_photos.attached? || pending_photos?
+      errors.add(:base, "Debe tener fotos de evidencia o estar marcado como pendiente de fotos")
     end
   end
 

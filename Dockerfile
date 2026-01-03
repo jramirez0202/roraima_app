@@ -182,8 +182,13 @@ COPY --from=builder /rails /rails
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 # Crear usuario rails y ajustar permisos
+# IMPORTANTE: El usuario rails necesita permisos de lectura en toda la aplicación
+# pero de escritura solo en db, log, storage, tmp
 RUN useradd rails --create-home --shell /bin/bash && \
-    chown -R rails:rails db log storage tmp
+    chown -R rails:rails /rails && \
+    find /rails -type d -exec chmod 755 {} \; && \
+    find /rails -type f -exec chmod 644 {} \; && \
+    chmod -R 755 /rails/bin
 
 # Cambiar a usuario no-root
 USER rails:rails

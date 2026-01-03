@@ -87,8 +87,39 @@
       </dl>
     </div>
 
-    <!-- Fotos de Evidencia de Entrega -->
-    <% if @package.proof_photos.attached? %>
+    <!-- Detalles del Receptor -->
+    <% if @package.in_transit? || @package.rescheduled? || @package.delivered? %>
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">Detalles del Receptor</h2>
+        <%= form_with model: @package, url: drivers_package_path(@package), method: :patch, local: true, class: "space-y-4" do |f| %>
+          <div>
+            <%= f.label :receiver_name, "Nombre del Receptor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <p class="text-xs text-gray-500 mb-1">Nombre y apellido de quien recibe (máximo 30 caracteres)</p>
+            <%= f.text_field :receiver_name,
+                             maxlength: 30,
+                             class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+                             placeholder: "Ej: Juan Pérez" %>
+          </div>
+
+          <div>
+            <%= f.label :receiver_observations, "Observaciones", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <p class="text-xs text-gray-500 mb-1">Cualquier observación relevante sobre la entrega</p>
+            <%= f.text_area :receiver_observations,
+                            rows: 4,
+                            class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+                            placeholder: "Ej: El paquete fue entregado en portería..." %>
+          </div>
+
+          <div>
+            <%= f.submit "Guardar",
+                class: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Fotos de Evidencia de Entrega (solo mostrar si está delivered) -->
+    <% if @package.proof_photos.attached? && @package.delivered? %>
       <div class="px-6 py-4 border-b border-gray-200 bg-green-50">
         <h2 class="text-lg font-semibold text-gray-900 mb-3">✅ Fotos de Evidencia de Entrega</h2>
         <div class="grid grid-cols-2 gap-2">
@@ -118,8 +149,8 @@
       </div>
     <% end %>
 
-    <!-- Información de Reprogramación -->
-    <% if @package.reprogramed_to || @package.reprogram_motive || @package.reschedule_photos.attached? %>
+    <!-- Información de Reprogramación (solo mostrar si está rescheduled) -->
+    <% if (@package.reprogramed_to || @package.reprogram_motive || @package.reschedule_photos.attached?) && @package.rescheduled? %>
       <div class="px-6 py-4 border-b border-gray-200 bg-red-50">
         <h2 class="text-lg font-semibold text-gray-900 mb-3">⚠️ Paquete Reprogramado</h2>
         <dl class="grid grid-cols-1 gap-4">
@@ -174,6 +205,7 @@
       </div>
     <% end %>
 
+
     <!-- Cambio de Estado -->
     <div class="px-6 py-4 bg-gray-50">
       <h2 class="text-lg font-semibold text-gray-900 mb-3">Cambiar Estado</h2>
@@ -226,19 +258,151 @@
           </p>
         </div>
 
-        <div id="reschedule-photos-field" style="display: none;">
-          <%= f.label :reschedule_photos, "Fotos de Evidencia de Reprogramación (Opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= f.file_field :reschedule_photos,
-                           multiple: true,
-                           accept: "image/*",
-                           capture: "environment",
-                           class: "mt-1 block w-full text-sm text-gray-500
-                                  file:mr-4 file:py-2 file:px-4
-                                  file:rounded-md file:border-0
-                                  file:text-sm file:font-medium
-                                  file:bg-blue-50 file:text-blue-700
-                                  hover:file:bg-blue-100" %>
-          <p class="mt-1 text-xs text-gray-500">Puedes seleccionar múltiples fotos para adjuntar evidencia</p>
+        <!-- Fotos de evidencia para Entregado (Sistema Profesional) -->
+        <div id="delivery-photos-field"
+             style="display: none;"
+             data-controller="delivery-photos"
+             data-delivery-photos-package-id-value="<%= @package.id %>"
+             data-delivery-photos-direct-upload-url-value="<%= rails_direct_uploads_url %>">
+
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">
+            📸 Fotos de Evidencia de Entrega
+          </h3>
+
+          <!-- Botón de captura -->
+          <label class="block mb-4">
+            <input type="file"
+                   accept="image/*"
+                   multiple
+                   data-delivery-photos-target="input"
+                   data-action="change->delivery-photos#capturePhoto"
+                   class="hidden">
+            <div class="w-full cursor-pointer bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-6 rounded-lg text-center shadow-lg transform transition hover:scale-105">
+              📷 Tomar Foto / 🖼️ Seleccionar de Galería
+            </div>
+          </label>
+
+          <!-- Contador -->
+          <div class="mb-4 p-4 bg-white border-2 border-gray-200 rounded-lg text-center">
+            <p data-delivery-photos-target="count" class="text-lg font-bold text-gray-400">
+              0/4 fotos (mín. 2 para activar)
+            </p>
+          </div>
+
+          <!-- Previews (lista vertical) -->
+          <div data-delivery-photos-target="preview"
+               class="space-y-2 mb-4">
+          </div>
+
+          <!-- Estado de upload -->
+          <p data-delivery-photos-target="status" class="hidden mt-2 text-sm text-blue-600 font-medium"></p>
+
+          <!-- Botón de subir (hidden, se activa desde JS) -->
+          <button type="button"
+                  data-delivery-photos-target="submit"
+                  data-action="click->delivery-photos#uploadPhotos"
+                  disabled
+                  class="hidden w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+            ☁️ Subir Fotos y Continuar
+          </button>
+        </div>
+
+        <!-- Fotos de evidencia para Reprogramado (Sistema Profesional) -->
+        <div id="reschedule-photos-field"
+             style="display: none;"
+             data-controller="reschedule-photos"
+             data-reschedule-photos-package-id-value="<%= @package.id %>"
+             data-reschedule-photos-direct-upload-url-value="<%= rails_direct_uploads_url %>">
+
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">
+            📅 Fotos de Evidencia de Reprogramación
+          </h3>
+
+          <!-- Botón de captura -->
+          <label class="block mb-4">
+            <input type="file"
+                   accept="image/*"
+                   multiple
+                   data-reschedule-photos-target="input"
+                   data-action="change->reschedule-photos#capturePhoto"
+                   class="hidden">
+            <div class="w-full cursor-pointer bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-4 px-6 rounded-lg text-center shadow-lg transform transition hover:scale-105">
+              📷 Tomar Foto / 🖼️ Seleccionar de Galería
+            </div>
+          </label>
+
+          <!-- Contador -->
+          <div class="mb-4 p-4 bg-white border-2 border-gray-200 rounded-lg text-center">
+            <p data-reschedule-photos-target="count" class="text-lg font-bold text-gray-400">
+              0/4 fotos (mín. 2 para activar)
+            </p>
+          </div>
+
+          <!-- Previews (lista vertical) -->
+          <div data-reschedule-photos-target="preview"
+               class="space-y-2 mb-4">
+          </div>
+
+          <!-- Estado de upload -->
+          <p data-reschedule-photos-target="status" class="hidden mt-2 text-sm text-blue-600 font-medium"></p>
+
+          <!-- Botón de subir (hidden, se activa desde JS) -->
+          <button type="button"
+                  data-reschedule-photos-target="submit"
+                  data-action="click->reschedule-photos#uploadPhotos"
+                  disabled
+                  class="hidden w-full py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+            ☁️ Subir Fotos y Continuar
+          </button>
+        </div>
+
+        <!-- Fotos de evidencia para Cancelado (Sistema Profesional) -->
+        <div id="cancelled-photos-field"
+             style="display: none;"
+             data-controller="cancelled-photos"
+             data-cancelled-photos-package-id-value="<%= @package.id %>"
+             data-cancelled-photos-direct-upload-url-value="<%= rails_direct_uploads_url %>">
+
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">
+            ❌ Fotos de Evidencia de Cancelación
+          </h3>
+
+          <!-- Botón de captura -->
+          <label class="block mb-4">
+            <input type="file"
+                   accept="image/*"
+                   multiple
+                   data-cancelled-photos-target="input"
+                   data-action="change->cancelled-photos#capturePhoto"
+                   class="hidden">
+            <div class="w-full cursor-pointer bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-4 px-6 rounded-lg text-center shadow-lg transform transition hover:scale-105">
+              📷 Tomar Foto / 🖼️ Seleccionar de Galería
+            </div>
+          </label>
+
+          <!-- Contador -->
+          <div class="mb-4 p-4 bg-white border-2 border-gray-200 rounded-lg text-center">
+            <p data-cancelled-photos-target="count" class="text-lg font-bold text-gray-400">
+              0/4 fotos (mín. 2 para activar)
+            </p>
+          </div>
+
+          <!-- Previews (lista vertical) -->
+          <div data-cancelled-photos-target="preview"
+               class="space-y-2 mb-4">
+          </div>
+
+          <!-- Estado de upload -->
+          <p data-cancelled-photos-target="status" class="hidden mt-2 text-sm text-blue-600 font-medium"></p>
+
+          <!-- Botón de subir (hidden, se activa desde JS) -->
+          <button type="button"
+                  data-cancelled-photos-target="submit"
+                  data-action="click->cancelled-photos#uploadPhotos"
+                  disabled
+                  class="hidden w-full py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+            ☁️ Subir Fotos y Continuar
+          </button>
         </div>
 
         <!-- <div>
@@ -246,27 +410,10 @@
           <%= f.text_field :location, class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm", placeholder: "Ej: En ruta, En casa del cliente, etc." %>
         </div> -->
 
-        <!-- Campo de Fotos de Evidencia (para "Entregado" y "Reprogramado") -->
-        <div id="proof-field" style="display: none;">
-          <%= f.label :proof_photos, "Fotos de Evidencia (Máximo 4)", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= f.file_field :proof_photos,
-                           multiple: true,
-                           accept: "image/*",
-                           capture: "environment",
-                           required: false,
-                           class: "mt-1 block w-full text-sm text-gray-500
-                                  file:mr-4 file:py-2 file:px-4
-                                  file:rounded-md file:border-0
-                                  file:text-sm file:font-medium
-                                  file:bg-blue-50 file:text-blue-700
-                                  hover:file:bg-blue-100" %>
-          <p class="mt-2 text-xs text-gray-500">
-            📸 Puedes seleccionar o tomar hasta 4 fotos de evidencia de entrega
-          </p>
-        </div>
-
         <div class="flex gap-3">
-          <%= f.submit "Actualizar Estado", class: "flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" %>
+          <%= f.submit "Actualizar Estado",
+              id: "update-status-btn",
+              class: "flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" %>
           <%= link_to "Cancelar", drivers_packages_path(@filter_params), class: "px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" %>
         </div>
       <% end %>
@@ -326,14 +473,24 @@
     function openReschedulePhotoModal(imageUrl) {
       const modal = document.getElementById('reschedule-photo-modal');
       const img = document.getElementById('reschedule-photo-modal-img');
+
+      // Validar que los elementos existen
+      if (!modal || !img) {
+        console.warn('Reschedule modal elements not found');
+        return;
+      }
+
       img.src = imageUrl;
       modal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     }
 
     function closeReschedulePhotoModal() {
-      document.getElementById('reschedule-photo-modal').classList.add('hidden');
-      document.body.style.overflow = 'auto';
+      const modal = document.getElementById('reschedule-photo-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+      }
     }
 
     // Contador de caracteres para el campo de razón
@@ -401,19 +558,37 @@
   </div>
 
   <script>
+    console.log('✅ Proof photo modal script loaded');
+
     function openProofPhotoModal(imageUrl) {
+      console.log('🖼️ openProofPhotoModal called with:', imageUrl);
       const modal = document.getElementById('proof-photo-modal');
       const img = document.getElementById('proof-photo-modal-img');
+
+      console.log('Modal elements found:', { modal: !!modal, img: !!img });
+
+      // Validar que los elementos existen
+      if (!modal || !img) {
+        console.error('❌ Modal elements not found:', {
+          modal: modal ? 'found' : 'NOT FOUND',
+          img: img ? 'found' : 'NOT FOUND'
+        });
+        return;
+      }
+
       img.src = imageUrl;
       modal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
+      console.log('✅ Modal opened successfully');
     }
 
     function closeProofPhotoModal() {
+      console.log('🚪 Closing proof photo modal');
       const modal = document.getElementById('proof-photo-modal');
       if (modal) {
         modal.classList.add('hidden');
         document.body.style.overflow = 'auto';
+        console.log('✅ Modal closed');
       }
     }
   </script>

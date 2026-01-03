@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_28_194358) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_03_074333) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -105,6 +105,11 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_28_194358) do
     t.string "company_name"
     t.datetime "assigned_at"
     t.bigint "assigned_by_id"
+    t.boolean "pending_photos", default: false, null: false
+    t.datetime "photos_uploaded_at"
+    t.datetime "photos_confirmed_at"
+    t.string "receiver_name", limit: 30
+    t.text "receiver_observations"
     t.index ["assigned_by_id"], name: "index_packages_on_assigned_by_id"
     t.index ["assigned_courier_id", "assigned_at"], name: "index_packages_on_assigned_courier_id_and_assigned_at"
     t.index ["assigned_courier_id", "delivered_at"], name: "index_packages_on_assigned_courier_and_delivered_at", comment: "Optimizes Driver#today_deliveries queries (QA audit fix)"
@@ -114,10 +119,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_28_194358) do
     t.index ["created_at"], name: "index_packages_on_created_at"
     t.index ["exchange"], name: "index_packages_on_exchange"
     t.index ["loading_date"], name: "index_packages_on_loading_date"
+    t.index ["pending_photos"], name: "index_packages_on_pending_photos", where: "(pending_photos = true)"
     t.index ["region_id", "commune_id"], name: "index_packages_on_region_and_commune"
     t.index ["region_id"], name: "index_packages_on_region_id"
     t.index ["status", "assigned_courier_id"], name: "index_packages_on_status_and_assigned_courier_id"
     t.index ["status", "loading_date"], name: "index_packages_on_status_and_loading_date"
+    t.index ["status", "pending_photos", "assigned_courier_id"], name: "index_packages_on_status_pending_photos_courier"
     t.index ["status"], name: "index_packages_on_status"
     t.index ["tracking_code"], name: "index_packages_on_tracking_code", unique: true
     t.index ["tracking_code"], name: "index_packages_on_tracking_code_trigram", opclass: :gin_trgm_ops, using: :gin, comment: "Trigram index for fast ILIKE searches on tracking_code"

@@ -87,7 +87,7 @@ Rails.application.routes.draw do
 
   # Drivers namespace
   namespace :drivers do
-    resources :packages, only: [:index, :show] do
+    resources :packages, only: [:index, :show, :update] do
       member do
         patch :change_status
       end

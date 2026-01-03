@@ -15,7 +15,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: roraima_app_production
+      POSTGRES_DB: roraima_app_staging
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -64,15 +64,13 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env.docker
-    environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/roraima_app_production
-      REDIS_URL: redis://redis:6379/0
-      RAILS_ENV: production
+      - .env.staging
     volumes:
+      # STAGING: No montar código local - usar código bakeado en imagen
+      # Esto evita sobrescribir /rails/vendor/bundle con gemas instaladas
       - storage_data:/rails/storage
     ports:
-      - "3000:3000"
+      - "3001:3000"
     restart: unless-stopped
     networks:
       - roraima_network
@@ -94,12 +92,10 @@ services:
       web:
         condition: service_started
     env_file:
-      - .env.docker
-    environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/roraima_app_production
-      REDIS_URL: redis://redis:6379/0
-      RAILS_ENV: production
+      - .env.staging
     volumes:
+      # STAGING: No montar código local - usar código bakeado en imagen
+      # Esto evita sobrescribir /rails/vendor/bundle con gemas instaladas
       - storage_data:/rails/storage
     healthcheck:
       disable: true

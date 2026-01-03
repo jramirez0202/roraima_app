@@ -161,8 +161,33 @@
               <dd class="mt-1 text-sm text-gray-900"><%= @package.description.presence || '—' %></dd>
             </div>
 
-            <%# Información de Reprogramación %>
-            <% if @package.reprogram_motive.present? || @package.reschedule_photos.attached? %>
+            <%# Detalles del Receptor %>
+            <% if @package.receiver_name.present? || @package.receiver_observations.present? %>
+              <div class="sm:col-span-2 border-t border-gray-200 pt-4">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">📋 Detalles del Receptor</h3>
+
+                <% if @package.receiver_name.present? %>
+                  <div class="mb-3">
+                    <dt class="text-sm font-medium text-gray-500 mb-1">Nombre del Receptor</dt>
+                    <dd class="mt-1">
+                      <p class="text-base font-semibold text-gray-900"><%= @package.receiver_name %></p>
+                    </dd>
+                  </div>
+                <% end %>
+
+                <% if @package.receiver_observations.present? %>
+                  <div>
+                    <dt class="text-sm font-medium text-gray-500 mb-1">Observaciones</dt>
+                    <dd class="mt-1">
+                      <p class="text-sm text-gray-900 whitespace-pre-wrap"><%= @package.receiver_observations %></p>
+                    </dd>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+
+            <%# Información de Reprogramación - Solo mostrar si está rescheduled %>
+            <% if (@package.reprogram_motive.present? || @package.reschedule_photos.attached?) && @package.rescheduled? %>
               <div class="sm:col-span-2 border-t border-gray-200 pt-4">
                 <h3 class="text-base font-semibold text-gray-900 mb-4">⚠️ Información de Reprogramación</h3>
 
@@ -209,8 +234,8 @@
               </div>
             <% end %>
 
-            <!-- Fotos de Evidencia de Entrega (Active Storage) -->
-            <% if @package.proof_photos.attached? %>
+            <!-- Fotos de Evidencia de Entrega (Active Storage) - Solo mostrar si está delivered -->
+            <% if @package.proof_photos.attached? && @package.delivered? %>
               <div class="sm:col-span-2">
                 <dt class="text-sm font-medium text-gray-500 mb-2">📸 Fotos de Evidencia de Entrega</dt>
                 <dd class="mt-1">

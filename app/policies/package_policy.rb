@@ -20,6 +20,9 @@ class PackagePolicy < ApplicationPolicy
     # Admin puede editar siempre
     return true if user.admin?
 
+    # Driver puede actualizar detalles del receptor de paquetes asignados
+    return true if user.driver? && record.assigned_courier_id == user.id
+
     # Cliente solo puede editar si el paquete está en estado pending_pickup
     # Una vez que está en bodega o más allá, ya no puede modificarlo
     record.user_id == user.id && record.pending_pickup?

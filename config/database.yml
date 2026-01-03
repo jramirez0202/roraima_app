@@ -81,6 +81,12 @@ test:
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
+staging:
+  <<: *default
+  # Use DATABASE_URL from .env.staging
+  # Format: postgresql://postgres:password@postgres:5432/roraima_app_staging
+  url: <%= ENV["DATABASE_URL"] %>
+
 production:
   <<: *default
   database: roraima_app_production

@@ -16,6 +16,12 @@ application.register("bulk-packages", BulkPackagesController)
 import BulkRoutesController from "./bulk_routes_controller"
 application.register("bulk-routes", BulkRoutesController)
 
+import CancelledPhotosController from "./cancelled_photos_controller"
+application.register("cancelled-photos", CancelledPhotosController)
+
+import DeliveryPhotosController from "./delivery_photos_controller"
+application.register("delivery-photos", DeliveryPhotosController)
+
 import FiltersPanelController from "./filters_panel_controller"
 application.register("filters-panel", FiltersPanelController)
 
@@ -31,8 +37,14 @@ application.register("package-status", PackageStatusController)
 import PhoneController from "./phone_controller"
 application.register("phone", PhoneController)
 
+import PhotoUploadController from "./photo_upload_controller"
+application.register("photo-upload", PhotoUploadController)
+
 import RegionCommuneController from "./region_commune_controller"
 application.register("region-commune", RegionCommuneController)
+
+import ReschedulePhotosController from "./reschedule_photos_controller"
+application.register("reschedule-photos", ReschedulePhotosController)
 
 import RouteCompleteController from "./route_complete_controller"
 application.register("route-complete", RouteCompleteController)

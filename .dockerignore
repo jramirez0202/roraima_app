@@ -35,3 +35,7 @@
 /app/assets/builds/*
 !/app/assets/builds/.keep
 /public/assets
+
+# Ignore ALL custom rake tasks - only needed in development
+/lib/tasks/*.rake
+!/lib/tasks/.keep

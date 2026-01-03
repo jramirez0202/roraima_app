@@ -33,39 +33,44 @@
     </div>
 
     <!-- Pendiente Retiro -->
-    <div class="bg-white px-4 py-3 text-center">
+    <%= link_to admin_packages_path(status: 'pending_pickup', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-4 py-3 text-center hover:bg-gray-50 transition-colors block" do %>
       <div class="text-xs font-medium text-gray-500 uppercase mb-1">Pendiente</div>
       <div class="text-2xl font-bold" style="color: var(--color-status-pending-text)">
         <%= @pending_pickup_count %>
       </div>
-    </div>
+    <% end %>
 
     <!-- Bodega -->
-    <div class="bg-white px-4 py-3 text-center">
+    <%= link_to admin_packages_path(status: 'in_warehouse', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-4 py-3 text-center hover:bg-gray-50 transition-colors block" do %>
       <div class="text-xs font-medium text-gray-500 uppercase mb-1">Bodega</div>
       <div class="text-2xl font-bold" style="color: var(--color-status-warehouse-text)">
         <%= @in_warehouse_count %>
       </div>
-    </div>
+    <% end %>
 
     <!-- En Camino -->
-    <div class="bg-white px-4 py-3 text-center">
+    <%= link_to admin_packages_path(status: 'in_transit', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-4 py-3 text-center hover:bg-gray-50 transition-colors block" do %>
       <div class="text-xs font-medium text-gray-500 uppercase mb-1">En Camino</div>
       <div class="text-2xl font-bold" style="color: var(--color-status-transit-text)">
         <%= @in_transit_count %>
       </div>
-    </div>
+    <% end %>
 
     <!-- Entregados -->
-    <div class="bg-white px-4 py-3 text-center">
+    <%= link_to admin_packages_path(status: 'delivered', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-4 py-3 text-center hover:bg-gray-50 transition-colors block" do %>
       <div class="text-xs font-medium text-gray-500 uppercase mb-1">Entregados</div>
       <div class="text-2xl font-bold" style="color: var(--color-status-delivered-text)">
         <%= @delivered_count %>
       </div>
-    </div>
+    <% end %>
 
     <!-- Reprogramados (PERSISTENTES) -->
-    <div class="bg-white px-4 py-3 text-center relative">
+    <%= link_to admin_packages_path(status: 'rescheduled'),
+        class: "bg-white px-4 py-3 text-center hover:bg-gray-50 transition-colors block relative" do %>
       <div class="text-xs font-medium text-gray-500 uppercase mb-1">
         Reprogramados
         <% if @persistent_rescheduled_count > @rescheduled_count %>
@@ -82,22 +87,24 @@
           (+<%= @persistent_rescheduled_count - @rescheduled_count %> históricos)
         </div>
       <% end %>
-    </div>
+    <% end %>
 
     <!-- Devolución -->
-    <div class="bg-white px-4 py-3 text-center">
+    <%= link_to admin_packages_path(status: 'return', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-4 py-3 text-center hover:bg-gray-50 transition-colors block" do %>
       <div class="text-xs font-medium text-gray-500 uppercase mb-1">Devolución</div>
       <div class="text-2xl font-bold" style="color: var(--color-status-return-text)">
         <%= @return_count %>
       </div>
-    </div>
+    <% end %>
 
     <!-- Cancelados -->
-    <div class="bg-white px-4 py-3 text-center">
+    <%= link_to admin_packages_path(status: 'cancelled', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-4 py-3 text-center hover:bg-gray-50 transition-colors block" do %>
       <div class="text-xs font-medium text-gray-500 uppercase mb-1">Cancelados</div>
       <div class="text-2xl font-bold" style="color: var(--color-status-cancelled-text)">
         <%= @cancelled_count %>
       </div>
-    </div>
+    <% end %>
   </div>
 </div>

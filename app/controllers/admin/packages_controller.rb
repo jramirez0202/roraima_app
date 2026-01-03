@@ -85,6 +85,20 @@ class Admin::PackagesController < Admin::BaseController
   end
 
   def show
+    # Limpiar fotos huérfanas (fotos que no corresponden al estado actual)
+    # Esto puede suceder si una transacción falló pero las fotos quedaron adjuntas
+    if @package.proof_photos.attached? && !@package.delivered?
+      @package.proof_photos.purge
+    end
+
+    if @package.reschedule_photos.attached? && !@package.rescheduled?
+      @package.reschedule_photos.purge
+    end
+
+    if @package.cancelled_photos.attached? && !@package.cancelled?
+      @package.cancelled_photos.purge
+    end
+
     # Preservar parámetros de filtro para el botón "Volver"
     @filter_params = {
       status: params[:status],
@@ -225,7 +239,16 @@ end
 
     # Adjuntar fotos de evidencia (delivered) si se proporcionaron
     if new_status == 'delivered' && params[:proof_photos].present?
-      params[:proof_photos].each do |photo|
+      # Validar límite de 4 fotos
+      photos_to_attach = params[:proof_photos].is_a?(Array) ? params[:proof_photos] : [params[:proof_photos]]
+
+      if photos_to_attach.size > 4
+        redirect_to admin_package_path(@package), alert: 'Máximo 4 fotos permitidas'
+        return
+      end
+
+      # Adjuntar todas las fotos (Active Storage las agrega, no las reemplaza)
+      photos_to_attach.each do |photo|
         @package.proof_photos.attach(photo)
       end
     end

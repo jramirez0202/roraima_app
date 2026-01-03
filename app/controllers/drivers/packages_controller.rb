@@ -4,7 +4,7 @@ module Drivers
   class PackagesController < BaseController
     include FilterablePackages
 
-    before_action :set_package, only: [:show, :change_status]
+    before_action :set_package, only: [:show, :change_status, :update]
 
     def index
       # Nota: Drivers filtran por assigned_at (fecha de asignación), no por loading_date
@@ -37,8 +37,10 @@ module Drivers
                     )
 
       # Aplicar filtro por rango de fechas de asignación (si aplica)
-      # IMPORTANTE: Los paquetes reprogramados deben aparecer SIEMPRE (sin importar assigned_at)
-      if date_from.present? && date_to.present?
+      # IMPORTANTE:
+      # - Los paquetes reprogramados deben aparecer SIEMPRE (sin importar assigned_at)
+      # - NO aplicar filtro de fecha si se está buscando por tracking code
+      if date_from.present? && date_to.present? && !searching_by_tracking
         @packages = @packages.where(
           'assigned_at BETWEEN ? AND ? OR status = ?',
           date_from.beginning_of_day,
@@ -87,6 +89,20 @@ module Drivers
     def show
       authorize @package
 
+      # Limpiar fotos huérfanas (fotos que no corresponden al estado actual)
+      # Esto puede suceder si una transacción falló pero las fotos quedaron adjuntas
+      if @package.proof_photos.attached? && !@package.delivered?
+        @package.proof_photos.purge
+      end
+
+      if @package.reschedule_photos.attached? && !@package.rescheduled?
+        @package.reschedule_photos.purge
+      end
+
+      if @package.cancelled_photos.attached? && !@package.cancelled?
+        @package.cancelled_photos.purge
+      end
+
       # Preservar parámetros de filtro para el botón "Volver"
       @filter_params = {
         status: params[:status],
@@ -97,38 +113,99 @@ module Drivers
       }.compact
     end
 
+    def update
+      authorize @package
+
+      if @package.update(receiver_params)
+        redirect_to drivers_package_path(@package),
+                    notice: 'Detalles del receptor actualizados correctamente'
+      else
+        redirect_to drivers_package_path(@package),
+                    alert: @package.errors.full_messages.join(', ')
+      end
+    end
+
     def change_status
       authorize @package, :change_status?
 
-      service = PackageStatusService.new(@package, current_user)
-
-      # Adjuntar fotos de evidencia (delivered) si se proporcionaron
-      if params[:new_status] == 'delivered' && params[:proof_photos].present?
-        params[:proof_photos].each do |photo|
-          @package.proof_photos.attach(photo)
+      # Validar cantidad de fotos ANTES de la transacción
+      if params[:new_status] == 'delivered'
+        photo_ids = Array(params[:package][:proof_photos]).compact.reject(&:blank?)
+        if photo_ids.size < 1
+          redirect_to drivers_package_path(@package), alert: "Se requiere al menos 1 foto de evidencia."
+          return
+        end
+        if photo_ids.size > 4
+          redirect_to drivers_package_path(@package), alert: "Máximo 4 fotos permitidas."
+          return
         end
       end
 
-      if service.change_status(
-        params[:new_status],
-        reason: params[:reason],
-        location: params[:location],
-        override: false,
-        proof: @package.proof_photos.attached? ? 'attached' : nil,
-        motive: params[:reason]
-      )
-        # Adjuntar fotos de reprogramación si se proporcionaron
-        if params[:new_status] == 'rescheduled' && params[:reschedule_photos].present?
-          params[:reschedule_photos].each do |photo|
-            @package.reschedule_photos.attach(photo)
-          end
+      if params[:new_status] == 'rescheduled'
+        photo_ids = Array(params[:reschedule_photos]).compact.reject(&:blank?)
+        if photo_ids.size < 1
+          redirect_to drivers_package_path(@package), alert: "Se requiere al menos 1 foto de evidencia para reprogramación."
+          return
+        end
+        if photo_ids.size > 4
+          redirect_to drivers_package_path(@package), alert: "Máximo 4 fotos permitidas."
+          return
+        end
+      end
+
+      if params[:new_status] == 'cancelled'
+        photo_ids = Array(params[:cancelled_photos]).compact.reject(&:blank?)
+        if photo_ids.size < 1
+          redirect_to drivers_package_path(@package), alert: "Se requiere al menos 1 foto de evidencia para cancelación."
+          return
+        end
+        if photo_ids.size > 4
+          redirect_to drivers_package_path(@package), alert: "Máximo 4 fotos permitidas."
+          return
+        end
+      end
+
+      # Usar transacción: si algo falla, TODO se revierte (incluyendo fotos)
+      service_errors = nil
+      ActiveRecord::Base.transaction do
+        # Adjuntar fotos según el estado
+        if params[:new_status] == 'delivered'
+          photo_ids = Array(params[:package][:proof_photos]).compact.reject(&:blank?)
+          photo_ids.each { |signed_id| @package.proof_photos.attach(signed_id) }
+        elsif params[:new_status] == 'rescheduled'
+          photo_ids = Array(params[:reschedule_photos]).compact.reject(&:blank?)
+          photo_ids.each { |signed_id| @package.reschedule_photos.attach(signed_id) }
+        elsif params[:new_status] == 'cancelled'
+          photo_ids = Array(params[:cancelled_photos]).compact.reject(&:blank?)
+          photo_ids.each { |signed_id| @package.cancelled_photos.attach(signed_id) }
         end
 
-        redirect_to drivers_root_path,
-                    notice: 'Estado actualizado correctamente'
+        # Cambiar el estado
+        service = PackageStatusService.new(@package, current_user)
+        success = service.change_status(
+          params[:new_status],
+          reason: params[:reason],
+          location: params[:location],
+          override: false,
+          proof: @package.proof_photos.attached? ? 'attached' : nil,
+          motive: params[:reason]
+        )
+
+        unless success
+          # Guardar errores antes de revertir
+          service_errors = service.errors
+          # Si falla, lanzar excepción para revertir la transacción
+          raise ActiveRecord::Rollback
+        end
+      end
+
+      # Verificar si el cambio fue exitoso (revisando el estado actual)
+      @package.reload
+      if @package.status == params[:new_status]
+        redirect_to drivers_root_path, notice: 'Estado actualizado correctamente'
       else
-        redirect_to drivers_package_path(@package),
-                    alert: service.errors.join(', ')
+        error_message = service_errors&.any? ? service_errors.join(', ') : 'No se pudo actualizar el estado. Intenta de nuevo.'
+        redirect_to drivers_package_path(@package), alert: error_message
       end
     end
 
@@ -138,6 +215,10 @@ module Drivers
       @package = current_driver.visible_packages.find(params[:id])
     rescue ActiveRecord::RecordNotFound
       redirect_to drivers_packages_path, alert: 'Paquete no encontrado o no asignado'
+    end
+
+    def receiver_params
+      params.require(:package).permit(:receiver_name, :receiver_observations)
     end
   end
 end

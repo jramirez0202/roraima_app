@@ -5,17 +5,11 @@ document.addEventListener('turbo:load', function() {
   if (!form) return; // Solo ejecutar en la página del formulario
 
   const reasonField = document.getElementById('reason-field');
-  const proofField = document.getElementById('proof-field');
   const reschedulePhotosField = document.getElementById('reschedule-photos-field');
-  const photoInput = document.getElementById('photo-input');
-  const photosContainer = document.getElementById('photos-container');
-  const compressionStatus = document.getElementById('compression-status');
-  const proofData = document.getElementById('proof-data');
+  const deliveryPhotosField = document.getElementById('delivery-photos-field');
+  const cancelledPhotosField = document.getElementById('cancelled-photos-field');
 
   if (!reasonField) return;
-
-  let compressedPhotos = [];
-  const MAX_PHOTOS = 4;
 
   console.log('📦 Package form script loaded');
 
@@ -31,17 +25,84 @@ document.addEventListener('turbo:load', function() {
     console.log('🔄 toggleFields called, status:', status);
 
     const needsReason = ['return', 'rescheduled', 'cancelled'].includes(status);
-    const needsProof = status === 'delivered';
     const needsReschedulePhotos = status === 'rescheduled';
+    const needsDeliveryPhotos = status === 'delivered';
+    const needsCancelledPhotos = status === 'cancelled';
 
-    console.log('needsReason:', needsReason, 'needsProof:', needsProof, 'needsReschedulePhotos:', needsReschedulePhotos);
+    console.log('needsReason:', needsReason, 'needsReschedulePhotos:', needsReschedulePhotos, 'needsDeliveryPhotos:', needsDeliveryPhotos, 'needsCancelledPhotos:', needsCancelledPhotos);
 
+    // Mostrar/ocultar campos según el estado
     reasonField.style.display = needsReason ? 'block' : 'none';
-    if (proofField) {
-      proofField.style.display = needsProof ? 'block' : 'none';
-    }
+
+    const submitBtn = document.getElementById('update-status-btn');
+
+    // Manejo de fotos de reprogramación
     if (reschedulePhotosField) {
       reschedulePhotosField.style.display = needsReschedulePhotos ? 'block' : 'none';
+
+      if (submitBtn && needsReschedulePhotos) {
+        // Ocultar botón "Actualizar Estado", se usa el botón del controller Stimulus
+        submitBtn.classList.add('hidden');
+
+        // Mostrar botón de "Subir Fotos" del controller reschedule
+        const uploadBtn = reschedulePhotosField.querySelector('[data-reschedule-photos-target="submit"]');
+        if (uploadBtn) {
+          uploadBtn.classList.remove('hidden');
+        }
+      }
+    }
+
+    // Manejo de fotos de entrega
+    if (deliveryPhotosField) {
+      deliveryPhotosField.style.display = needsDeliveryPhotos ? 'block' : 'none';
+
+      if (submitBtn && needsDeliveryPhotos) {
+        // Ocultar botón "Actualizar Estado", se usa el botón del controller Stimulus
+        submitBtn.classList.add('hidden');
+
+        // Mostrar botón de "Subir Fotos" del controller delivery
+        const uploadBtn = deliveryPhotosField.querySelector('[data-delivery-photos-target="submit"]');
+        if (uploadBtn) {
+          uploadBtn.classList.remove('hidden');
+        }
+      }
+    }
+
+    // Manejo de fotos de cancelación
+    if (cancelledPhotosField) {
+      cancelledPhotosField.style.display = needsCancelledPhotos ? 'block' : 'none';
+
+      if (submitBtn && needsCancelledPhotos) {
+        // Ocultar botón "Actualizar Estado", se usa el botón del controller Stimulus
+        submitBtn.classList.add('hidden');
+
+        // Mostrar botón de "Subir Fotos" del controller cancelled
+        const uploadBtn = cancelledPhotosField.querySelector('[data-cancelled-photos-target="submit"]');
+        if (uploadBtn) {
+          uploadBtn.classList.remove('hidden');
+        }
+      }
+    }
+
+    // Si NO necesita fotos, mostrar botón normal
+    if (submitBtn && !needsDeliveryPhotos && !needsReschedulePhotos && !needsCancelledPhotos) {
+      submitBtn.classList.remove('hidden');
+
+      // Ocultar todos los botones de "Subir Fotos"
+      const deliveryUploadBtn = deliveryPhotosField?.querySelector('[data-delivery-photos-target="submit"]');
+      if (deliveryUploadBtn) {
+        deliveryUploadBtn.classList.add('hidden');
+      }
+
+      const rescheduleUploadBtn = reschedulePhotosField?.querySelector('[data-reschedule-photos-target="submit"]');
+      if (rescheduleUploadBtn) {
+        rescheduleUploadBtn.classList.add('hidden');
+      }
+
+      const cancelledUploadBtn = cancelledPhotosField?.querySelector('[data-cancelled-photos-target="submit"]');
+      if (cancelledUploadBtn) {
+        cancelledUploadBtn.classList.add('hidden');
+      }
     }
 
     // Actualizar required
@@ -51,133 +112,36 @@ document.addEventListener('turbo:load', function() {
     }
   }
 
+  // Actualizar contador de fotos
+  function updatePhotoCount() {
+    const proofPhotosInput = document.getElementById('proof_photos');
+    const photoCount = document.getElementById('photo-count');
+    const photoCountNumber = document.getElementById('photo-count-number');
+
+    if (proofPhotosInput && photoCount && photoCountNumber) {
+      const count = proofPhotosInput.files.length;
+
+      if (count > 0) {
+        photoCountNumber.textContent = count;
+        photoCount.classList.remove('hidden');
+
+        // Cambiar color según cantidad
+        if (count > 4) {
+          photoCount.className = 'mt-2 text-sm text-red-600 font-medium';
+        } else {
+          photoCount.className = 'mt-2 text-sm text-green-600 font-medium';
+        }
+      } else {
+        photoCount.classList.add('hidden');
+      }
+    }
+  }
+
   // Función global para manejar cambio de estado desde radio buttons
   window.handleStatusChange = function(status) {
     console.log('📻 Status changed to:', status);
     toggleFields();
   };
-
-  // Manejar selección de fotos (solo si el sistema de compresión existe)
-  function handlePhotoInput(event) {
-    // Si no existe el sistema de compresión base64, no hacer nada
-    if (!photoInput || !photosContainer || !compressionStatus || !proofData) {
-      return;
-    }
-
-    const files = Array.from(event.target.files);
-
-    if (compressedPhotos.length + files.length > MAX_PHOTOS) {
-      alert(`Solo puedes subir un máximo de ${MAX_PHOTOS} fotos. Actualmente tienes ${compressedPhotos.length} foto(s).`);
-      photoInput.value = '';
-      return;
-    }
-
-    if (files.length > 0) {
-      compressionStatus.style.display = 'block';
-
-      let processedCount = 0;
-      files.forEach((file) => {
-        compressImage(file, (compressedDataUrl, originalSize, compressedSize) => {
-          compressedPhotos.push(compressedDataUrl);
-          addPhotoPreview(compressedDataUrl, compressedSize, compressedPhotos.length - 1);
-
-          processedCount++;
-          if (processedCount === files.length) {
-            compressionStatus.style.display = 'none';
-            updateProofData();
-            photoInput.value = '';
-          }
-        });
-      });
-    }
-  }
-
-  // Comprimir imagen
-  function compressImage(file, callback) {
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      const img = new Image();
-
-      img.onload = () => {
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
-        const QUALITY = 0.6;
-
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', QUALITY);
-        const originalSize = Math.round(e.target.result.length * 0.75 / 1024);
-        const compressedSize = Math.round(compressedDataUrl.length * 0.75 / 1024);
-
-        console.log(`📸 Imagen comprimida: ${originalSize}KB → ${compressedSize}KB`);
-
-        callback(compressedDataUrl, originalSize, compressedSize);
-      };
-
-      img.src = e.target.result;
-    };
-
-    reader.readAsDataURL(file);
-  }
-
-  // Agregar preview de foto
-  function addPhotoPreview(dataUrl, sizeKB, index) {
-    const photoDiv = document.createElement('div');
-    photoDiv.className = 'relative';
-    photoDiv.dataset.photoIndex = index;
-    photoDiv.innerHTML = `
-      <img src="${dataUrl}" class="w-full h-32 object-cover rounded border border-gray-200">
-      <button type="button" data-photo-index="${index}"
-              class="photo-remove-btn absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-700">
-        ×
-      </button>
-      <p class="text-xs text-green-600 mt-1">${sizeKB}KB</p>
-    `;
-    photosContainer.appendChild(photoDiv);
-  }
-
-  // Eliminar foto
-  function removePhoto(index) {
-    console.log('Removing photo at index:', index);
-    compressedPhotos.splice(index, 1);
-    refreshPhotosPreviews();
-    updateProofData();
-  }
-
-  // Refrescar previews
-  function refreshPhotosPreviews() {
-    photosContainer.innerHTML = '';
-    compressedPhotos.forEach((photo, idx) => {
-      const sizeKB = Math.round(photo.length * 0.75 / 1024);
-      addPhotoPreview(photo, sizeKB, idx);
-    });
-  }
-
-  // Actualizar campo hidden
-  function updateProofData() {
-    proofData.value = JSON.stringify(compressedPhotos);
-    console.log('Updated proof data:', compressedPhotos.length, 'photos');
-  }
 
   // Validar formulario antes de enviar
   function validateForm(event) {
@@ -189,15 +153,7 @@ document.addEventListener('turbo:load', function() {
       return false;
     }
 
-    // Solo validar fotos comprimidas si existe el sistema de compresión base64
-    if (status === 'delivered' && proofData) {
-      if (compressedPhotos.length === 0) {
-        event.preventDefault();
-        alert('Por favor, proporciona al menos una foto de evidencia antes de continuar.');
-        return false;
-      }
-    }
-
+    // Validar motivo para estados que lo requieren
     if (status === 'return' || status === 'rescheduled' || status === 'cancelled') {
       const reason = document.getElementById('reason');
       if (reason && (!reason.value || reason.value.trim() === '')) {
@@ -207,27 +163,33 @@ document.addEventListener('turbo:load', function() {
       }
     }
 
+    // Validar fotos para estado "delivered"
+    if (status === 'delivered') {
+      const proofPhotos = document.getElementById('proof_photos');
+      if (proofPhotos && proofPhotos.files.length === 0) {
+        event.preventDefault();
+        alert('⚠️ Debes seleccionar al menos 1 foto para marcar como entregado.');
+        return false;
+      }
+      if (proofPhotos && proofPhotos.files.length > 4) {
+        event.preventDefault();
+        alert('⚠️ Máximo 4 fotos permitidas.');
+        return false;
+      }
+    }
+
     return true;
   }
 
   // Event listeners
-  if (photoInput) {
-    photoInput.addEventListener('change', handlePhotoInput);
-  }
-
   if (form) {
     form.addEventListener('submit', validateForm);
   }
 
-  // Event delegation para botones de eliminar foto (solo si existe el contenedor)
-  if (photosContainer) {
-    photosContainer.addEventListener('click', function(e) {
-      if (e.target.classList.contains('photo-remove-btn') || e.target.closest('.photo-remove-btn')) {
-        const btn = e.target.classList.contains('photo-remove-btn') ? e.target : e.target.closest('.photo-remove-btn');
-        const index = parseInt(btn.dataset.photoIndex);
-        removePhoto(index);
-      }
-    });
+  // Event listener para contador de fotos
+  const proofPhotosInput = document.getElementById('proof_photos');
+  if (proofPhotosInput) {
+    proofPhotosInput.addEventListener('change', updatePhotoCount);
   }
 
   // Inicializar - toggle fields con el estado seleccionado por defecto (delivered)

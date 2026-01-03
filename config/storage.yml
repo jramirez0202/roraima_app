@@ -15,8 +15,8 @@ local:
 # Staging environment (checkpoint-active-storage-dev)
 amazon_staging:
   service: S3
-  region: us-east-1
-  bucket: checkpoint-active-storage-dev
+  region: <%= ENV.fetch("AWS_REGION", "us-east-1") %>
+  bucket: <%= ENV.fetch("AWS_S3_BUCKET", "checkpoint-active-storage-dev") %>
   http_open_timeout: 5
   http_read_timeout: 5
 
@@ -29,12 +29,12 @@ amazon_production:
   http_read_timeout: 5
 
 # Alias genérico (usa amazon_staging o amazon_production según Rails.env)
-amazon:
-  service: S3
-  region: us-east-1
-  bucket: <%= Rails.env.production? ? 'roraima-delivery-production' : 'checkpoint-active-storage-dev' %>
-  http_open_timeout: 5
-  http_read_timeout: 5
+# amazon:
+#   service: S3
+#   region: us-east-1
+#   bucket: <%= Rails.env.production? ? 'roraima-delivery-production' : 'checkpoint-active-storage-dev' %>
+#   http_open_timeout: 5
+#   http_read_timeout: 5
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:

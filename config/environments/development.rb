@@ -33,8 +33,9 @@ Rails.application.configure do
     config.cache_store = :null_store
   end
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Store uploaded files on AWS S3 (see config/storage.yml for options).
+  # Cambiar a :local si prefieres almacenamiento local (sin costos AWS)
+  config.active_storage.service = :amazon_staging
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
@@ -79,6 +80,6 @@ Rails.application.configure do
 
   # config.hosts << "192.168.1.4"   # tu IP local
   # config.hosts << /.*\.local/     # opcional para otros dispositivos
-  config.hosts << "9fcf7722a17e.ngrok-free.app"  # ngrok HTTPS tunnel
+  config.hosts << "4042ed5b970d.ngrok-free.app"  # ngrok HTTPS tunnel (updated)
 
 end

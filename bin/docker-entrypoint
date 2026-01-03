@@ -123,21 +123,31 @@ if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
   echo "ℹ️  Docker Compose ya verificó que PostgreSQL y Redis están listos"
   echo "   (gracias a depends_on con condition: service_healthy)"
   echo ""
-  echo "================================================"
-  echo "📊 Preparando base de datos..."
-  echo "================================================"
-  echo ""
 
-  # rails db:prepare hace:
-  # 1. Crea la DB si no existe (rails db:create)
-  # 2. Ejecuta migraciones pendientes (rails db:migrate)
-  # 3. Carga el schema si es DB nueva (rails db:schema:load)
-  # Es idempotente: puedes ejecutarlo múltiples veces sin problemas
-  ./bin/rails db:prepare
+  # Skip db:prepare in staging/production - run manually:
+  # docker compose -f docker-compose.staging.yml exec web rails db:create db:migrate
+  if [ "${RAILS_ENV}" != "staging" ] && [ "${RAILS_ENV}" != "production" ]; then
+    echo "================================================"
+    echo "📊 Preparando base de datos..."
+    echo "================================================"
+    echo ""
 
-  echo ""
-  echo "✅ Base de datos lista"
-  echo ""
+    # rails db:prepare hace:
+    # 1. Crea la DB si no existe (rails db:create)
+    # 2. Ejecuta migraciones pendientes (rails db:migrate)
+    # 3. Carga el schema si es DB nueva (rails db:schema:load)
+    # Es idempotente: puedes ejecutarlo múltiples veces sin problemas
+    ./bin/rails db:prepare
+
+    echo ""
+    echo "✅ Base de datos lista"
+    echo ""
+  else
+    echo "ℹ️  En staging/production, ejecuta manualmente:"
+    echo "   docker compose exec web rails db:create db:migrate"
+    echo ""
+  fi
+
   echo "================================================"
   echo "🌐 Iniciando servidor Rails..."
   echo "================================================"
