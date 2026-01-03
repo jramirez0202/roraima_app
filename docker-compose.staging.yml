@@ -83,7 +83,7 @@ services:
       args:
         RUBY_VERSION: 3.2.2
     container_name: roraima_sidekiq
-    command: sh -c "cd /rails && ruby /rails/vendor/bundle/ruby/3.2.0/gems/sidekiq-7.3.9/bin/sidekiq -C config/sidekiq.yml"
+    command: bundle exec sidekiq -C config/sidekiq.yml
     depends_on:
       postgres:
         condition: service_healthy
