@@ -51,7 +51,7 @@ sleep 10
 # Run database migrations
 echo ""
 echo -e "${YELLOW}📊 Running database migrations...${NC}"
-docker compose -f docker-compose.staging.yml exec -T web rails db:migrate
+docker compose -f docker-compose.staging.yml exec -T web ./bin/rails db:migrate
 
 # Check container health
 echo ""
