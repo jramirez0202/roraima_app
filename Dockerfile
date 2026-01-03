@@ -125,11 +125,16 @@ RUN mkdir -p /rails/tmp /rails/log /rails/storage && \
 # A partir de aquí, todos los comandos se ejecutan como usuario 'rails'
 USER rails:rails
 
+# Copiar el entrypoint script
+COPY bin/docker-entrypoint /rails/bin/
+RUN chmod +x /rails/bin/docker-entrypoint
+
+
 # HEALTHCHECK: Docker ejecuta este comando cada 30s para verificar que la app funciona
 # Si falla 3 veces seguidas, marca el contenedor como "unhealthy"
 # El endpoint /up es nuevo en Rails 7+ y responde 200 OK si la app está viva
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:3000/up || exit 1
+    CMD curl -f http://localhost:3000/up || exit 1
 
 # ENTRYPOINT se ejecuta ANTES del CMD
 # Este script prepara la base de datos (migraciones, etc.)
@@ -195,7 +200,7 @@ USER rails:rails
 
 # Healthcheck para producción
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:3000/up || exit 1
+    CMD curl -f http://localhost:3000/up || exit 1
 
 # Entrypoint prepara la base de datos
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
