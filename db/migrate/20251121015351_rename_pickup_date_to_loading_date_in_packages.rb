@@ -1,7 +1,9 @@
 class RenamePickupDateToLoadingDateInPackages < ActiveRecord::Migration[7.1]
   def change
     # Renombrar pickup_date a loading_date
-    rename_column :packages, :pickup_date, :loading_date
+    if column_exists?(:packages, :pickup_date) && !column_exists?(:packages, :loading_date)
+      rename_column :packages, :pickup_date, :loading_date
+    end
 
     # Renombrar los índices que usan pickup_date si existen
     # Nota: PostgreSQL puede renombrar automáticamente los índices al renombrar la columna
