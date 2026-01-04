@@ -105,6 +105,9 @@ Rails.application.configure do
   config.hosts << '3.235.99.151'
   config.hosts << 'localhost'
 
+  # CRITICAL: Disable importmap cache sweeping in production-like environments
+  config.importmap.sweep_cache = false
+
   # Enable DNS rebinding protection and other `Host` header attacks.
   # config.hosts = [
   #   "example.com",     # Allow requests from example.com

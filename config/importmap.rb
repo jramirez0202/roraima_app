@@ -13,3 +13,7 @@ pin "html5-qrcode" # @2.3.8
 pin "browser-image-compression" # @2.0.2
 pin "idb" # @8.0.3
 pin "@rails/activestorage", to: "@rails--activestorage.js" # @8.1.100
+
+# Custom application JS files
+pin "labels", to: "labels.js"
+pin "package_form", to: "package_form.js"
