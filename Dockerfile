@@ -105,44 +105,38 @@ RUN bundle exec bootsnap precompile app/ lib/
 
 FROM base AS development
 
-# Copiar gemas instaladas desde el stage builder
-# --from=builder permite copiar archivos de OTRO stage
+# Copiar gemas
 COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
 
+# Copiar TODO el código (esto falta)
+COPY --from=builder /rails /rails
 
-# Variables de entorno para desarrollo
+# Variables de entorno
 ENV RAILS_ENV="development" \
     BUNDLE_WITHOUT=""
 
-# Crear usuario no-root para seguridad
-# Aunque estemos en desarrollo, es buena práctica NO ejecutar como root
+# Crear usuario
 RUN useradd rails --create-home --shell /bin/bash
 
-# Crear directorios necesarios y dar permisos al usuario rails
+# Directorios y permisos
 RUN mkdir -p /rails/tmp /rails/log /rails/storage && \
     chown -R rails:rails /rails
 
-# A partir de aquí, todos los comandos se ejecutan como usuario 'rails'
+# Dar permisos a binarios
+RUN find /rails/vendor/bundle/bin -type f -exec chmod +x {} \; && \
+    find /rails/bin -type f -exec chmod +x {} \;
+
+# Usuario no-root
 USER rails:rails
 
-# Copiar el entrypoint script
-COPY bin/docker-entrypoint /rails/bin/
-RUN chmod +x /rails/bin/docker-entrypoint
-
-
-# HEALTHCHECK: Docker ejecuta este comando cada 30s para verificar que la app funciona
-# Si falla 3 veces seguidas, marca el contenedor como "unhealthy"
-# El endpoint /up es nuevo en Rails 7+ y responde 200 OK si la app está viva
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3000/up || exit 1
 
-# ENTRYPOINT se ejecuta ANTES del CMD
-# Este script prepara la base de datos (migraciones, etc.)
+# Entrypoint
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Comando por defecto: iniciar servidor Rails
-# -b 0.0.0.0 hace que escuche en TODAS las interfaces (necesario para Docker)
-# Sin esto, solo escucharía en localhost y no sería accesible desde el host
+# Comando
 CMD ["./bin/rails", "server", "-b", "0.0.0.0"]
 
 # ============================================
@@ -157,10 +151,7 @@ CMD ["./bin/rails", "server", "-b", "0.0.0.0"]
 
 FROM base AS production
 
-# Instalar SOLO las dependencias de runtime (no las de compilación)
-# curl: Para healthchecks
-# libvips: Procesamiento de imágenes en runtime
-# postgresql-client: Para ejecutar comandos de DB
+# 1. PRIMERO: Instalar dependencias de runtime
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     curl \
@@ -168,45 +159,45 @@ RUN apt-get update -qq && \
     postgresql-client && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Variables de entorno para producción
+# 2. Configurar variables de entorno
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_WITHOUT="development:test" \
     RAILS_SERVE_STATIC_FILES="true" \
     RAILS_LOG_TO_STDOUT="true"
 
-# Copiar gemas instaladas desde builder
+# 3. COPIAR gemas desde builder
 COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
 
-# Copiar código de la aplicación desde builder
+# 4. COPIAR código desde builder
 COPY --from=builder /rails /rails
 
-# Precompilar assets para producción
-# SECRET_KEY_BASE_DUMMY permite precompilar sin tener el secret real
-# (el secret real se pasa como variable de entorno en runtime)
+# 5. Dar permisos a binarios (AHORA SÍ existen)
+RUN find /rails/vendor/bundle/bin -type f -exec chmod +x {} \; && \
+    find /rails/vendor/bundle -name "*.so" -o -name "*.so.*" -exec chmod +x {} \; 2>/dev/null || true
+
+# 6. Precompilar assets UNA SOLA VEZ
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
-# Crear usuario rails y ajustar permisos
-# IMPORTANTE: El usuario rails necesita permisos de lectura en toda la aplicación
-# pero de escritura solo en db, log, storage, tmp
+# 7. Crear usuario y ajustar permisos finales
 RUN useradd rails --create-home --shell /bin/bash && \
     chown -R rails:rails /rails && \
     find /rails -type d -exec chmod 755 {} \; && \
     find /rails -type f -exec chmod 644 {} \; && \
     chmod -R 755 /rails/bin
 
-# Cambiar a usuario no-root
+# 8. Usuario no-root
 USER rails:rails
 
-# Healthcheck para producción
+# 9. Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3000/up || exit 1
 
-# Entrypoint prepara la base de datos
+# 10. Entrypoint
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Exponer puerto 3000 (informativo, no abre el puerto automáticamente)
+# 11. Puerto
 EXPOSE 3000
 
-# Comando por defecto: servidor Rails
+# 12. Comando
 CMD ["./bin/rails", "server"]
