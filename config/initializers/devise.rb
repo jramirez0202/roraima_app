@@ -310,13 +310,5 @@ Devise.setup do |config|
   # When set to false, does not sign a user in automatically after their password is
   # changed. Defaults to true, so a user is signed in automatically after changing a password.
   # config.sign_in_after_change_password = true
-  Devise.setup do |config|
-  # Force host in redirects (desde variable de entorno)
-    if Rails.env.staging? || Rails.env.production?
-      config.default_url_options = { 
-        host: ENV['DEVISE_HOST'] || 'localhost:3000',
-        protocol: ENV['DEVISE_PROTOCOL'] || 'http'
-      }
-    end
-  end
+
 end

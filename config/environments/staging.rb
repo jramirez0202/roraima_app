@@ -95,8 +95,13 @@ Rails.application.configure do
 
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
+  devise_host = ENV['DEVISE_HOST'] || '3.235.99.151:3001'
 
-  config.action_mailer.default_url_options = { host: '3.235.99.151:3001' }
+  config.action_mailer.default_url_options = { 
+    host: devise_host
+  }
+
+  config.hosts << devise_host.split(':').first  # Solo el dominio, sin puerto
   config.hosts << '3.235.99.151'
   config.hosts << 'localhost'
 
