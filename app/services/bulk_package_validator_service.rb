@@ -1,5 +1,5 @@
 require 'roo'
-
+require_relative 'concerns/spreadsheet_opener'
 class BulkPackageValidatorService
   attr_reader :errors, :total_rows, :validated_rows
 
@@ -83,18 +83,7 @@ class BulkPackageValidatorService
   private
 
   def open_spreadsheet
-    file_path = @file_attachment.blob.service.path_for(@file_attachment.key)
-
-    case @file_attachment.content_type
-    when 'text/csv'
-      Roo::CSV.new(file_path)
-    when 'application/vnd.ms-excel'
-      Roo::Excel.new(file_path)
-    when 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      Roo::Excelx.new(file_path)
-    else
-      raise "Formato de archivo no soportado: #{@file_attachment.content_type}"
-    end
+    SpreadsheetOpener.open_from_attachment(@file_attachment)
   end
 
   def normalize_headers(header_row)

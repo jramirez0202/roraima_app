@@ -81,6 +81,33 @@ export default class extends Controller {
     this.processScan({ preventDefault: () => {} })
   }
 
+  handleFocus(event) {
+    const input = event.target
+    const prefix = 'PKG-'
+
+    // Siempre asegurar que el valor empiece con el prefijo
+    if (!input.value.startsWith(prefix)) {
+      input.value = prefix
+    }
+
+    // Posicionar cursor después del prefijo
+    setTimeout(() => {
+      input.setSelectionRange(prefix.length, prefix.length)
+    }, 0)
+  }
+
+  handleInput(event) {
+    const input = event.target
+    const prefix = 'PKG-'
+
+    // Restaurar prefijo si fue eliminado
+    if (!input.value.startsWith(prefix)) {
+      const numericPart = input.value.replace(prefix, '')
+      input.value = prefix + numericPart
+      input.setSelectionRange(prefix.length, input.value.length)
+    }
+  }
+
   async resetSession(event) {
     event.preventDefault()
 
@@ -208,14 +235,20 @@ export default class extends Controller {
   }
 
   clearAndFocus() {
-    this.inputTarget.value = ''
+    this.inputTarget.value = 'PKG-'
     this.focusInput()
   }
 
   focusInput() {
     setTimeout(() => {
       this.inputTarget.focus()
-      this.inputTarget.select()
+      // Posicionar cursor después de "PKG-" en vez de seleccionar todo
+      const prefix = 'PKG-'
+      if (this.inputTarget.value.startsWith(prefix)) {
+        this.inputTarget.setSelectionRange(prefix.length, this.inputTarget.value.length)
+      } else {
+        this.inputTarget.select()
+      }
     }, 100)
   }
 

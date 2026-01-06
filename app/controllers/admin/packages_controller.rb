@@ -253,6 +253,15 @@ end
       end
     end
 
+    # Validar nombre del receptor para entregados (solo si no es override)
+    if new_status == 'delivered' && !override
+      @package.reload # Asegurar que tenemos la última versión
+      unless @package.receiver_name.present?
+        redirect_to admin_package_path(@package), alert: 'Se requiere el nombre del receptor para marcar como entregado.'
+        return
+      end
+    end
+
     # Parámetros adicionales según el tipo de cambio
     additional_params = {}
     additional_params[:proof] = @package.proof_photos.attached? ? 'attached' : nil

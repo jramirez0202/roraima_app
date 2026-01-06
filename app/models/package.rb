@@ -22,6 +22,12 @@ class Package < ApplicationRecord
     cancelled: 7            # Shipment cancelled (terminal)
   }
 
+  # Enum for payment method (cuando monto > 0)
+  enum payment_method: {
+    cash: 0,        # Efectivo (default)
+    transfer: 1     # Transferencia
+  }
+
   # Allowed transitions matrix
   ALLOWED_TRANSITIONS = {
     pending_pickup: [:in_warehouse, :cancelled],

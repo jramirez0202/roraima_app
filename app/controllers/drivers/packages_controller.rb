@@ -3,8 +3,9 @@
 module Drivers
   class PackagesController < BaseController
     include FilterablePackages
+    helper PackagesHelper
 
-    before_action :set_package, only: [:show, :change_status, :update]
+    before_action :set_package, only: [:show, :change_status, :update, :update_payment_method]
 
     def index
       # Nota: Drivers filtran por assigned_at (fecha de asignación), no por loading_date
@@ -139,6 +140,12 @@ module Drivers
           redirect_to drivers_package_path(@package), alert: "Máximo 4 fotos permitidas."
           return
         end
+
+        # Validar que se haya enviado el nombre del receptor
+        unless params[:receiver_name].present?
+          redirect_to drivers_package_path(@package), alert: "Se requiere el nombre del receptor para marcar como entregado."
+          return
+        end
       end
 
       if params[:new_status] == 'rescheduled'
@@ -168,6 +175,14 @@ module Drivers
       # Usar transacción: si algo falla, TODO se revierte (incluyendo fotos)
       service_errors = nil
       ActiveRecord::Base.transaction do
+        # Actualizar datos del receptor ANTES de cambiar estado (para validación)
+        if params[:new_status] == 'delivered'
+          @package.update!(
+            receiver_name: params[:receiver_name],
+            receiver_observations: params[:receiver_observations]
+          )
+        end
+
         # Adjuntar fotos según el estado
         if params[:new_status] == 'delivered'
           photo_ids = Array(params[:package][:proof_photos]).compact.reject(&:blank?)
@@ -206,6 +221,28 @@ module Drivers
       else
         error_message = service_errors&.any? ? service_errors.join(', ') : 'No se pudo actualizar el estado. Intenta de nuevo.'
         redirect_to drivers_package_path(@package), alert: error_message
+      end
+    end
+
+    def update_payment_method
+      authorize @package, :change_status?
+
+      # Solo permitir si el paquete tiene monto > 0 y no está entregado
+      unless @package.amount > 0 && !@package.delivered?
+        redirect_to drivers_package_path(@package), alert: 'No se puede cambiar el método de pago en este momento.'
+        return
+      end
+
+      # Validar que se envió un método de pago válido
+      unless params[:payment_method].present? && %w[cash transfer].include?(params[:payment_method])
+        redirect_to drivers_package_path(@package), alert: 'Método de pago inválido.'
+        return
+      end
+
+      if @package.update(payment_method: params[:payment_method])
+        redirect_to drivers_package_path(@package), notice: "Método de pago actualizado a #{helpers.payment_method_text(@package.payment_method)}."
+      else
+        redirect_to drivers_package_path(@package), alert: 'No se pudo actualizar el método de pago.'
       end
     end
 

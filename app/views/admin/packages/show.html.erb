@@ -156,6 +156,17 @@
               <dd class="mt-1 text-sm text-gray-900"><%= @package.formatted_amount %></dd>
             </div>
 
+            <% if @package.amount > 0 %>
+            <div class="sm:col-span-1">
+              <dt class="text-sm font-medium text-gray-500">Método de Pago</dt>
+              <dd class="mt-1 text-sm text-gray-900">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= @package.cash? ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800' %>">
+                  <%= payment_method_text(@package.payment_method) %>
+                </span>
+              </dd>
+            </div>
+            <% end %>
+
             <div class="sm:col-span-2">
               <dt class="text-sm font-medium text-gray-500">Descripción</dt>
               <dd class="mt-1 text-sm text-gray-900"><%= @package.description.presence || '—' %></dd>
@@ -708,16 +719,22 @@
         <img id="reschedule-photo-modal-img"
              src=""
              alt="Foto de reprogramación - Tamaño completo"
-             class="w-full h-auto rounded-lg shadow-2xl"
-             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'bg-white p-8 rounded-lg text-center\'><p class=\'text-red-600\'>Error al cargar la imagen</p></div>';">
+             class="w-full h-auto rounded-lg shadow-2xl">
 
         <!-- Info adicional -->
         <div class="mt-4 bg-white bg-opacity-90 rounded-lg p-4">
           <p class="text-sm text-gray-900">
             <strong>Paquete:</strong> <%= @package.tracking_code %>
             <span class="mx-2">•</span>
-            <strong>Cliente:</strong> <%= @package.customer_name %>
+            <strong>Receptor:</strong> <%= @package.receiver_name.presence || 'No especificado' %>
+            <span class="mx-2">•</span>
+            <strong>Estado:</strong> <%= status_text(@package.status) %>
           </p>
+          <% if @package.receiver_observations.present? %>
+            <p class="text-sm text-gray-700 mt-2">
+              <strong>Observación:</strong> <%= @package.receiver_observations %>
+            </p>
+          <% end %>
           <% if @package.reprogramed_to %>
             <p class="text-xs text-gray-600 mt-1">
               Reprogramado para <%= l(@package.reprogramed_to, format: :long) %>
@@ -725,7 +742,7 @@
           <% end %>
           <% if @package.reprogram_motive %>
             <p class="text-xs font-bold text-red-600 mt-1">
-              <%= @package.reprogram_motive %>
+              <strong>Motivo:</strong> <%= @package.reprogram_motive %>
             </p>
           <% end %>
         </div>
@@ -780,18 +797,22 @@
         <img id="proof-photo-modal-img"
              src=""
              alt="Foto de evidencia de entrega - Tamaño completo"
-             class="w-full h-auto rounded-lg shadow-2xl"
-             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'bg-white p-8 rounded-lg text-center\'><p class=\'text-red-600\'>Error al cargar la imagen</p></div>';">
+             class="w-full h-auto rounded-lg shadow-2xl">
 
         <!-- Info adicional -->
         <div class="mt-4 bg-white bg-opacity-90 rounded-lg p-4">
           <p class="text-sm text-gray-900">
             <strong>Paquete:</strong> <%= @package.tracking_code %>
             <span class="mx-2">•</span>
-            <strong>Cliente:</strong> <%= @package.customer_name %>
+            <strong>Receptor:</strong> <%= @package.receiver_name.presence || 'No especificado' %>
             <span class="mx-2">•</span>
             <strong>Estado:</strong> <%= status_text(@package.status) %>
           </p>
+          <% if @package.receiver_observations.present? %>
+            <p class="text-sm text-gray-700 mt-2">
+              <strong>Observación:</strong> <%= @package.receiver_observations %>
+            </p>
+          <% end %>
           <% if @package.delivered_at %>
             <p class="text-xs text-gray-600 mt-1">
               Entregado el <%= l(@package.delivered_at, format: :long) %>

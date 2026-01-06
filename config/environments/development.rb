@@ -35,7 +35,7 @@ Rails.application.configure do
 
   # Store uploaded files on AWS S3 (see config/storage.yml for options).
   # Cambiar a :local si prefieres almacenamiento local (sin costos AWS)
-  config.active_storage.service = :amazon_staging
+  config.active_storage.service = :local
 
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false

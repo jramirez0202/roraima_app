@@ -57,7 +57,7 @@ Rails.application.configure do
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   # En staging es opcional (facilita testing), en producción debe ser true
-  config.force_ssl = ENV.fetch("FORCE_SSL", "false") == "true"
+  config.force_ssl = ENV.fetch("FORCE_SSL", "true") == "true"
 
   # Log to STDOUT by default
   config.logger = ActiveSupport::Logger.new(STDOUT)
@@ -95,14 +95,14 @@ Rails.application.configure do
 
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
-  devise_host = ENV['DEVISE_HOST'] || '3.235.99.151:3001'
+  devise_host = ENV['DEVISE_HOST'] || 'staging.rutiservice.com'
 
   config.action_mailer.default_url_options = { 
     host: devise_host
   }
 
   config.hosts << devise_host.split(':').first  # Solo el dominio, sin puerto
-  config.hosts << '3.235.99.151'
+  config.hosts << 'staging.rutiservice.com'
   config.hosts << 'localhost'
 
   # CRITICAL: Disable importmap cache sweeping in production-like environments

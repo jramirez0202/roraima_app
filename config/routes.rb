@@ -90,6 +90,7 @@ Rails.application.routes.draw do
     resources :packages, only: [:index, :show, :update] do
       member do
         patch :change_status
+        patch :update_payment_method
       end
     end
 

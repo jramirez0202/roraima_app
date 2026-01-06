@@ -77,9 +77,10 @@
           <input type="text"
                  id="scanner-input"
                  data-scanner-target="input"
-                 data-action="keydown.enter->scanner#processScan"
+                 data-action="keydown.enter->scanner#processScan focus->scanner#handleFocus input->scanner#handleInput"
                  autocomplete="off"
                  autofocus
+                 value="PKG-"
                  placeholder="PKG-XXXXXXXXXXXXXX"
                  class="block w-full text-center text-2xl font-mono rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-200 transition-all py-4 px-6">
 

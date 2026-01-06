@@ -44,6 +44,58 @@ class Driver < User
     visible_packages.where(status: [:pending_pickup, :in_warehouse, :in_transit, :rescheduled])
   end
 
+  # === WEEKLY STATISTICS ===
+  # Semana laboral chilena: Lunes a Domingo
+
+  # Obtiene el lunes de la semana para una fecha dada
+  def week_start_for(date)
+    date.beginning_of_week(:monday)
+  end
+
+  # Obtiene el domingo de la semana para una fecha dada
+  def week_end_for(date)
+    date.end_of_week(:monday)
+  end
+
+  # Estadísticas semanales completas
+  def weekly_summary(week_start_date)
+    week_start = week_start_date.is_a?(Date) ? week_start_date : Date.parse(week_start_date)
+    week_end = week_end_for(week_start)
+
+    {
+      delivered: weekly_delivered_count(week_start, week_end),
+      rescheduled: weekly_rescheduled_count(week_start, week_end),
+      cancelled: weekly_cancelled_count(week_start, week_end),
+      week_start: week_start,
+      week_end: week_end
+    }
+  end
+
+  # Paquetes entregados en la semana (usa delivered_at) - ESTOS SE PAGAN
+  def weekly_delivered_count(week_start, week_end)
+    visible_packages
+      .where(status: :delivered)
+      .where(delivered_at: week_start.beginning_of_day..week_end.end_of_day)
+      .count
+  end
+
+  # Paquetes reprogramados en la semana - SOLO INFORMACIÓN, NO SE PAGAN
+  # Solo cuenta los que AÚN están en estado rescheduled
+  def weekly_rescheduled_count(week_start, week_end)
+    visible_packages
+      .where(status: :rescheduled)
+      .where(updated_at: week_start.beginning_of_day..week_end.end_of_day)
+      .count
+  end
+
+  # Paquetes cancelados en la semana (usa cancelled_at) - SOLO INFORMACIÓN
+  def weekly_cancelled_count(week_start, week_end)
+    visible_packages
+      .where(status: :cancelled)
+      .where(cancelled_at: week_start.beginning_of_day..week_end.end_of_day)
+      .count
+  end
+
   # Reprogramados persistentes (históricos) - NO filtra por fecha de asignación
   def persistent_rescheduled
     visible_packages.where(status: :rescheduled)

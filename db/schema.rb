@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_03_074333) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_05_201146) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -62,7 +62,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_03_074333) do
   end
 
   create_table "communes", force: :cascade do |t|
-    t.string "name"
+    t.string "name", null: false
     t.bigint "region_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -110,6 +110,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_03_074333) do
     t.datetime "photos_confirmed_at"
     t.string "receiver_name", limit: 30
     t.text "receiver_observations"
+    t.integer "payment_method", default: 0, null: false
     t.index ["assigned_by_id"], name: "index_packages_on_assigned_by_id"
     t.index ["assigned_courier_id", "assigned_at"], name: "index_packages_on_assigned_courier_id_and_assigned_at"
     t.index ["assigned_courier_id", "delivered_at"], name: "index_packages_on_assigned_courier_and_delivered_at", comment: "Optimizes Driver#today_deliveries queries (QA audit fix)"

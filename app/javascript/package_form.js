@@ -5,6 +5,7 @@ document.addEventListener('turbo:load', function() {
   if (!form) return; // Solo ejecutar en la página del formulario
 
   const reasonField = document.getElementById('reason-field');
+  const receiverFields = document.getElementById('receiver-fields');
   const reschedulePhotosField = document.getElementById('reschedule-photos-field');
   const deliveryPhotosField = document.getElementById('delivery-photos-field');
   const cancelledPhotosField = document.getElementById('cancelled-photos-field');
@@ -25,14 +26,20 @@ document.addEventListener('turbo:load', function() {
     console.log('🔄 toggleFields called, status:', status);
 
     const needsReason = ['return', 'rescheduled', 'cancelled'].includes(status);
+    const needsReceiverFields = status === 'delivered';
     const needsReschedulePhotos = status === 'rescheduled';
     const needsDeliveryPhotos = status === 'delivered';
     const needsCancelledPhotos = status === 'cancelled';
 
-    console.log('needsReason:', needsReason, 'needsReschedulePhotos:', needsReschedulePhotos, 'needsDeliveryPhotos:', needsDeliveryPhotos, 'needsCancelledPhotos:', needsCancelledPhotos);
+    console.log('needsReason:', needsReason, 'needsReceiverFields:', needsReceiverFields, 'needsReschedulePhotos:', needsReschedulePhotos, 'needsDeliveryPhotos:', needsDeliveryPhotos, 'needsCancelledPhotos:', needsCancelledPhotos);
 
     // Mostrar/ocultar campos según el estado
     reasonField.style.display = needsReason ? 'block' : 'none';
+
+    // Mostrar/ocultar campos del receptor para entregado
+    if (receiverFields) {
+      receiverFields.style.display = needsReceiverFields ? 'block' : 'none';
+    }
 
     const submitBtn = document.getElementById('update-status-btn');
 
@@ -110,6 +117,11 @@ document.addEventListener('turbo:load', function() {
     if (reasonTextarea) {
       reasonTextarea.required = needsReason;
     }
+
+    const receiverNameInput = document.getElementById('receiver_name');
+    if (receiverNameInput) {
+      receiverNameInput.required = needsReceiverFields;
+    }
   }
 
   // Actualizar contador de fotos
@@ -143,13 +155,76 @@ document.addEventListener('turbo:load', function() {
     toggleFields();
   };
 
+  // Mostrar alerta estilo flash (sin refresh)
+  function showFlashAlert(message, type = 'error') {
+    // Remover alertas previas
+    const existingAlert = document.querySelector('.flash-alert-dynamic')
+    if (existingAlert) existingAlert.remove()
+
+    const colors = {
+      error: {
+        bg: 'bg-red-50',
+        border: 'border-red-500',
+        text: 'text-red-800',
+        icon: 'text-red-500'
+      }
+    }
+
+    const color = colors[type] || colors.error
+
+    const alertHTML = `
+      <div class="flash-alert-dynamic mb-4 ${color.bg} border-l-4 ${color.border} p-4 rounded shadow-sm">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 ${color.icon}" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div class="ml-3 flex-1">
+            <p class="text-sm font-medium ${color.text}">${message}</p>
+          </div>
+          <div class="ml-auto pl-3">
+            <button type="button" class="inline-flex ${color.text} hover:${color.bg} rounded-md p-1.5 focus:outline-none" onclick="this.parentElement.parentElement.parentElement.remove()">
+              <span class="sr-only">Cerrar</span>
+              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `
+
+    // Insertar antes del formulario de cambio de estado
+    const formElement = document.getElementById('package-status-form')
+    if (formElement) {
+      formElement.insertAdjacentHTML('beforebegin', alertHTML)
+
+      // Scroll suave a la alerta
+      const alertElement = document.querySelector('.flash-alert-dynamic')
+      if (alertElement) {
+        alertElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+
+      // Auto-ocultar después de 6 segundos
+      setTimeout(() => {
+        const alertToRemove = document.querySelector('.flash-alert-dynamic')
+        if (alertToRemove) {
+          alertToRemove.style.transition = 'opacity 0.3s ease-out'
+          alertToRemove.style.opacity = '0'
+          setTimeout(() => alertToRemove.remove(), 300)
+        }
+      }, 6000)
+    }
+  }
+
   // Validar formulario antes de enviar
   function validateForm(event) {
     const status = getSelectedStatus();
 
     if (!status) {
       event.preventDefault();
-      alert('Por favor, selecciona un nuevo estado.');
+      showFlashAlert('Por favor, selecciona un nuevo estado.')
       return false;
     }
 
@@ -158,22 +233,22 @@ document.addEventListener('turbo:load', function() {
       const reason = document.getElementById('reason');
       if (reason && (!reason.value || reason.value.trim() === '')) {
         event.preventDefault();
-        alert('Por favor, proporciona un motivo antes de continuar.');
+        showFlashAlert('Se requiere un motivo para reprogramar por favor.')
+        reason.focus()
+        reason.scrollIntoView({ behavior: 'smooth', block: 'center' })
         return false;
       }
     }
 
-    // Validar fotos para estado "delivered"
+    // Validar datos del receptor para estado "delivered"
+    // Nota: La validación de fotos se hace en delivery_photos_controller.js
     if (status === 'delivered') {
-      const proofPhotos = document.getElementById('proof_photos');
-      if (proofPhotos && proofPhotos.files.length === 0) {
+      const receiverName = document.getElementById('receiver_name');
+      if (receiverName && (!receiverName.value || receiverName.value.trim() === '')) {
         event.preventDefault();
-        alert('⚠️ Debes seleccionar al menos 1 foto para marcar como entregado.');
-        return false;
-      }
-      if (proofPhotos && proofPhotos.files.length > 4) {
-        event.preventDefault();
-        alert('⚠️ Máximo 4 fotos permitidas.');
+        showFlashAlert('Se requiere el nombre del receptor para marcar como entregado por favor.')
+        receiverName.focus()
+        receiverName.scrollIntoView({ behavior: 'smooth', block: 'center' })
         return false;
       }
     }

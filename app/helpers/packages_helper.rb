@@ -163,6 +163,72 @@ TAB_BADGE_ACTIVE_CLASSES = {
     }.compact # Elimina valores nil
   end
 
+  # === PAYMENT METHOD TRANSLATIONS ===
+
+  PAYMENT_METHOD_TRANSLATIONS = {
+    cash: "Efectivo",
+    transfer: "Transferencia"
+  }.freeze
+
+  # Returns human-readable payment method text in Spanish
+  def payment_method_text(payment_method)
+    payment_method_sym = payment_method.is_a?(String) ? payment_method.to_sym : payment_method
+    PAYMENT_METHOD_TRANSLATIONS.fetch(payment_method_sym, payment_method.to_s.humanize)
+  end
+
+  # Returns payment method options for radio buttons
+  def payment_method_options
+    [
+      { label: 'Efectivo', value: 'cash' },
+      { label: 'Transferencia', value: 'transfer' }
+    ]
+  end
+
+  # === STATUS OPTIONS FOR FORMS ===
+
+  # Returns available status options for driver status change form
+  # Each option includes label (Spanish), value (status key), and icon (emoji)
+  def available_status_options
+    [
+      { label: 'Entregado', value: 'delivered', icon: '✅' },
+      { label: 'En Camino', value: 'in_transit', icon: '🚚' },
+      { label: 'Reprogramado', value: 'rescheduled', icon: '📅' },
+      { label: 'Cancelado', value: 'cancelled', icon: '❌' }
+    ]
+  end
+
+  # Returns status options excluding the package's current status
+  # Used in forms to prevent selecting the same status
+  def available_status_options_for(package)
+    available_status_options.reject { |option| option[:value] == package.status }
+  end
+
+  # === CONDITIONAL DISPLAY HELPERS ===
+
+  # Determines if receiver details section should be displayed
+  # Shows when package is delivered and has receiver information
+  def show_receiver_details?(package)
+    package.delivered? && (package.receiver_name.present? || package.receiver_observations.present?)
+  end
+
+  # Determines if proof photos section should be displayed
+  # Shows when package is delivered and has photos attached
+  def show_proof_photos?(package)
+    package.proof_photos.attached? && package.delivered?
+  end
+
+  # Determines if reschedule photos should be displayed
+  # Shows when package has reschedule photos attached
+  def show_reschedule_photos?(package)
+    package.reschedule_photos.attached?
+  end
+
+  # Determines if reschedule info section should be displayed
+  # Shows when package is rescheduled and has any reschedule data
+  def show_reschedule_section?(package)
+    (package.reprogramed_to || package.reprogram_motive || package.reschedule_photos.attached?) && package.rescheduled?
+  end
+
   private
 
   # Normaliza el estado a symbol

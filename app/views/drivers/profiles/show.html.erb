@@ -74,26 +74,75 @@
     </div>
   </div>
 
-  <!-- Estadísticas Generales -->
+  <!-- Entregas Semanales -->
   <div class="mt-6 bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-900">Mis Estadísticas</h2>
+      <h2 class="text-lg font-semibold text-gray-900">Entregas Semanales</h2>
+      <p class="text-sm text-gray-500 mt-1">
+        Del <%= I18n.l(@current_week_start, format: '%A %d/%m') %> al <%= I18n.l(@current_week_end, format: '%A %d/%m') %>
+      </p>
     </div>
-    <div class="px-6 py-4">
+
+    <!-- Contadores de estadísticas -->
+    <div class="px-6 py-4 border-b border-gray-200">
       <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <dt class="text-sm font-medium text-gray-500">Paquetes Asignados</dt>
-          <dd class="mt-2 text-3xl font-bold text-gray-900"><%= @driver.visible_packages.count %></dd>
+        <!-- Entregados - SE PAGAN -->
+        <div class="text-center p-4 bg-green-50 rounded-lg border-2 border-green-200">
+          <dt class="text-sm font-medium text-gray-600">✅ Entregados</dt>
+          <dd class="mt-2 text-4xl font-bold text-green-700"><%= @weekly_stats[:delivered] %></dd>
         </div>
-        <div class="text-center p-4 bg-green-50 rounded-lg">
-          <dt class="text-sm font-medium text-gray-500">Entregados Hoy</dt>
-          <dd class="mt-2 text-3xl font-bold text-green-600"><%= @driver.today_deliveries.count %></dd>
+
+        <!-- Reprogramados - NO SE PAGAN -->
+        <div class="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <dt class="text-sm font-medium text-gray-600">📅 Reprogramados</dt>
+          <dd class="mt-2 text-4xl font-bold text-amber-700"><%= @weekly_stats[:rescheduled] %></dd>
+          <p class="text-xs text-gray-500 mt-1">Solo información</p>
         </div>
-        <div class="text-center p-4 bg-yellow-50 rounded-lg">
-          <dt class="text-sm font-medium text-gray-500">Pendientes</dt>
-          <dd class="mt-2 text-3xl font-bold text-yellow-600"><%= @driver.pending_deliveries.count %></dd>
+
+        <!-- Cancelados - NO SE PAGAN -->
+        <div class="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+          <dt class="text-sm font-medium text-gray-600">❌ Cancelados</dt>
+          <dd class="mt-2 text-4xl font-bold text-red-700"><%= @weekly_stats[:cancelled] %></dd>
+          <p class="text-xs text-gray-500 mt-1">Solo información</p>
         </div>
       </dl>
+    </div>
+
+    <!-- Navegación de semanas -->
+    <div class="px-6 py-4 flex justify-between items-center">
+      <!-- Botón Semana Anterior -->
+      <%= link_to drivers_profile_path(week: @previous_week_start.to_s),
+          class: "flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Semana Anterior
+      <% end %>
+
+      <!-- Indicador de semana actual -->
+      <% if @is_current_week %>
+        <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+          Semana Actual
+        </span>
+      <% else %>
+        <span class="text-xs text-gray-500">
+          <%= @current_week_start.strftime('%d/%m/%Y') %>
+        </span>
+      <% end %>
+
+      <!-- Botón Semana Siguiente (solo si no estamos en semana actual) -->
+      <% if @next_week_start.present? %>
+        <%= link_to drivers_profile_path(week: @next_week_start.to_s),
+            class: "flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
+          Semana Siguiente
+          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        <% end %>
+      <% else %>
+        <!-- Placeholder invisible para mantener layout -->
+        <div class="w-40"></div>
+      <% end %>
     </div>
   </div>
 

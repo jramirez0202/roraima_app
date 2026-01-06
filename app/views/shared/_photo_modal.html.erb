@@ -1,0 +1,64 @@
+<%#
+  Photo Modal Partial - Reusable modal for viewing photos in full size
+
+  Parameters:
+  - modal_id: Unique ID for the modal div (e.g., 'proof-photo-modal')
+  - img_id: Unique ID for the img element (e.g., 'proof-photo-modal-img')
+  - close_function: JavaScript function name to close modal (e.g., 'closeProofPhotoModal')
+  - alt_text: Alt text for the image (e.g., 'Foto de evidencia de entrega')
+  - info_content: Block of HTML for additional info section
+%>
+
+<div
+  id="<%= modal_id %>"
+  class="hidden fixed inset-0 z-50 overflow-y-auto"
+  aria-labelledby="modal-title"
+  role="dialog"
+  aria-modal="true"
+>
+  <!-- Overlay -->
+  <div
+    class="fixed inset-0 bg-black bg-opacity-75 transition-opacity"
+    onclick="<%= close_function %>()"
+  ></div>
+
+  <!-- Modal Content -->
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div class="relative max-w-7xl w-full">
+      <!-- Botón de cerrar -->
+      <button
+        type="button"
+        onclick="<%= close_function %>()"
+        class="absolute -top-12 right-0 text-white hover:text-gray-300 focus:outline-none"
+      >
+        <svg
+          class="h-8 w-8"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+        <span class="sr-only">Cerrar</span>
+      </button>
+
+      <!-- Imagen -->
+      <img
+        id="<%= img_id %>"
+        src=""
+        alt="<%= alt_text %> - Tamaño completo"
+        class="w-full h-auto rounded-lg shadow-2xl"
+      />
+
+      <!-- Info adicional -->
+      <div class="mt-4 bg-white bg-opacity-90 rounded-lg p-4">
+        <%= info_content %>
+      </div>
+    </div>
+  </div>
+</div>

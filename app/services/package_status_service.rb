@@ -242,6 +242,7 @@ class PackageStatusService
   end
 
   # Validates specific requirements according to destination status
+  # El parámetro override ya fue validado en validate_transition
   def validate_requirements(new_status, params)
     # RESTRICCIÓN: Drivers deben tener ruta iniciada para cambiar estados
     if user.driver? && !user.on_route?
@@ -261,6 +262,14 @@ class PackageStatusService
       unless params[:allow_pending_photos] || package.proof_photos.attached?
         status_text = translate_status(new_status)
         @errors << "Se requiere evidencia fotográfica para marcar como #{status_text}"
+        return false
+      end
+
+      # Validar que exista el nombre del receptor
+      # NOTA: Esta validación se hace aquí porque validate_requirements solo se ejecuta
+      # cuando NO hay override (ver línea 19: return false unless override || validate_requirements)
+      unless package.receiver_name.present?
+        @errors << "Se requiere el nombre del receptor para marcar como entregado"
         return false
       end
 
