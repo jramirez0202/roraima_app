@@ -381,23 +381,50 @@
           📸 Fotos de Evidencia de Entrega
         </h3>
 
-        <!-- Botón de captura -->
-        <label class="block mb-4">
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            data-delivery-photos-target="input"
-            capture="environment"
-            data-action="change->delivery-photos#capturePhoto"
-            class="hidden"
-          />
-          <div
-            class="w-full cursor-pointer bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-6 rounded-lg text-center shadow-lg transform transition hover:scale-105"
-          >
-            Tomar Foto / Seleccionar de Galería
-          </div>
-        </label>
+        <!-- Botones de Captura Separados -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <!-- Botón 1: Tomar Foto con Cámara -->
+          <label class="block">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              capture="environment"
+              data-delivery-photos-target="input"
+              data-action="change->delivery-photos#capturePhoto"
+              class="hidden"
+            />
+            <div
+              class="w-full cursor-pointer bg-blue-200 hover:bg-blue-300 text-blue-700 font-bold py-3 px-3 rounded-lg text-center transition"
+            >
+              <svg class="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <span class="text-xs">Tomar Foto</span>
+            </div>
+          </label>
+
+          <!-- Botón 2: Seleccionar de Galería -->
+          <label class="block">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              data-delivery-photos-target="input"
+              data-action="change->delivery-photos#capturePhoto"
+              class="hidden"
+            />
+            <div
+              class="w-full cursor-pointer bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-4 px-4 rounded-lg text-center transition"
+            >
+              <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-sm">Galería</span>
+            </div>
+          </label>
+        </div>
 
         <!-- Contador -->
         <div
@@ -444,23 +471,50 @@
           📅 Fotos de Evidencia de Reprogramación
         </h3>
 
-        <!-- Botón de captura -->
-        <label class="block mb-4">
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            data-reschedule-photos-target="input"
-            capture="environment"
-            data-action="change->reschedule-photos#capturePhoto"
-            class="hidden"
-          />
-          <div
-            class="w-full cursor-pointer bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-4 px-6 rounded-lg text-center shadow-lg transform transition hover:scale-105"
-          >
-            Tomar Foto / Seleccionar de Galería
-          </div>
-        </label>
+        <!-- Botones de Captura Separados -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <!-- Botón 1: Tomar Foto con Cámara -->
+          <label class="block">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              capture="environment"
+              data-reschedule-photos-target="input"
+              data-action="change->reschedule-photos#capturePhoto"
+              class="hidden"
+            />
+            <div
+              class="w-full cursor-pointer bg-blue-200 hover:bg-blue-300 text-blue-700 font-bold py-3 px-3 rounded-lg text-center transition"
+            >
+              <svg class="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <span class="text-xs">Tomar Foto</span>
+            </div>
+          </label>
+
+          <!-- Botón 2: Seleccionar de Galería -->
+          <label class="block">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              data-reschedule-photos-target="input"
+              data-action="change->reschedule-photos#capturePhoto"
+              class="hidden"
+            />
+            <div
+              class="w-full cursor-pointer bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-4 px-4 rounded-lg text-center transition"
+            >
+              <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-sm">Galería</span>
+            </div>
+          </label>
+        </div>
 
         <!-- Contador -->
         <div
@@ -510,23 +564,50 @@
           ❌ Fotos de Evidencia de Cancelación
         </h3>
 
-        <!-- Botón de captura -->
-        <label class="block mb-4">
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            capture="environment"
-            data-cancelled-photos-target="input"
-            data-action="change->cancelled-photos#capturePhoto"
-            class="hidden"
-          />
-          <div
-            class="w-full cursor-pointer bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-4 px-6 rounded-lg text-center shadow-lg transform transition hover:scale-105"
-          >
-            Tomar Foto / Seleccionar de Galería
-          </div>
-        </label>
+        <!-- Botones de Captura Separados -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <!-- Botón 1: Tomar Foto con Cámara -->
+          <label class="block">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              capture="environment"
+              data-cancelled-photos-target="input"
+              data-action="change->cancelled-photos#capturePhoto"
+              class="hidden"
+            />
+            <div
+              class="w-full cursor-pointer bg-blue-200 hover:bg-blue-300 text-blue-700 font-bold py-3 px-3 rounded-lg text-center transition"
+            >
+              <svg class="w-5 h-5 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <span class="text-xs">Tomar Foto</span>
+            </div>
+          </label>
+
+          <!-- Botón 2: Seleccionar de Galería -->
+          <label class="block">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              data-cancelled-photos-target="input"
+              data-action="change->cancelled-photos#capturePhoto"
+              class="hidden"
+            />
+            <div
+              class="w-full cursor-pointer bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-4 px-4 rounded-lg text-center transition"
+            >
+              <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-sm">Galería</span>
+            </div>
+          </label>
+        </div>
 
         <!-- Contador -->
         <div
