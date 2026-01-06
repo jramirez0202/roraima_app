@@ -3,16 +3,15 @@ require_relative 'concerns/spreadsheet_opener'
 class BulkPackageUploadService
   attr_reader :bulk_upload, :errors
 
-  # Mapeo de columnas esperadas en el archivo
   EXPECTED_HEADERS = {
     'DESTINATARIO' => :customer_name,
     'TELÉFONO' => :phone,
-    'TELEFONO' => :phone, # Alternativa sin tilde
+    'TELEFONO' => :phone,
     'DIRECCIÓN' => :address,
-    'DIRECCION' => :address, # Alternativa sin tilde
+    'DIRECCION' => :address,
     'COMUNA' => :commune,
     'DESCRIPCIÓN' => :description,
-    'DESCRIPCION' => :description, # Alternativa sin tilde
+    'DESCRIPCION' => :description,
     'MONTO' => :amount,
     'CAMBIO' => :exchange,
     'EMPRESA' => :sender_email
@@ -24,34 +23,34 @@ class BulkPackageUploadService
     @successful_rows = 0
     @failed_rows = 0
     @total_rows = 0
+    
+    # PRECARGA en MEMORIA (solo 3 queries)
+    @region = Region.find_by('LOWER(name) = ?', 'región metropolitana')
+    @communes_by_name = build_communes_index  # Hash: normalized_name => commune
+    @customers_by_email = build_customers_index  # Hash: email => customer
   end
 
   def process
     begin
       bulk_upload.update!(status: :processing)
 
-      # Abrir el archivo con Roo
       spreadsheet = open_spreadsheet
       headers = normalize_headers(spreadsheet.row(1))
 
-      # Validar que existan los headers requeridos
       unless valid_headers?(headers)
         add_error(0, 'estructura', '', 'El archivo no tiene las columnas requeridas')
         finalize_with_error
         return false
       end
 
-      # Calcular el total de filas y guardarlo para el progreso
-      total_file_rows = spreadsheet.last_row - 1 # Restar la fila de headers
+      total_file_rows = spreadsheet.last_row - 1
       bulk_upload.update!(total_rows: total_file_rows, started_at: Time.current)
 
-      # Procesar cada fila (empezando desde la fila 2, ya que 1 son los headers)
       (2..spreadsheet.last_row).each do |row_number|
         @total_rows += 1
         row_data = Hash[headers.zip(spreadsheet.row(row_number))]
         process_row(row_number, row_data)
 
-        # Actualizar progreso cada 5 filas o en la última fila
         if @total_rows % 5 == 0 || row_number == spreadsheet.last_row
           bulk_upload.update!(
             processed_count: @total_rows,
@@ -69,7 +68,6 @@ class BulkPackageUploadService
       Rails.logger.error "BulkUpload #{bulk_upload.id} falló: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
 
-      # Mensaje de error más amigable
       error_message = if e.message.include?("not an Excel 2007 file")
         "El archivo XLSX no es válido o está corrupto. Por favor descarga la plantilla XLSX oficial y úsala como base."
       elsif e.message.include?("Invalid header")
@@ -85,6 +83,24 @@ class BulkPackageUploadService
   end
 
   private
+
+  # BUILD INDEXES (solo 3 queries al inicio)
+  def build_communes_index
+    return {} unless @region
+    
+    Commune.where(region_id: @region.id)
+           .each_with_object({}) do |commune, hash|
+      normalized = normalize_commune_name(commune.name).downcase
+      hash[normalized] = commune
+    end
+  end
+
+  def build_customers_index
+    User.where(role: :customer, active: true)
+        .each_with_object({}) do |user, hash|
+      hash[user.email.downcase] = user
+    end
+  end
 
   def open_spreadsheet
     SpreadsheetOpener.open_from_attachment(bulk_upload.file)
@@ -104,14 +120,9 @@ class BulkPackageUploadService
 
   def process_row(row_number, row_data)
     begin
-      # Transformar datos
       package_params = build_package_params(row_number, row_data)
-      if package_params.nil?
-        @failed_rows += 1
-        return # Si hubo errores en la construcción, ya se registraron
-      end
+      return if package_params.nil?
 
-      # Crear el package con user_id explícito
       package = Package.new(package_params)
 
       if package.save
@@ -132,9 +143,6 @@ class BulkPackageUploadService
     params = {}
     has_errors = false
 
-    # loading_date se establece automáticamente por el callback del modelo
-
-    # customer_name
     customer_name = row_data[:customer_name].to_s.strip
     if customer_name.blank?
       add_error(row_number, 'DESTINATARIO', customer_name, 'no puede estar vacío')
@@ -143,7 +151,6 @@ class BulkPackageUploadService
       params[:customer_name] = customer_name
     end
 
-    # phone - Transformar automáticamente
     phone = normalize_phone(row_data[:phone].to_s.strip)
     if phone.blank?
       add_error(row_number, 'TELÉFONO', row_data[:phone], 'no puede estar vacío')
@@ -155,22 +162,23 @@ class BulkPackageUploadService
       params[:phone] = phone
     end
 
-    # address
     address = row_data[:address].to_s.strip
     if address.blank?
       add_error(row_number, 'DIRECCIÓN', address, 'no puede estar vacío')
       has_errors = true
     else
-      params[:address] = address[0..99] # Limitar a 100 caracteres
+      params[:address] = address[0..99]
     end
 
-    # commune - Buscar por nombre
+    # LOOKUP EN HASH (O(1) en memoria, NO query)
     commune_name = row_data[:commune].to_s.strip
     if commune_name.blank?
       add_error(row_number, 'COMUNA', commune_name, 'no puede estar vacío')
       has_errors = true
     else
-      commune = find_commune(commune_name)
+      normalized_commune = normalize_commune_name(commune_name).downcase
+      commune = @communes_by_name[normalized_commune]  # ← HASH LOOKUP
+      
       if commune.nil?
         add_error(row_number, 'COMUNA', commune_name, 'no existe en el sistema')
         has_errors = true
@@ -180,16 +188,14 @@ class BulkPackageUploadService
       end
     end
 
-    # description
     description = row_data[:description].to_s.strip
     if description.blank?
       add_error(row_number, 'DESCRIPCIÓN', description, 'no puede estar vacío')
       has_errors = true
     else
-      params[:description] = description[0..99] # Limitar a 100 caracteres
+      params[:description] = description[0..99]
     end
 
-    # amount
     amount = parse_amount(row_data[:amount])
     if amount.nil?
       add_error(row_number, 'MONTO', row_data[:amount], 'formato de monto inválido')
@@ -198,21 +204,19 @@ class BulkPackageUploadService
       params[:amount] = amount
     end
 
-    # exchange (boolean)
     exchange_value = row_data[:exchange].to_s.strip.upcase
     params[:exchange] = ['SI', 'SÍ', 'S', 'TRUE', '1', 'YES', 'Y'].include?(exchange_value)
 
-    # sender_email y company_name (lógica diferente para admin vs customer)
     sender_email = row_data[:sender_email].to_s.strip
 
-    # Si el uploader es admin, EMPRESA es obligatorio
     if bulk_upload.user.admin?
       if sender_email.blank?
         add_error(row_number, 'EMPRESA', sender_email, 'no puede estar vacío (debe ser el email del cliente)')
         has_errors = true
       else
         params[:sender_email] = sender_email
-        customer = find_customer_by_email(sender_email)
+        customer = @customers_by_email[sender_email.downcase]  # ← HASH LOOKUP
+        
         if customer
           params[:user_id] = customer.id
           params[:company_name] = customer.company
@@ -222,17 +226,12 @@ class BulkPackageUploadService
         end
       end
     else
-      # Si es customer, EMPRESA es opcional/informativo
       params[:sender_email] = sender_email if sender_email.present?
       params[:company_name] = bulk_upload.user.company
-      # Siempre asignar al usuario logueado
       params[:user_id] = bulk_upload.user_id
     end
 
-    # Initial status
     params[:status] = :pending_pickup
-
-    # Asignar el bulk_upload_id para trazabilidad
     params[:bulk_upload_id] = bulk_upload.id
 
     return nil if has_errors
@@ -240,35 +239,27 @@ class BulkPackageUploadService
   end
 
   def normalize_phone(phone)
-    # Eliminar espacios, guiones, paréntesis
     cleaned = phone.gsub(/[\s\-\(\)]/, '')
 
-    # Si empieza con +56, verificar que sea +569
     if cleaned.start_with?('+56')
       return cleaned if cleaned.start_with?('+569') && cleaned.length == 12
-      # Si es +56 seguido de 9 dígitos, agregar el 9
       return "+569#{cleaned[3..]}" if cleaned.length == 11 && cleaned[3].match?(/[0-9]/)
     end
 
-    # Si empieza con 56 (sin +)
     if cleaned.start_with?('56') && !cleaned.start_with?('+')
       return "+569#{cleaned[3..]}" if cleaned.length == 11 && cleaned[3].match?(/[0-9]/)
     end
 
-    # Si empieza con 9 y tiene 9 dígitos (formato chileno móvil)
     if cleaned.start_with?('9') && cleaned.length == 9
       return "+56#{cleaned}"
     end
 
-    # Si son 8 dígitos, asumir que falta el 9 inicial
     if cleaned.length == 8 && cleaned.match?(/\A\d{8}\z/)
       return "+569#{cleaned}"
     end
 
-    # Si ya tiene el formato correcto
     return cleaned if cleaned.match?(/\A\+569\d{8}\z/)
 
-    # Si no se pudo normalizar, devolver el valor limpio
     cleaned
   end
 
@@ -276,27 +267,12 @@ class BulkPackageUploadService
     return 0.0 if value.blank?
     return value.to_f if value.is_a?(Numeric)
 
-    # Si es string, limpiar y parsear
     cleaned = value.to_s.gsub(/[^\d,.]/, '')
-    cleaned.gsub!(',', '.') # Convertir coma a punto decimal
+    cleaned.gsub!(',', '.')
     cleaned.to_f rescue nil
   end
 
-  def find_commune(commune_name)
-    # Buscar por nombre case-insensitive en Región Metropolitana
-    region = Region.find_by('LOWER(name) = ?', 'región metropolitana')
-    return nil unless region
-
-    # Normalizar nombre de comuna (mapear aliases comunes)
-    normalized_name = normalize_commune_name(commune_name)
-
-    Commune.where(region_id: region.id)
-           .where('LOWER(name) = ?', normalized_name.downcase)
-           .first
-  end
-
   def normalize_commune_name(name)
-    # Mapeo de aliases comunes a nombres oficiales
     aliases = {
       'santiago centro' => 'santiago',
       'stgo' => 'santiago',
@@ -318,18 +294,11 @@ class BulkPackageUploadService
     aliases[normalized] || name
   end
 
-  def find_customer_by_email(email)
-    # Buscar usuario customer por email (case-insensitive)
-    User.where('LOWER(email) = ?', email.downcase)
-        .where(role: :customer, active: true)
-        .first
-  end
-
   def add_error(row, column, value, error_message)
     @errors << {
       row: row,
       column: column,
-      value: value.to_s[0..50], # Limitar longitud del valor
+      value: value.to_s[0..50],
       error: error_message
     }
   end
