@@ -79,7 +79,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
+      target: development
       args:
         RUBY_VERSION: 3.2.2
     container_name: roraima_sidekiq
