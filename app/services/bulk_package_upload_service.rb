@@ -2,6 +2,9 @@ require 'roo'
 require_relative 'concerns/spreadsheet_opener'
 class BulkPackageUploadService
   attr_reader :bulk_upload, :errors
+  
+  BATCH_SIZE = 500  # Insertar de a 500 paquetes por transacción
+  PROGRESS_UPDATE_INTERVAL = 100  # Actualizar progreso cada 100 filas
 
   EXPECTED_HEADERS = {
     'DESTINATARIO' => :customer_name,
@@ -23,11 +26,12 @@ class BulkPackageUploadService
     @successful_rows = 0
     @failed_rows = 0
     @total_rows = 0
+    @packages_batch = []  # Acumular paquetes para batch insert
     
     # PRECARGA en MEMORIA (solo 3 queries)
     @region = Region.find_by('LOWER(name) = ?', 'región metropolitana')
-    @communes_by_name = build_communes_index  # Hash: normalized_name => commune
-    @customers_by_email = build_customers_index  # Hash: email => customer
+    @communes_by_name = build_communes_index
+    @customers_by_email = build_customers_index
   end
 
   def process
@@ -46,12 +50,19 @@ class BulkPackageUploadService
       total_file_rows = spreadsheet.last_row - 1
       bulk_upload.update!(total_rows: total_file_rows, started_at: Time.current)
 
+      # LEER y VALIDAR todas las filas
       (2..spreadsheet.last_row).each do |row_number|
         @total_rows += 1
         row_data = Hash[headers.zip(spreadsheet.row(row_number))]
         process_row(row_number, row_data)
 
-        if @total_rows % 5 == 0 || row_number == spreadsheet.last_row
+        # Insertar en batch cuando lleguemos a BATCH_SIZE
+        if @packages_batch.size >= BATCH_SIZE
+          flush_batch
+        end
+
+        # Actualizar progreso
+        if @total_rows % PROGRESS_UPDATE_INTERVAL == 0 || row_number == spreadsheet.last_row
           bulk_upload.update!(
             processed_count: @total_rows,
             current_row: row_number,
@@ -61,6 +72,9 @@ class BulkPackageUploadService
           bulk_upload.broadcast_progress
         end
       end
+
+      # Insertar último batch
+      flush_batch if @packages_batch.any?
 
       finalize_success
       true
@@ -83,6 +97,32 @@ class BulkPackageUploadService
   end
 
   private
+
+  # BATCH INSERT - Una sola transacción para múltiples paquetes
+  def flush_batch
+    return if @packages_batch.empty?
+
+    begin
+      Package.insert_all(@packages_batch)  # ← Inserción masiva
+      @successful_rows += @packages_batch.size
+    rescue => e
+      Rails.logger.error "Error en batch insert: #{e.message}"
+      # Si falla el batch, intentar uno por uno para identificar el error
+      @packages_batch.each do |package_params|
+        package = Package.new(package_params)
+        if package.save
+          @successful_rows += 1
+        else
+          @failed_rows += 1
+          package.errors.full_messages.each do |error_message|
+            add_error(0, 'validación', '', error_message)
+          end
+        end
+      end
+    end
+
+    @packages_batch.clear
+  end
 
   # BUILD INDEXES (solo 3 queries al inicio)
   def build_communes_index
@@ -123,16 +163,8 @@ class BulkPackageUploadService
       package_params = build_package_params(row_number, row_data)
       return if package_params.nil?
 
-      package = Package.new(package_params)
-
-      if package.save
-        @successful_rows += 1
-      else
-        @failed_rows += 1
-        package.errors.full_messages.each do |error_message|
-          add_error(row_number, 'validación', '', error_message)
-        end
-      end
+      # En lugar de guardar, agregar al batch
+      @packages_batch << package_params
     rescue => e
       @failed_rows += 1
       add_error(row_number, 'error', '', e.message)
@@ -170,14 +202,13 @@ class BulkPackageUploadService
       params[:address] = address[0..99]
     end
 
-    # LOOKUP EN HASH (O(1) en memoria, NO query)
     commune_name = row_data[:commune].to_s.strip
     if commune_name.blank?
       add_error(row_number, 'COMUNA', commune_name, 'no puede estar vacío')
       has_errors = true
     else
       normalized_commune = normalize_commune_name(commune_name).downcase
-      commune = @communes_by_name[normalized_commune]  # ← HASH LOOKUP
+      commune = @communes_by_name[normalized_commune]
       
       if commune.nil?
         add_error(row_number, 'COMUNA', commune_name, 'no existe en el sistema')
@@ -215,7 +246,7 @@ class BulkPackageUploadService
         has_errors = true
       else
         params[:sender_email] = sender_email
-        customer = @customers_by_email[sender_email.downcase]  # ← HASH LOOKUP
+        customer = @customers_by_email[sender_email.downcase]
         
         if customer
           params[:user_id] = customer.id
@@ -233,6 +264,8 @@ class BulkPackageUploadService
 
     params[:status] = :pending_pickup
     params[:bulk_upload_id] = bulk_upload.id
+    params[:created_at] = Time.current
+    params[:updated_at] = Time.current
 
     return nil if has_errors
     params

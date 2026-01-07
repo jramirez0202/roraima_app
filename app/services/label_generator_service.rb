@@ -134,13 +134,14 @@ class LabelGeneratorService
     if user&.logo_enabled_for_labels? && user.company_logo.attached?
       begin
         # Usar el logo pre-cargado sin descargas adicionales
-        logo_path = ActiveStorage::Blob.service.send(:path_for, user.company_logo.key)
+        logo_file = get_logo_file(user)
         logo_x_base = LABEL_WIDTH - 2 * MARGIN - LOGO_MAX_WIDTH
         pdf.image(
-          logo_path,
+          logo_file,
           at: [logo_x_base + LOGO_HORIZONTAL_OFFSET, cursor_y + LOGO_VERTICAL_OFFSET],
           fit: [LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT]
         )
+        logo_file.unlink if logo_file.is_a?(Tempfile)
       rescue => e
         Rails.logger.error("Error al mostrar logo: #{e.message}")
         show_company_name_fallback(pdf, package, cursor_y)
@@ -148,6 +149,19 @@ class LabelGeneratorService
     else
       show_company_name_fallback(pdf, package, cursor_y)
     end
+  end
+
+  def get_logo_file(user)
+    blob = user.company_logo.blob
+    
+  if blob.service.respond_to?(:path_for)
+    blob.service.send(:path_for, blob.key)
+  else
+    temp_file = Tempfile.new(['logo', File.extname(blob.filename.to_s)])
+    temp_file.binmode
+    temp_file.write(blob.download)
+    temp_file.rewind
+    temp_file
   end
 
   def show_company_name_fallback(pdf, package, cursor_y)
