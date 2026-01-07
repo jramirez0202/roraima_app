@@ -152,16 +152,17 @@ class LabelGeneratorService
   end
 
   def get_logo_file(user)
-    blob = user.company_logo.blob
-    
-  if blob.service.respond_to?(:path_for)
-    blob.service.send(:path_for, blob.key)
-  else
-    temp_file = Tempfile.new(['logo', File.extname(blob.filename.to_s)])
-    temp_file.binmode
-    temp_file.write(blob.download)
-    temp_file.rewind
-    temp_file
+      blob = user.company_logo.blob
+
+    if blob.service.respond_to?(:path_for)
+      blob.service.send(:path_for, blob.key)
+    else
+      temp_file = Tempfile.new(['logo', File.extname(blob.filename.to_s)])
+      temp_file.binmode
+      temp_file.write(blob.download)
+      temp_file.rewind
+      temp_file
+    end
   end
 
   def show_company_name_fallback(pdf, package, cursor_y)
