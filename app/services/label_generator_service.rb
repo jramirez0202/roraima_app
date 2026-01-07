@@ -1,3 +1,4 @@
+require 'tempfile'
 require 'prawn'
 require 'prawn/qrcode'
 
@@ -130,26 +131,30 @@ class LabelGeneratorService
 
   def add_company_branding(pdf, package, cursor_y)
     user = package.user
+    logo_file = nil
 
-    if user&.logo_enabled_for_labels? && user.company_logo.attached?
-      begin
-        # Usar el logo pre-cargado sin descargas adicionales
-        logo_file = get_logo_file(user)
-        logo_x_base = LABEL_WIDTH - 2 * MARGIN - LOGO_MAX_WIDTH
-        pdf.image(
-          logo_file,
-          at: [logo_x_base + LOGO_HORIZONTAL_OFFSET, cursor_y + LOGO_VERTICAL_OFFSET],
-          fit: [LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT]
-        )
-        logo_file.unlink if logo_file.is_a?(Tempfile)
-      rescue => e
-        Rails.logger.error("Error al mostrar logo: #{e.message}")
-        show_company_name_fallback(pdf, package, cursor_y)
-      end
-    else
+  if user&.logo_enabled_for_labels? && user.company_logo.attached?
+    begin
+      logo_file = get_logo_file(user)
+
+      logo_x_base = LABEL_WIDTH - 2 * MARGIN - LOGO_MAX_WIDTH
+
+      pdf.image(
+        logo_file,
+        at: [logo_x_base + LOGO_HORIZONTAL_OFFSET, cursor_y + LOGO_VERTICAL_OFFSET],
+        fit: [LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT]
+      )
+    rescue => e
+      Rails.logger.error("Error al mostrar logo: #{e.message}")
       show_company_name_fallback(pdf, package, cursor_y)
+    ensure
+      logo_file&.unlink if logo_file.is_a?(Tempfile)
     end
+  else
+    show_company_name_fallback(pdf, package, cursor_y)
   end
+end
+
 
   def get_logo_file(user)
       blob = user.company_logo.blob
