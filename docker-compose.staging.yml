@@ -70,7 +70,7 @@ services:
       # Esto evita sobrescribir /rails/vendor/bundle con gemas instaladas
       - storage_data:/rails/storage
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     restart: unless-stopped
     networks:
       - roraima_network
