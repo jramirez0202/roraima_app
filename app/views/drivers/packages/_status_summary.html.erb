@@ -13,11 +13,6 @@
           <span class="text-sm font-normal text-gray-500">(<%= l(filter_date, format: :short) %>)</span>
         <% end %>
       </h2>
-      <% if current_driver.on_route? %>
-        <p class="text-sm text-blue-600 mt-1">
-          🚚 Ruta iniciada a las <%= current_driver.route_started_at.strftime('%H:%M') %>
-        </p>
-      <% end %>
     </div>
 
     <!-- Botones de Control de Ruta -->

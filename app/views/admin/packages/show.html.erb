@@ -248,7 +248,7 @@
             <!-- Fotos de Evidencia de Entrega (Active Storage) - Solo mostrar si está delivered -->
             <% if @package.proof_photos.attached? && @package.delivered? %>
               <div class="sm:col-span-2">
-                <dt class="text-sm font-medium text-gray-500 mb-2">📸 Fotos de Evidencia de Entrega</dt>
+                <dt class="text-sm font-medium text-gray-500 mb-2">📸 Fotos de Entrega</dt>
                 <dd class="mt-1">
                   <div class="grid grid-cols-2 gap-2">
                     <% @package.proof_photos.each do |photo| %>
@@ -435,7 +435,7 @@
 
               <!-- Campo de Fotos de Evidencia (para "Entregado") -->
               <div class="mb-4" data-package-status-target="proofField" style="display: none;">
-                <label for="proof_photos" class="block text-sm font-medium text-gray-700 mb-2">Fotos de Evidencia (Máximo 4)</label>
+                <label for="proof_photos" class="block text-sm font-medium text-gray-700 mb-2">Fotos de Entrega (Min 2)</label>
                 <input type="file"
                        name="proof_photos[]"
                        id="proof_photos"
@@ -449,7 +449,7 @@
                               file:bg-indigo-50 file:text-indigo-700
                               hover:file:bg-indigo-100">
                 <p class="mt-2 text-xs text-gray-500">
-                  📸 Puedes seleccionar o tomar hasta 4 fotos de evidencia de entrega
+                  📸 hasta 4 fotos de entrega
                 </p>
               </div>
 
@@ -474,7 +474,7 @@
                   </p>
                 </div>
                 <div>
-                  <label for="reschedule_photos" class="block text-sm font-medium text-gray-700 mb-2">Fotos de Evidencia (Opcional)</label>
+                  <label for="reschedule_photos" class="block text-sm font-medium text-gray-700 mb-2">Fotos de Entrega</label>
                   <input type="file"
                          name="reschedule_photos[]"
                          id="reschedule_photos"

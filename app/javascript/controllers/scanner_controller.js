@@ -26,7 +26,6 @@ export default class extends Controller {
   }
 
   connect() {
-    console.log('🔍 Scanner Controller connected')
     this.recentScans = []
     this.scannedCodes = new Set() // Track códigos ya escaneados
     this.isProcessing = false
@@ -137,7 +136,6 @@ export default class extends Controller {
 
   async performScan(trackingInput) {
     if (this.isProcessing) {
-      console.log('⏳ Ya procesando un escaneo, ignorando')
       return
     }
 
@@ -146,21 +144,18 @@ export default class extends Controller {
 
     // 1. Prevenir escaneos del mismo código en < 2 segundos
     if (trackingInput === this.lastScanCode && (now - this.lastScanTime < 2000)) {
-      console.log('🚫 Código duplicado exacto detectado (<2s), ignorando')
       return
     }
 
     // 2. Extraer tracking code y verificar si ya está en sesión
     const trackingCode = this.extractTrackingCode(trackingInput)
     if (trackingCode && this.scannedCodes.has(trackingCode)) {
-      console.log('⚠️ Código ya escaneado en esta sesión:', trackingCode)
       this.showDuplicateError(trackingCode)
       return
     }
 
     // 3. Debounce general
     if (now - this.lastScanTime < 500) {
-      console.log('⏱️ Debounced: Escaneo demasiado rápido')
       return
     }
 
@@ -444,7 +439,6 @@ export default class extends Controller {
       oscillator.stop(audioContext.currentTime + 0.1)
     } catch (error) {
       // Audio no disponible o bloqueado
-      console.log('Audio feedback no disponible')
     }
   }
 
@@ -467,15 +461,13 @@ export default class extends Controller {
       oscillator.start(audioContext.currentTime)
       oscillator.stop(audioContext.currentTime + 0.15)
     } catch (error) {
-      console.log('Audio feedback no disponible')
+      // Audio no disponible
     }
   }
 
   // === CAMERA QR SCANNER ===
 
   async toggleCamera() {
-    console.log('🎥 Toggle camera clicked, current state:', this.isCameraActive)
-
     if (this.isCameraActive) {
       await this.stopCamera()
     } else {
@@ -485,11 +477,8 @@ export default class extends Controller {
 
   async startCamera() {
     try {
-      console.log('📷 Starting camera...')
-
       // Verificar que la librería esté cargada
       const Html5Qrcode = window.Html5Qrcode
-      console.log('Html5Qrcode library loaded:', !!Html5Qrcode)
 
       if (!Html5Qrcode) {
         throw new Error('Html5Qrcode no está cargado. Verifica la conexión a internet.')
@@ -500,7 +489,6 @@ export default class extends Controller {
       this.cameraContainerTarget.classList.remove('hidden')
 
       // Inicializar lector QR
-      console.log('Creating Html5Qrcode instance...')
       this.html5QrCode = new Html5Qrcode("qr-reader")
 
       // Configuración de la cámara
@@ -512,8 +500,6 @@ export default class extends Controller {
 
       // Callback cuando se detecta un QR
       const onScanSuccess = (decodedText, decodedResult) => {
-        console.log('📷 QR detectado:', decodedText)
-
         // === MODO CONTINUO: NO cerramos la cámara ===
         // La cámara permanece activa para el siguiente escaneo
         // Simplemente procesamos el código y dejamos la cámara lista
@@ -523,16 +509,10 @@ export default class extends Controller {
       // Callback de error (opcional, no hacer nada si no hay QR)
       const onScanError = (errorMessage) => {
         // Ignorar errores de "No QR code found" que son normales
-        // Solo logear otros errores
-        if (!errorMessage.includes('NotFoundException')) {
-          console.log('Scan error:', errorMessage)
-        }
       }
 
       // Intentar usar cámara trasera si está disponible (mejor para escanear)
-      console.log('Getting available cameras...')
       const cameras = await Html5Qrcode.getCameras()
-      console.log('Available cameras:', cameras.length, cameras)
 
       let cameraId = { facingMode: "environment" } // Cámara trasera por defecto
 
@@ -545,14 +525,10 @@ export default class extends Controller {
         )
         if (rearCamera) {
           cameraId = rearCamera.id
-          console.log('Using rear camera:', rearCamera.label)
         }
-      } else {
-        console.log('Using facingMode: environment')
       }
 
       // Iniciar escaneo
-      console.log('Starting scanner with camera:', cameraId)
       await this.html5QrCode.start(
         cameraId,
         config,
@@ -567,12 +543,9 @@ export default class extends Controller {
       this.cameraBtnTarget.classList.remove('bg-green-600', 'hover:bg-green-700')
       this.cameraBtnTarget.classList.add('bg-red-600', 'hover:bg-red-700')
 
-      console.log('✅ Cámara QR iniciada')
-
     } catch (error) {
-      console.error('❌ Error al iniciar cámara:', error)
-      console.error('Error name:', error.name)
-      console.error('Error message:', error.message)
+      // Error crítico: mantener para debugging de problemas de cámara
+      console.error('Error al iniciar cámara:', error)
 
       let errorMsg = 'Error al acceder a la cámara'
 
@@ -600,7 +573,6 @@ export default class extends Controller {
     if (this.html5QrCode && this.isCameraActive) {
       try {
         await this.html5QrCode.stop()
-        console.log('🛑 Cámara QR detenida')
       } catch (error) {
         console.error('Error al detener cámara:', error)
       }

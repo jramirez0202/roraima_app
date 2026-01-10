@@ -90,20 +90,6 @@ module Drivers
     def show
       authorize @package
 
-      # Limpiar fotos huérfanas (fotos que no corresponden al estado actual)
-      # Esto puede suceder si una transacción falló pero las fotos quedaron adjuntas
-      if @package.proof_photos.attached? && !@package.delivered?
-        @package.proof_photos.purge
-      end
-
-      if @package.reschedule_photos.attached? && !@package.rescheduled?
-        @package.reschedule_photos.purge
-      end
-
-      if @package.cancelled_photos.attached? && !@package.cancelled?
-        @package.cancelled_photos.purge
-      end
-
       # Preservar parámetros de filtro para el botón "Volver"
       @filter_params = {
         status: params[:status],
@@ -249,7 +235,18 @@ module Drivers
     private
 
     def set_package
-      @package = current_driver.visible_packages.find(params[:id])
+      @package = current_driver.visible_packages
+                                .includes(
+                                  :region,
+                                  :commune,
+                                  :user,
+                                  :assigned_courier,
+                                  :assigned_by,
+                                  proof_photos_attachments: :blob,
+                                  reschedule_photos_attachments: :blob,
+                                  cancelled_photos_attachments: :blob
+                                )
+                                .find(params[:id])
     rescue ActiveRecord::RecordNotFound
       redirect_to drivers_packages_path, alert: 'Paquete no encontrado o no asignado'
     end

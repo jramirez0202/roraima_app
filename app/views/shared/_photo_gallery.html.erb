@@ -10,10 +10,13 @@
 <div class="grid grid-cols-2 gap-2">
   <% photos.each do |photo| %>
   <div class="relative group">
-    <%= image_tag photo, class: "w-full h-32 object-cover rounded-lg
-    border border-gray-300 cursor-pointer hover:opacity-90
-    transition-opacity", onclick:
-    "#{modal_function}('#{url_for(photo)}')", alt: alt_text %>
+    <%= image_tag photo,
+                  loading: "lazy",
+                  class: "w-full h-32 object-cover rounded-lg
+                  border border-gray-300 cursor-pointer hover:opacity-90
+                  transition-opacity",
+                  onclick: "#{modal_function}('#{url_for(photo)}')",
+                  alt: alt_text %>
     <button
       type="button"
       onclick="<%= modal_function %>('<%= url_for(photo) %>')"

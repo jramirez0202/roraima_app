@@ -21,7 +21,6 @@ export default class extends Controller {
     await this.loadPendingPhotos()
 
     this.setupOnlineListener()
-    console.log('📸 Photo upload controller connected')
   }
 
   // Inicializar IndexedDB
@@ -65,8 +64,6 @@ export default class extends Controller {
 
     // Actualizar UI
     this.updateUI()
-
-    console.log(`📷 Foto ${this.photos.length} agregada. Total: ${this.photos.length}/${this.maxPhotos}`)
 
     // NO subir automáticamente - esperar a que usuario presione "Subir Fotos"
     event.target.value = ''
@@ -201,7 +198,6 @@ export default class extends Controller {
     const img = div.querySelector('img')
     img.onclick = (e) => {
       e.stopPropagation()
-      console.log('📸 Image clicked, opening modal...')
       this.openPhotoModal(url, index + 1, file.name)
     }
 
@@ -305,25 +301,15 @@ export default class extends Controller {
   }
 
   openPhotoModal(imageUrl, photoNumber, fileName) {
-    console.log('🖼️ Opening modal for:', fileName)
     const modal = document.getElementById('photo-upload-modal')
     const img = document.getElementById('photo-upload-modal-img')
     const info = document.getElementById('photo-upload-modal-info')
-
-    console.log('Modal elements:', { modal: !!modal, img: !!img, info: !!info })
 
     if (modal && img && info) {
       img.src = imageUrl
       info.textContent = `📷 Foto ${photoNumber} - ${fileName}`
       modal.classList.remove('hidden')
       document.body.style.overflow = 'hidden'
-      console.log('✅ Modal opened successfully')
-    } else {
-      console.error('❌ Modal elements not found:', {
-        modal: modal ? 'found' : 'NOT FOUND',
-        img: img ? 'found' : 'NOT FOUND',
-        info: info ? 'found' : 'NOT FOUND'
-      })
     }
   }
 

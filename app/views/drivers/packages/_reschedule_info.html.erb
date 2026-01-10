@@ -1,0 +1,67 @@
+<!-- Información de Reprogramación (solo mostrar si está rescheduled) -->
+<% if show_reschedule_section?(package) %>
+<div class="px-6 py-4 border-b border-gray-200 bg-red-50">
+  <h2 class="text-lg font-semibold text-gray-900 mb-3">
+    ⚠️ Paquete Reprogramado
+  </h2>
+  <dl class="grid grid-cols-1 gap-4">
+    <% if package.reprogramed_to %>
+    <div>
+      <dt class="text-sm font-medium text-gray-700">
+        Nueva Fecha de Entrega
+      </dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <%= l(package.reprogramed_to, format: :long) %>
+      </dd>
+    </div>
+    <% end %>
+    <% if package.reprogram_motive %>
+    <div>
+      <dt class="text-sm font-medium text-gray-700">
+        Motivo de Reprogramación
+      </dt>
+      <dd class="mt-1">
+        <p class="text-base font-bold text-red-600">
+          <%= package.reprogram_motive %>
+        </p>
+      </dd>
+    </div>
+    <% end %>
+    <% if show_reschedule_photos?(package) %>
+    <div>
+      <dt class="text-sm font-medium text-gray-700 mb-2">
+        Fotos de Evidencia
+      </dt>
+      <dd class="mt-2">
+        <%= render 'shared/photo_gallery',
+                   photos: package.reschedule_photos,
+                   modal_function: 'openReschedulePhotoModal',
+                   alt_text: 'Foto de reprogramación' %>
+        <p class="mt-2 text-xs text-gray-600">
+          <svg
+            class="inline w-3 h-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+            />
+          </svg>
+          Click en la foto para verla en tamaño completo
+        </p>
+      </dd>
+    </div>
+    <% end %>
+  </dl>
+</div>
+<% end %>

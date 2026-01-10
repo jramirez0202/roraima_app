@@ -303,6 +303,10 @@ class PackageStatusService
 
   # Actions executed after a successful transition
   def after_transition_actions(new_status)
+    # PERFORMANCE: Limpiar fotos huérfanas ANTES de las acciones específicas
+    # Esto previene que fotos de estados anteriores queden adjuntas
+    cleanup_orphan_photos(new_status)
+
     case new_status
     when :delivered
       # TODO: Send delivery notification to customer
@@ -325,6 +329,25 @@ class PackageStatusService
     when :return
       # TODO: Start return process, notify sender
       Rails.logger.info "Paquete #{package.tracking_code} marcado para devolución"
+    end
+  end
+
+  # Limpia fotos que no corresponden al estado actual
+  # Esto puede suceder si una transacción falló pero las fotos quedaron adjuntas
+  def cleanup_orphan_photos(current_status)
+    # Purgar proof_photos si NO está delivered
+    if package.proof_photos.attached? && current_status != :delivered
+      package.proof_photos.purge
+    end
+
+    # Purgar reschedule_photos si NO está rescheduled
+    if package.reschedule_photos.attached? && current_status != :rescheduled
+      package.reschedule_photos.purge
+    end
+
+    # Purgar cancelled_photos si NO está cancelled
+    if package.cancelled_photos.attached? && current_status != :cancelled
+      package.cancelled_photos.purge
     end
   end
 

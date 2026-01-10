@@ -1,15 +1,10 @@
-<div class="px-4 sm:px-0">
+<div class="px-4 sm:px-0" data-controller="form-cleanup">
   <h1 class="text-3xl font-bold text-gray-900 mb-6">Dashboard del Conductor</h1>
 
   <!-- Resumen de Estados -->
   <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-6">
     <div class="mb-4">
       <h2 class="text-lg font-semibold text-gray-900">Mi Trabajo Actual</h2>
-      <% if current_driver.on_route? %>
-        <p class="text-sm text-blue-600 mt-1">
-          🚚 Ruta iniciada a las <%= current_driver.route_started_at.strftime('%H:%M') %>
-        </p>
-      <% end %>
     </div>
 
     <div class="flex flex-wrap gap-3">
@@ -85,24 +80,16 @@
                 Estado
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Dirección
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Destinatario
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tracking
-              </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fecha Asignación
               </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <% @pending_packages.each do |package| %>
               <tr class="hover:bg-gray-50 cursor-pointer <%= 'bg-orange-50' if package.rescheduled? %>"
-                  onclick="window.location='<%= drivers_package_path(package) %>'"
-                <!-- Estado -->
+                  onclick="window.location='<%= drivers_package_path(package) %>'">
+                
+                  <!-- Estado -->
                 <td class="px-6 py-4">
                   <div class="flex flex-col items-start">
                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_class(package.status) %>">
@@ -117,16 +104,16 @@
                 </td>
 
                 <!-- Dirección + Comuna -->
-                <td class="px-6 py-4 text-sm max-w-xs">
+                <!-- <td class="px-6 py-4 text-sm max-w-xs">
                   <div class="text-gray-900"><%= package.address.present? ? package.address : "—" %></div>
                   <div class="text-xs text-gray-500 mt-1"><%= package.commune&.name || "—" %></div>
-                </td>
+                </td> -->
 
                 <!-- Destinatario -->
-                <td class="px-6 py-4 whitespace-nowrap">
+                <!-- <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900"><%= package.customer_name %></div>
                   <div class="text-xs text-gray-500"><%= package.phone %></div>
-                </td>
+                </td> -->
 
                 <!-- Tracking -->
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -137,10 +124,10 @@
 
                 <!-- Fecha Asignación -->
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-500">
+                  <!-- <div class="text-sm text-gray-500">
                     <%= package.assigned_at&.strftime('%d/%m/%Y %H:%M') || '-' %>
-                  </div>
-                  <% if package.rescheduled? %>
+                  </div> -->
+                  <% if package.rescheduled? && package.assigned_at.present? %>
                     <% days_ago = (Date.current - package.assigned_at.to_date).to_i %>
                     <div class="text-xs text-orange-600 font-semibold mt-1">
                       📅 Hace <%= days_ago %> <%= days_ago == 1 ? 'día' : 'días' %>

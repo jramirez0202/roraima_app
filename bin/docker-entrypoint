@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # ============================================
-# DOCKER ENTRYPOINT - Roraima Delivery App
+# DOCKER ENTRYPOINT - RutiService App
 # ============================================
 # Este script se ejecuta ANTES de iniciar la aplicación Rails.
 # Prepara el entorno: espera a que las dependencias (Postgres, Redis)
@@ -112,7 +112,7 @@ if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
   # Banner de inicio
   echo ""
   echo "================================================"
-  echo "🚀 INICIANDO RORAIMA DELIVERY APP"
+  echo "🚀 INICIANDO RUTISERVICE APP"
   echo "================================================"
   echo ""
   echo "📋 Configuración del entorno:"

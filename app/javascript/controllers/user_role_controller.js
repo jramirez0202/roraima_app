@@ -5,7 +5,6 @@ export default class extends Controller {
   static targets = ["roleSelect", "adminFields", "customerFields", "driverFields"]
 
   connect() {
-    console.log("🎯 user_role_controller.js v5.0 - Enfoque híbrido con partials")
     this.toggleFields()
   }
 

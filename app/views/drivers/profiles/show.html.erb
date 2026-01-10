@@ -108,43 +108,47 @@
       </dl>
     </div>
 
-    <!-- Navegación de semanas -->
-    <div class="px-6 py-4 flex justify-between items-center">
-      <!-- Botón Semana Anterior -->
-      <%= link_to drivers_profile_path(week: @previous_week_start.to_s),
-          class: "flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-        Semana Anterior
-      <% end %>
-
-      <!-- Indicador de semana actual -->
-      <% if @is_current_week %>
-        <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-          Semana Actual
-        </span>
-      <% else %>
-        <span class="text-xs text-gray-500">
-          <%= @current_week_start.strftime('%d/%m/%Y') %>
-        </span>
-      <% end %>
-
-      <!-- Botón Semana Siguiente (solo si no estamos en semana actual) -->
-      <% if @next_week_start.present? %>
-        <%= link_to drivers_profile_path(week: @next_week_start.to_s),
-            class: "flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
-          Semana Siguiente
-          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-          </svg>
-        <% end %>
-      <% else %>
-        <!-- Placeholder invisible para mantener layout -->
-        <div class="w-40"></div>
-      <% end %>
-    </div>
+  <!-- Navegación de semanas -->
+  <div class="px-6 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  
+  <!-- Indicador de semana -->
+  <div class="order-1 sm:order-2 text-center">
+    <% if @is_current_week %>
+      <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+        Semana Actual
+      </span>
+    <% else %>
+      <span class="text-xs text-gray-500">
+        <%= @current_week_start.strftime('%d/%m/%Y') %>
+      </span>
+    <% end %>
   </div>
+
+  <!-- Botón Semana Anterior -->
+  <div class="order-2 sm:order-1">
+    <%= link_to drivers_profile_path(week: @previous_week_start.to_s),
+        class: "w-full sm:w-auto flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Anterior
+    <% end %>
+  </div>
+
+  <!-- Botón Semana Siguiente -->
+  <div class="order-3">
+    <% if @next_week_start.present? %>
+      <%= link_to drivers_profile_path(week: @next_week_start.to_s),
+          class: "w-full sm:w-auto flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
+        Siguiente
+        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
 
   <!-- Botón Cerrar Sesión - Visible especialmente en móvil -->
   <div class="mt-6 mb-20 md:mb-6">

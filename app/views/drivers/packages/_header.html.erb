@@ -1,4 +1,22 @@
-<div class="flex justify-between items-center mb-6">
-  <h1 class="text-3xl font-bold text-gray-900">Historial de Entregas</h1>
-  <p class="text-sm text-gray-600">Consulta todos tus paquetes y entregas</p>
+<!-- Encabezado del Paquete -->
+<div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+  <div class="flex justify-between items-start">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">
+        Paquete <%= package.tracking_code %>
+      </h1>
+    </div>
+    <div class="text-right">
+      <span
+        class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full <%= status_badge_class(package.status) %>"
+      >
+        <%= status_text(package.status) %>
+      </span>
+      <% if package.delivered? && package.delivered_at %>
+      <p class="mt-1 text-xs text-gray-600">
+        <%= l(package.delivered_at, format: :short) %>
+      </p>
+      <% end %>
+    </div>
+  </div>
 </div>

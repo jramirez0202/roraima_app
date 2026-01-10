@@ -1,0 +1,68 @@
+<!-- Información del Destinatario (Colapsable) -->
+<details class="border-b border-gray-200 group">
+  <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors list-none flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-900">
+      Información de Entrega
+    </h2>
+    <svg class="w-5 h-5 text-gray-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+    </svg>
+  </summary>
+  <div class="px-6 pb-4">
+    <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-3">
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Destinatario</dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <%= package.customer_name %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Teléfono</dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <a
+          href="tel:<%= package.phone %>"
+          class="text-blue-600 hover:text-blue-800"
+        >
+          <%= package.phone %>
+        </a>
+      </dd>
+    </div>
+    <div class="sm:col-span-2">
+      <dt class="text-sm font-medium text-gray-500">
+        Dirección de Entrega
+      </dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <%= package.address %><br />
+        <%= package.commune&.name %>, <%= package.region&.name %>
+        <% if package.address.present? %>
+        <div class="mt-2">
+          <% waze_url = "https://waze.com/ul?q=#{ERB::Util.url_encode(package.address + ', ' + package.commune&.name.to_s)}&navigate=yes" %>
+          <%= link_to(waze_url, target: "_blank", class: "text-blue-600 hover:text-blue-800 inline-flex items-center") do %>
+          <svg
+            class="w-4 h-4 mr-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+            ></path>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            ></path>
+          </svg>
+          Abrir en Waze
+          <% end %>
+        </div>
+        <% end %>
+      </dd>
+    </div>
+    </dl>
+  </div>
+</details>
