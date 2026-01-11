@@ -78,9 +78,56 @@ TAB_BADGE_ACTIVE_CLASSES = {
     STATUS_TRANSLATIONS.map { |key, value| [value, key.to_s] }
   end
 
+  # Returns options for select of statuses for drivers (only relevant statuses)
+  def driver_status_select_options
+    allowed_statuses = [:in_transit, :delivered, :rescheduled, :cancelled]
+    STATUS_TRANSLATIONS.select { |key, _| allowed_statuses.include?(key) }
+                       .map { |key, value| [value, key.to_s] }
+  end
+
   # Returns status translations as JSON for JavaScript
   def status_translations_json
     STATUS_TRANSLATIONS.to_json
+  end
+
+  # === PROVIDER HELPERS ===
+
+  # Provider row background colors (very light, subtle)
+  PROVIDER_ROW_COLORS = {
+    'PKG' => '',  # White (no class, default)
+    'MLB' => 'bg-yellow-50',   # Very light yellow
+    'FLB' => 'bg-green-50'     # Very light green
+  }.freeze
+
+  # Provider badge colors
+  PROVIDER_BADGE_COLORS = {
+    'PKG' => 'bg-gray-100 text-gray-800',
+    'MLB' => 'bg-yellow-100 text-yellow-800',
+    'FLB' => 'bg-green-100 text-green-800'
+  }.freeze
+
+  # Returns row background class for provider
+  def provider_row_class(provider)
+    PROVIDER_ROW_COLORS.fetch(provider, '')
+  end
+
+  # Returns badge classes for provider
+  def provider_badge_class(provider)
+    PROVIDER_BADGE_COLORS.fetch(provider, 'bg-gray-100 text-gray-800')
+  end
+
+
+  # Returns provider display name
+  def provider_name(provider)
+    Package::PROVIDER_NAMES[provider] || provider
+  end
+
+  # Returns provider badge HTML
+  def provider_badge(package)
+    content_tag :span,
+      class: "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium #{provider_badge_class(package.provider)}" do
+      "#{provider_name(package.provider)}"
+    end
   end
 
   # Returns classes for filter tab
@@ -131,6 +178,15 @@ TAB_BADGE_ACTIVE_CLASSES = {
     drivers.map do |d|
       label = d.name.present? ? "#{d.name} - #{d.vehicle_plate}" : "#{d.email} - #{d.vehicle_plate}"
       { id: d.id, name: label }
+    end.to_json
+  end
+
+  # Returns customers as JSON for autocomplete (simple array of {id, name})
+  def customers_json(customers)
+    customers.map do |c|
+      label = "#{c.name} - #{c.email}"
+      label += " (#{c.company})" if c.company.present?
+      { id: c.id, name: label }
     end.to_json
   end
 
@@ -201,6 +257,41 @@ TAB_BADGE_ACTIVE_CLASSES = {
   # Used in forms to prevent selecting the same status
   def available_status_options_for(package)
     available_status_options.reject { |option| option[:value] == package.status }
+  end
+
+  # === DISPLAY HELPERS FOR MLB/FLB PACKAGES ===
+
+  # Returns display value for customer_name, showing provider for MLB/FLB empty values
+  def display_customer_name(package)
+    return package.customer_name if package.customer_name.present? && package.customer_name != 'Por Asignar'
+
+    # Si es MLB o FLB y el nombre está vacío/genérico, mostrar provider
+    if %w[MLB FLB].include?(package.provider)
+      package.provider_name
+    else
+      package.customer_name.presence || '—'
+    end
+  end
+
+  # Returns display value for address, showing provider for MLB/FLB empty values
+  def display_address(package)
+    return package.address if package.address.present? && package.address != 'Por Asignar'
+
+    # Si es MLB o FLB y la dirección está vacía/genérica, mostrar provider
+    if %w[MLB FLB].include?(package.provider)
+      package.provider_name
+    else
+      package.address.presence || '—'
+    end
+  end
+
+  # Returns display text for unassigned driver in select, showing provider for MLB/FLB
+  def display_unassigned_driver(package)
+    if %w[MLB FLB].include?(package.provider)
+      package.provider_name
+    else
+      'Sin asignar'
+    end
   end
 
   # === CONDITIONAL DISPLAY HELPERS ===

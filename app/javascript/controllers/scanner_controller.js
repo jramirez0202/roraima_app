@@ -8,6 +8,8 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "input",
+    "inputContainer",
+    "manualProcessBtn",
     "feedback",
     "feedbackContent",
     "recentList",
@@ -17,11 +19,16 @@ export default class extends Controller {
     "spinner",
     "cameraBtn",
     "cameraBtnText",
-    "cameraContainer"
+    "cameraContainer",
+    "modeButton",
+    "modeDescription",
+    "customerSelector",
+    "customerSelect"
   ]
 
   static values = {
     processUrl: { type: String, default: "/admin/scanner/process" },
+    createUrl: { type: String, default: "/admin/scanner/create_package" },
     resetUrl: { type: String, default: "/admin/scanner/reset_session" }
   }
 
@@ -33,6 +40,7 @@ export default class extends Controller {
     this.lastScanCode = null // Último código escaneado
     this.html5QrCode = null
     this.isCameraActive = false
+    this.currentMode = 'warehouse' // Default: ingresar a bodega
 
     // Asegurar que el input esté enfocado
     this.focusInput()
@@ -52,12 +60,78 @@ export default class extends Controller {
     }
   }
 
+  // === MODE MANAGEMENT ===
+
+  setMode(event) {
+    const newMode = event.currentTarget.dataset.mode
+
+    // Update current mode
+    this.currentMode = newMode
+
+    // Update button styles
+    this.modeButtonTargets.forEach(btn => {
+      const btnMode = btn.dataset.mode
+      if (btnMode === newMode) {
+        // Active state
+        btn.classList.remove('border-gray-300', 'bg-white', 'text-gray-700')
+        btn.classList.add('border-indigo-600', 'bg-indigo-600', 'text-white')
+      } else {
+        // Inactive state
+        btn.classList.remove('border-indigo-600', 'bg-indigo-600', 'text-white')
+        btn.classList.add('border-gray-300', 'bg-white', 'text-gray-700')
+      }
+    })
+
+    // Update description
+    const descriptions = {
+      warehouse: 'Escanea para ingresar paquetes a bodega (cambia estado a "Bodega")',
+      create: '1. Selecciona cliente → 2. Activa cámara → 3. Escanea código'
+    }
+    this.modeDescriptionTarget.textContent = descriptions[newMode] || ''
+
+    // Show/hide elements based on mode
+    if (newMode === 'create') {
+      // Modo CREATE: Solo cámara, sin input manual
+      if (this.hasCustomerSelectorTarget) {
+        this.customerSelectorTarget.classList.remove('hidden')
+      }
+      if (this.hasInputContainerTarget) {
+        this.inputContainerTarget.classList.add('hidden')
+      }
+      if (this.hasManualProcessBtnTarget) {
+        this.manualProcessBtnTarget.classList.add('hidden')
+      }
+    } else {
+      // Modo WAREHOUSE: Input manual visible
+      if (this.hasCustomerSelectorTarget) {
+        this.customerSelectorTarget.classList.add('hidden')
+      }
+      if (this.hasInputContainerTarget) {
+        this.inputContainerTarget.classList.remove('hidden')
+      }
+      if (this.hasManualProcessBtnTarget) {
+        this.manualProcessBtnTarget.classList.remove('hidden')
+      }
+      // Focus input solo en modo warehouse
+      this.focusInput()
+    }
+
+    // Clear scanned codes set when changing modes
+    this.scannedCodes.clear()
+  }
+
   // === EVENT HANDLERS ===
 
   handleDocumentClick(event) {
-    // No re-enfocar si se hace click en botones o links
-    if (!event.target.closest('button, a')) {
-      this.focusInput()
+    // No re-enfocar si se hace click en:
+    // - Botones o links
+    // - Buscador de clientes (autocomplete)
+    // - Input de scanner en modo create (para permitir usar el buscador)
+    if (!event.target.closest('button, a, [data-controller="autocomplete"]')) {
+      // En modo create, no forzar focus (permite usar buscador de clientes)
+      if (this.currentMode !== 'create') {
+        this.focusInput()
+      }
     }
   }
 
@@ -81,30 +155,13 @@ export default class extends Controller {
   }
 
   handleFocus(event) {
-    const input = event.target
-    const prefix = 'PKG-'
-
-    // Siempre asegurar que el valor empiece con el prefijo
-    if (!input.value.startsWith(prefix)) {
-      input.value = prefix
-    }
-
-    // Posicionar cursor después del prefijo
-    setTimeout(() => {
-      input.setSelectionRange(prefix.length, prefix.length)
-    }, 0)
+    // No longer auto-add PKG- prefix - allow typing any format
+    // This enables MLB (20000...) and FLB (10-digit) codes
   }
 
   handleInput(event) {
-    const input = event.target
-    const prefix = 'PKG-'
-
-    // Restaurar prefijo si fue eliminado
-    if (!input.value.startsWith(prefix)) {
-      const numericPart = input.value.replace(prefix, '')
-      input.value = prefix + numericPart
-      input.setSelectionRange(prefix.length, input.value.length)
-    }
+    // No longer force PKG- prefix - allow all provider formats
+    // Scanner now accepts PKG, MLB, and FLB tracking codes
   }
 
   async resetSession(event) {
@@ -139,6 +196,15 @@ export default class extends Controller {
       return
     }
 
+    // === VALIDACIÓN DE CLIENTE EN MODO CREATE ===
+    if (this.currentMode === 'create') {
+      const customerId = this.hasCustomerSelectTarget ? this.customerSelectTarget.value : null
+      if (!customerId) {
+        this.showError('Debes seleccionar un cliente antes de escanear')
+        return
+      }
+    }
+
     // === VALIDACIÓN DE DUPLICADOS (aplica a todos los modos de escaneo) ===
     const now = Date.now()
 
@@ -166,9 +232,20 @@ export default class extends Controller {
     this.setLoading(true)
 
     try {
-      const response = await this.fetchJSON(this.processUrlValue, {
+      // Decide qué endpoint usar según el modo
+      const url = this.currentMode === 'create' ? this.createUrlValue : this.processUrlValue
+
+      // Preparar body del request
+      const requestBody = { tracking_input: trackingInput }
+
+      // Agregar customer_id si estamos en modo "create"
+      if (this.currentMode === 'create' && this.hasCustomerSelectTarget) {
+        requestBody.customer_id = this.customerSelectTarget.value
+      }
+
+      const response = await this.fetchJSON(url, {
         method: 'POST',
-        body: JSON.stringify({ tracking_input: trackingInput })
+        body: JSON.stringify(requestBody)
       })
 
       if (response.success) {
@@ -477,6 +554,15 @@ export default class extends Controller {
 
   async startCamera() {
     try {
+      // === VALIDACIÓN EN MODO CREATE ===
+      if (this.currentMode === 'create') {
+        const customerId = this.hasCustomerSelectTarget ? this.customerSelectTarget.value : null
+        if (!customerId) {
+          this.showError('Primero debes seleccionar un cliente')
+          return
+        }
+      }
+
       // Verificar que la librería esté cargada
       const Html5Qrcode = window.Html5Qrcode
 
@@ -485,7 +571,9 @@ export default class extends Controller {
       }
 
       // Ocultar input manual y mostrar contenedor de cámara
-      this.inputTarget.parentElement.classList.add('hidden')
+      if (this.hasInputContainerTarget) {
+        this.inputContainerTarget.classList.add('hidden')
+      }
       this.cameraContainerTarget.classList.remove('hidden')
 
       // Inicializar lector QR
@@ -563,8 +651,10 @@ export default class extends Controller {
 
       this.showError(errorMsg)
 
-      // Restaurar UI
-      this.inputTarget.parentElement.classList.remove('hidden')
+      // Restaurar UI (solo en modo warehouse mostrar input)
+      if (this.currentMode === 'warehouse' && this.hasInputContainerTarget) {
+        this.inputContainerTarget.classList.remove('hidden')
+      }
       this.cameraContainerTarget.classList.add('hidden')
     }
   }
@@ -581,8 +671,10 @@ export default class extends Controller {
       this.html5QrCode = null
       this.isCameraActive = false
 
-      // Restaurar UI
-      this.inputTarget.parentElement.classList.remove('hidden')
+      // Restaurar UI (solo en modo warehouse mostrar input)
+      if (this.currentMode === 'warehouse' && this.hasInputContainerTarget) {
+        this.inputContainerTarget.classList.remove('hidden')
+      }
       this.cameraContainerTarget.classList.add('hidden')
 
       // Restaurar botón
@@ -590,8 +682,10 @@ export default class extends Controller {
       this.cameraBtnTarget.classList.remove('bg-red-600', 'hover:bg-red-700')
       this.cameraBtnTarget.classList.add('bg-green-600', 'hover:bg-green-700')
 
-      // Re-enfocar input
-      this.focusInput()
+      // Re-enfocar input solo en modo warehouse
+      if (this.currentMode === 'warehouse') {
+        this.focusInput()
+      }
     }
   }
 
@@ -602,9 +696,18 @@ export default class extends Controller {
 
     const cleaned = input.trim()
 
-    // Caso 1: Tracking code plano
-    if (cleaned.match(/^PKG-\d{14}$/)) {
-      return cleaned
+    // Provider patterns (same as Ruby)
+    const patterns = {
+      'PKG': /^PKG-\d{14}$/,     // PKG- + 14 digits (Rutiservice)
+      'MLB': /^4622\d{7}$/,      // 4622 + 7 digits (Mercado Libre)
+      'FLB': /^\d{10}$/          // 10 digits (Falabella)
+    }
+
+    // Caso 1: Tracking code plano - detectar provider
+    for (const [provider, pattern] of Object.entries(patterns)) {
+      if (cleaned.match(pattern)) {
+        return cleaned
+      }
     }
 
     // Caso 2: JSON del QR code
@@ -612,18 +715,28 @@ export default class extends Controller {
       try {
         const jsonData = JSON.parse(cleaned)
         const data = Array.isArray(jsonData) ? jsonData[0] : jsonData
-        const tracking = data.tracking || data['tracking']
-        if (tracking && tracking.match(/^PKG-\d{14}$/)) {
-          return tracking
+        // Buscar en múltiples claves posibles: "tracking", "id" (Mercado Libre usa "id")
+        const tracking = data.tracking || data['tracking'] || data.id || data['id']
+
+        if (tracking) {
+          for (const [provider, pattern] of Object.entries(patterns)) {
+            if (tracking.match(pattern)) {
+              return tracking
+            }
+          }
         }
       } catch (e) {
         // Fall through
       }
     }
 
-    // Caso 3: Buscar patrón PKG- en cualquier parte
-    const match = cleaned.match(/PKG-\d{14}/)
-    return match ? match[0] : null
+    // Caso 3: Buscar cualquier patrón válido en el string
+    for (const [provider, pattern] of Object.entries(patterns)) {
+      const match = cleaned.match(pattern)
+      if (match) return match[0]
+    }
+
+    return null
   }
 
   // === HELPERS ===

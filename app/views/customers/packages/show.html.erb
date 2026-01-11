@@ -21,7 +21,7 @@
             <div>
               <h1 class="text-2xl font-bold text-gray-900">Paquete #<%= @package.tracking_code %></h1>
               <p class="mt-1 text-sm text-gray-600">
-                Destinatario: <span class="font-medium"><%= @package.customer_name %></span>
+                Destinatario: <span class="font-medium"><%= display_customer_name(@package) %></span>
               </p>
             </div>
             <div class="text-right">
@@ -119,7 +119,7 @@
           <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
             <div class="sm:col-span-1">
               <dt class="text-sm font-medium text-gray-500">Nombre del Destinatario</dt>
-              <dd class="mt-1 text-sm text-gray-900"><%= @package.customer_name %></dd>
+              <dd class="mt-1 text-sm text-gray-900"><%= display_customer_name(@package) %></dd>
             </div>
 
             <div class="sm:col-span-1">
@@ -129,7 +129,7 @@
 
             <div class="sm:col-span-2">
               <dt class="text-sm font-medium text-gray-500">Dirección</dt>
-              <dd class="mt-1 text-sm text-gray-900"><%= @package.address %></dd>
+              <dd class="mt-1 text-sm text-gray-900"><%= display_address(@package) %></dd>
             </div>
 
             <div class="sm:col-span-1">

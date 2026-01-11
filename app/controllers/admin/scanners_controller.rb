@@ -6,8 +6,10 @@ module Admin
   class ScannersController < Admin::BaseController
     # GET /admin/scanner o /admin/scanner/warehouse
     def warehouse_scanner
-      # Vista simple, no requiere cargar datos
-      # Las estadísticas se cargan vía JSON si es necesario
+      # Cargar lista de clientes para selector (solo customers activos)
+      @customers = User.where(role: :customer, active: true)
+                       .order(:name)
+                       .select(:id, :name, :email, :company)
     end
 
     # POST /admin/scanner/process
@@ -41,7 +43,7 @@ module Admin
       unless tracking_code
         render json: {
           success: false,
-          error: 'Formato de código inválido. Esperado: PKG-XXXXXXXXXXXXXX'
+          error: 'Formato de código inválido. Formatos aceptados: PKG, MLB, FLB'
         }, status: :unprocessable_entity
         return
       end
@@ -71,6 +73,36 @@ module Admin
           package: package_summary(package)
         }
         return
+      end
+
+      # === SPECIAL CASE: RESCHEDULED PACKAGES ===
+      # Paquetes reprogramados al ser escaneados vuelven a bodega automáticamente
+      if package.rescheduled?
+        service = PackageStatusService.new(package, current_user)
+
+        if service.change_status(
+          :in_warehouse,
+          reason: 'Paquete reprogramado regresado a bodega',
+          location: 'Bodega Principal'
+        )
+          session[:last_scan_at] = Time.current
+          session[:scan_count] ||= 0
+          session[:scan_count] += 1
+
+          render json: {
+            success: true,
+            message: 'Paquete reprogramado ingresado a bodega exitosamente',
+            package: package_summary(package.reload),
+            session_count: session[:scan_count]
+          }
+          return
+        else
+          render json: {
+            success: false,
+            error: service.errors.join(', ')
+          }, status: :unprocessable_entity
+          return
+        end
       end
 
       # === VALIDATE TRANSITION ===
@@ -143,11 +175,133 @@ module Admin
       render json: { success: true }
     end
 
+    # POST /admin/scanner/create_package
+    # Crea un paquete nuevo con solo el tracking code escaneado
+    def create_package
+      tracking_input = params[:tracking_input]&.strip
+
+      # === INPUT VALIDATION ===
+      if tracking_input.blank?
+        render json: {
+          success: false,
+          error: 'Código de seguimiento vacío'
+        }, status: :unprocessable_entity
+        return
+      end
+
+      # === EXTRACT TRACKING CODE ===
+      tracking_code = extract_tracking_code(tracking_input)
+
+      unless tracking_code
+        render json: {
+          success: false,
+          error: 'Formato de código inválido. Formatos aceptados: PKG, MLB, FLB'
+        }, status: :unprocessable_entity
+        return
+      end
+
+      # === DETECT PROVIDER ===
+      provider = Package.detect_provider(tracking_code)
+      unless provider
+        render json: {
+          success: false,
+          error: 'No se pudo detectar el proveedor del código escaneado'
+        }, status: :unprocessable_entity
+        return
+      end
+
+      # === CHECK IF ALREADY EXISTS ===
+      existing_package = Package.find_by(tracking_code: tracking_code, provider: provider)
+      if existing_package
+        render json: {
+          success: false,
+          error: 'Este paquete ya existe en el sistema',
+          package_id: existing_package.id,
+          redirect_url: admin_package_path(existing_package)
+        }, status: :unprocessable_entity
+        return
+      end
+
+      # === GET CUSTOMER ===
+      customer_id = params[:customer_id]
+
+      unless customer_id.present?
+        render json: {
+          success: false,
+          error: 'Debe seleccionar un cliente antes de crear el paquete'
+        }, status: :unprocessable_entity
+        return
+      end
+
+      customer = User.find_by(id: customer_id, role: :customer)
+
+      unless customer
+        render json: {
+          success: false,
+          error: 'Cliente no encontrado o no es válido'
+        }, status: :unprocessable_entity
+        return
+      end
+
+      # === GET DEFAULT REGION AND COMMUNE ===
+      # Región Metropolitana como default
+      default_region = Region.find_by(name: 'Región Metropolitana de Santiago') || Region.first
+      default_commune = default_region.communes.find_by(name: 'Santiago') || default_region.communes.first
+
+      # === DETERMINE INITIAL STATUS ===
+      # FLB y MLB ya están en bodega cuando se escanean
+      # PKG (Roraima) están pendientes de retiro
+      initial_status = %w[FLB MLB].include?(provider) ? :in_warehouse : :pending_pickup
+
+      # === CREATE PACKAGE ===
+      package = Package.new(
+        tracking_code: tracking_code,
+        provider: provider,
+        user: customer,
+        region: default_region,
+        commune: default_commune,
+        phone: customer.phone || '+56900000000',  # Usar teléfono del cliente o placeholder
+        loading_date: Date.current,
+        status: initial_status,
+        amount: 0,
+        customer_name: customer.name || 'Por Asignar',
+        address: 'Por Asignar'
+      )
+
+      if package.save
+        # Update session stats
+        session[:last_scan_at] = Time.current
+        session[:scan_count] ||= 0
+        session[:scan_count] += 1
+
+        status_message = initial_status == :in_warehouse ? "registrado en bodega" : "registrado como pendiente retiro"
+
+        render json: {
+          success: true,
+          message: "Paquete #{provider} #{status_message} para #{customer.name}",
+          package: package_summary(package),
+          session_count: session[:scan_count]
+        }
+      else
+        render json: {
+          success: false,
+          error: "Error al crear el paquete: #{package.errors.full_messages.join(', ')}"
+        }, status: :unprocessable_entity
+      end
+
+    rescue StandardError => e
+      Rails.logger.error "Error creating package: #{e.message}\n#{e.backtrace.join("\n")}"
+      render json: {
+        success: false,
+        error: 'Error interno al crear el paquete'
+      }, status: :internal_server_error
+    end
+
     private
 
-    # Extrae el tracking code de varios formatos de input
+    # Extrae el tracking code y detecta el provider automáticamente
     # Acepta:
-    # 1. Tracking code plano: "PKG-86169301226465"
+    # 1. Tracking code plano: "PKG-86169301226465" (Rutiservice), "46228651544" (Mercado Libre), o "3219053220" (Falabella)
     # 2. JSON del QR: {"tracking":"PKG-86169301226465",...}
     # 3. Con whitespace/newlines (se limpian)
     def extract_tracking_code(input)
@@ -155,25 +309,34 @@ module Admin
 
       cleaned = input.strip
 
-      # Caso 1: Tracking code plano
-      return cleaned if cleaned.match?(/^PKG-\d{14}$/)
+      # Caso 1: Detectar provider desde código plano
+      provider = Package.detect_provider(cleaned)
+      return cleaned if provider
 
       # Caso 2: JSON del QR code
       if cleaned.start_with?('{') || cleaned.start_with?('[')
         begin
           json_data = JSON.parse(cleaned)
-          # Manejar tanto objeto único como array
           data = json_data.is_a?(Array) ? json_data.first : json_data
-          tracking = data['tracking'] || data[:tracking]
-          return tracking if tracking&.match?(/^PKG-\d{14}$/)
+          # Buscar en múltiples claves posibles: "tracking", "id" (Mercado Libre usa "id")
+          tracking = data['tracking'] || data[:tracking] || data['id'] || data[:id]
+
+          if tracking
+            provider = Package.detect_provider(tracking)
+            return tracking if provider
+          end
         rescue JSON::ParserError
-          # Fall through a return nil
+          # Fall through
         end
       end
 
-      # Caso 3: Intentar encontrar patrón PKG- en cualquier parte del string
-      match = cleaned.match(/PKG-\d{14}/)
-      match ? match[0] : nil
+      # Caso 3: Buscar cualquier patrón válido en el string
+      Package::PROVIDER_PATTERNS.each do |provider_name, pattern|
+        match = cleaned.match(pattern)
+        return match[0] if match
+      end
+
+      nil
     end
 
     # Retorna resumen del paquete para respuesta JSON
@@ -181,6 +344,8 @@ module Admin
       {
         id: package.id,
         tracking_code: package.tracking_code,
+        provider: package.provider,
+        provider_name: package.provider_name,
         customer_name: package.customer_name,
         address: package.address,
         commune: package.commune.name,

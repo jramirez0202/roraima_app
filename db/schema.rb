@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_05_201146) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_10_150831) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_trgm"
   enable_extension "plpgsql"
@@ -111,6 +111,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_05_201146) do
     t.string "receiver_name", limit: 30
     t.text "receiver_observations"
     t.integer "payment_method", default: 0, null: false
+    t.string "provider", default: "PKG", null: false
     t.index ["assigned_by_id"], name: "index_packages_on_assigned_by_id"
     t.index ["assigned_courier_id", "assigned_at"], name: "index_packages_on_assigned_courier_id_and_assigned_at"
     t.index ["assigned_courier_id", "delivered_at"], name: "index_packages_on_assigned_courier_and_delivered_at", comment: "Optimizes Driver#today_deliveries queries (QA audit fix)"
@@ -121,6 +122,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_05_201146) do
     t.index ["exchange"], name: "index_packages_on_exchange"
     t.index ["loading_date"], name: "index_packages_on_loading_date"
     t.index ["pending_photos"], name: "index_packages_on_pending_photos", where: "(pending_photos = true)"
+    t.index ["provider", "tracking_code"], name: "index_packages_on_provider_and_tracking_code", unique: true
+    t.index ["provider"], name: "index_packages_on_provider"
     t.index ["region_id", "commune_id"], name: "index_packages_on_region_and_commune"
     t.index ["region_id"], name: "index_packages_on_region_id"
     t.index ["status", "assigned_courier_id"], name: "index_packages_on_status_and_assigned_courier_id"

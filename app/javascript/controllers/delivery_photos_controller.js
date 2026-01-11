@@ -135,6 +135,19 @@ export default class extends PhotoBaseController {
     }
 
     // Si la validación pasa, llamar al método original de la clase base
-    await super.uploadPhotos()
+    try {
+      await super.uploadPhotos()
+    } catch (error) {
+      console.error(`${this.consolePrefixValue} Error en uploadPhotos:`, error)
+      this.showFlashAlert(
+        'Error al procesar el cambio de estado. Por favor intenta nuevamente o contacta soporte.',
+        'error'
+      )
+
+      // Re-habilitar botón para permitir reintentos
+      if (this.hasSubmitTarget) {
+        this.submitTarget.disabled = false
+      }
+    }
   }
 }

@@ -80,6 +80,9 @@ Rails.application.configure do
 
   # config.hosts << "192.168.1.4"   # tu IP local
   # config.hosts << /.*\.local/     # opcional para otros dispositivos
-  config.hosts << "4042ed5b970d.ngrok-free.app"  # ngrok HTTPS tunnel (updated)
+  # config.hosts << "92aff04b2bad.ngrok-free.app"  # ngrok HTTPS tunnel (updated)
+
+  # Permitir todos los hosts en desarrollo (incluye ngrok)
+  config.hosts.clear
 
 end

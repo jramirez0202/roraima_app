@@ -9,9 +9,6 @@ export default class extends Controller {
   }
 
   connect() {
-    console.log('🔍 Autocomplete connected')
-    console.log('  - Items loaded:', this.itemsValue.length)
-
     // Close dropdown when clicking outside
     this.boundHandleClickOutside = this.handleClickOutside.bind(this)
     document.addEventListener('click', this.boundHandleClickOutside)
@@ -86,8 +83,6 @@ export default class extends Controller {
 
     // Hide results
     this.hideResults()
-
-    console.log('✅ Selected:', itemName, '(ID:', itemId, ')')
   }
 
   // Clear selection

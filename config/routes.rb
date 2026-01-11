@@ -54,6 +54,7 @@ Rails.application.routes.draw do
     #
     get  'scanner/warehouse',      to: 'scanners#warehouse_scanner'
     post 'scanner/process',        to: 'scanners#process_scan'
+    post 'scanner/create_package', to: 'scanners#create_package'
     get  'scanner/session_stats',  to: 'scanners#session_stats'
     post 'scanner/reset_session',  to: 'scanners#reset_session'
 
@@ -90,7 +91,7 @@ Rails.application.routes.draw do
     resources :packages, only: [:index, :show, :update] do
       member do
         patch :change_status
-        patch :update_payment_method
+        # patch :update_payment_method  # ELIMINADO - ahora se guarda con change_status
       end
     end
 

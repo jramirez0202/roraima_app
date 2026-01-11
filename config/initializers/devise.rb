@@ -164,13 +164,15 @@ Devise.setup do |config|
 
   # ==> Configuration for :rememberable
   # The time the user will be remembered without asking for credentials again.
-  # config.remember_for = 2.weeks
+  # Configurado en 1 semana para balance entre seguridad y conveniencia
+  config.remember_for = 1.week
 
   # Invalidates all the remember me tokens when the user signs out.
   config.expire_all_remember_me_on_sign_out = true
 
   # If true, extends the user's remember period when remembered via cookie.
-  # config.extend_remember_period = false
+  # Habilitado para extender sesión cada vez que el usuario use la app (rolling session)
+  config.extend_remember_period = true
 
   # Options to be passed to the created cookie. For instance, you can set
   # secure: true in order to force SSL only cookies.

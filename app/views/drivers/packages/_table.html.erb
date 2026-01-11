@@ -56,13 +56,13 @@
 
               <!-- Dirección + Comuna -->
               <td class="px-6 py-4 text-sm max-w-xs">
-                <div class="text-gray-900"><%= package.address.present? ? package.address : "—" %></div>
+                <div class="text-gray-900"><%= display_address(package) %></div>
                 <div class="text-xs text-gray-500 mt-1"><%= package.commune&.name || "—" %></div>
               </td>
 
               <!-- Destinatario -->
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900"><%= package.customer_name %></div>
+                <div class="text-sm text-gray-900"><%= display_customer_name(package) %></div>
                 <div class="text-xs text-gray-500"><%= package.phone %></div>
               </td>
 

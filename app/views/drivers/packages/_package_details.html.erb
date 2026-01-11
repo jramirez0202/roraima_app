@@ -16,37 +16,13 @@
         <%= package.assigned_at&.strftime('%d/%m/%Y %H:%M') || '-' %>
       </dd>
     </div>
+    <% if package.amount > 0 && package.delivered? %>
     <div>
       <dt class="text-sm font-medium text-gray-500">Monto</dt>
       <dd class="mt-1 text-sm text-gray-900">
         <%= package.formatted_amount %>
       </dd>
     </div>
-    <% if package.amount > 0 && !package.delivered? %>
-    <div class="sm:col-span-2">
-      <dt class="text-sm font-medium text-gray-500 mb-2">Método de Pago</dt>
-      <dd class="mt-1">
-        <%= form_with url: update_payment_method_drivers_package_path(package),
-                      method: :patch,
-                      local: true,
-                      data: { turbo: false },
-                      class: "inline-flex gap-4" do |f| %>
-          <% payment_method_options.each do |option| %>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <%= f.radio_button :payment_method,
-                               option[:value],
-                               checked: package.payment_method == option[:value],
-                               onchange: "this.form.submit()",
-                               class: "w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" %>
-            <span class="text-sm font-medium text-gray-900">
-              <%= option[:label] %>
-            </span>
-          </label>
-          <% end %>
-        <% end %>
-      </dd>
-    </div>
-    <% elsif package.amount > 0 && package.delivered? %>
     <div>
       <dt class="text-sm font-medium text-gray-500">Método de Pago</dt>
       <dd class="mt-1 text-sm text-gray-900">

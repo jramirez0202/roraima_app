@@ -64,6 +64,10 @@ class User < ApplicationRecord
                            size: { less_than: 5.megabytes,
                                    message: 'debe ser menor a 5MB' }
 
+  # Callbacks
+  # Invalidar remember_me token cuando el usuario es desactivado (seguridad)
+  before_update :forget_me_if_deactivated, if: :will_save_change_to_active?
+
   # Scopes
   scope :active, -> { where(active: true) }
   scope :inactive, -> { where(active: false) }
@@ -121,8 +125,19 @@ class User < ApplicationRecord
     super && active?
   end
 
-def inactive_message
-  active? ? super : :inactive_account
-end
+  def inactive_message
+    active? ? super : :inactive_account
+  end
 
+  private
+
+  # Invalidar remember_me token cuando el usuario es desactivado
+  # Esto fuerza al usuario a hacer login nuevamente si fue desactivado
+  def forget_me_if_deactivated
+    if active_changed?(from: true, to: false)
+      # Limpiar el token remember_me de la base de datos
+      self.remember_created_at = nil
+      Rails.logger.info "[Security] Remember token invalidado para usuario #{email} (desactivado)"
+    end
+  end
 end

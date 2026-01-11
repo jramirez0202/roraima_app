@@ -6,8 +6,6 @@ export default class extends Controller {
   static values = { expanded: Boolean }
 
   connect() {
-    console.log('🔍 Filters Panel Controller connected')
-
     // Restore accordion state from localStorage
     const savedState = localStorage.getItem('filtersExpanded')
     if (savedState !== null) {
@@ -25,6 +23,14 @@ export default class extends Controller {
 
     // Save state to localStorage
     localStorage.setItem('filtersExpanded', this.expandedValue)
+  }
+
+  // Close panel when form is submitted (better UX on mobile)
+  closeOnSubmit(event) {
+    // Close the panel to show results
+    this.expandedValue = false
+    this.updatePanelState()
+    localStorage.setItem('filtersExpanded', 'false')
   }
 
   // Update panel visibility and chevron rotation

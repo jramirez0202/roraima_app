@@ -5,7 +5,15 @@ class Users::SessionsController < Devise::SessionsController
   def create
     self.resource = warden.authenticate!(auth_options)
     set_flash_message!(:notice, :signed_in)
-    sign_in(resource_name, resource)
+
+    # Auto-remember drivers (sin necesidad de marcar checkbox)
+    # Esto permite que los drivers mantengan sesión activa al cerrar/minimizar navegador
+    if resource.driver?
+      sign_in(resource_name, resource, remember_me: true)
+    else
+      sign_in(resource_name, resource)
+    end
+
     yield resource if block_given?
 
     redirect_url = get_redirect_url_for(resource)

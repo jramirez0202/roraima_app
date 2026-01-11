@@ -80,9 +80,9 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <span class="font-mono text-xs"><%= package.tracking_code %></span>
                 </td>
-                <td class="px-6 py-4 text-sm font-medium text-gray-900 max-w-xs break-words"><%= package.customer_name %></td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 max-w-xs break-words"><%= display_customer_name(package) %></td>
                 <td class="px-6 py-4 text-sm text-gray-500 max-w-xs">
-                  <div class="break-words"><%= package.address.present? ? package.address : "—" %></div>
+                  <div class="break-words"><%= display_address(package) %></div>
                   <div class="text-xs text-gray-400 mt-1"><%= package.commune&.name || "—" %></div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= package.phone %></td>

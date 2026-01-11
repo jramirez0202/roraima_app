@@ -1,6 +1,11 @@
 <div class="px-4 sm:px-0">
   <%# Header with title %>
-  <%= render 'header' %>
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Mis Paquetes</h1>
+    <p class="mt-1 text-sm text-gray-600">
+      Paquetes asignados a ti
+    </p>
+  </div>
 
   <%# Filters %>
   <%= render 'shared/simple_filters',
@@ -10,7 +15,8 @@
              active_filters_count: @active_filters_count,
              pagy: @pagy,
              filtered_count: @filtered_count,
-             total_count: @total_count %>
+             total_count: @total_count,
+             status_options: driver_status_select_options %>
 
   <%# Packages table %>
   <%= render 'table', packages: @packages %>

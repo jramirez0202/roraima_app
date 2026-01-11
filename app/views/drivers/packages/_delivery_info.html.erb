@@ -13,7 +13,7 @@
     <div>
       <dt class="text-sm font-medium text-gray-500">Destinatario</dt>
       <dd class="mt-1 text-sm text-gray-900">
-        <%= package.customer_name %>
+        <%= display_customer_name(package) %>
       </dd>
     </div>
     <div>
@@ -32,9 +32,9 @@
         Dirección de Entrega
       </dt>
       <dd class="mt-1 text-sm text-gray-900">
-        <%= package.address %><br />
+        <%= display_address(package) %><br />
         <%= package.commune&.name %>, <%= package.region&.name %>
-        <% if package.address.present? %>
+        <% if package.address.present? && package.address != 'Por Asignar' %>
         <div class="mt-2">
           <% waze_url = "https://waze.com/ul?q=#{ERB::Util.url_encode(package.address + ', ' + package.commune&.name.to_s)}&navigate=yes" %>
           <%= link_to(waze_url, target: "_blank", class: "text-blue-600 hover:text-blue-800 inline-flex items-center") do %>

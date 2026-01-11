@@ -296,6 +296,13 @@ class PackageStatusService
     when :delivered
       package.proof = params[:proof] if params[:proof].present?
 
+      # Aplicar datos del receptor DENTRO de la transacción
+      # Esto asegura que si falla el cambio de estado, los datos del receptor tampoco se guardan
+      if params[:receiver_name].present?
+        package.receiver_name = params[:receiver_name]
+        package.receiver_observations = params[:receiver_observations]
+      end
+
     when :cancelled
       package.cancellation_reason = params[:reason] if params[:reason].present?
     end

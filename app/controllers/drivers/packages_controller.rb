@@ -5,7 +5,7 @@ module Drivers
     include FilterablePackages
     helper PackagesHelper
 
-    before_action :set_package, only: [:show, :change_status, :update, :update_payment_method]
+    before_action :set_package, only: [:show, :change_status, :update]
 
     def index
       # Nota: Drivers filtran por assigned_at (fecha de asignación), no por loading_date
@@ -161,12 +161,13 @@ module Drivers
       # Usar transacción: si algo falla, TODO se revierte (incluyendo fotos)
       service_errors = nil
       ActiveRecord::Base.transaction do
-        # Actualizar datos del receptor ANTES de cambiar estado (para validación)
-        if params[:new_status] == 'delivered'
-          @package.update!(
-            receiver_name: params[:receiver_name],
-            receiver_observations: params[:receiver_observations]
-          )
+        # Actualizar método de pago si está presente (solo si amount > 0)
+        if params[:package] && params[:package][:payment_method].present? && @package.amount > 0
+          unless %w[cash transfer].include?(params[:package][:payment_method])
+            flash[:alert] = 'Método de pago inválido'
+            raise ActiveRecord::Rollback
+          end
+          @package.update!(payment_method: params[:package][:payment_method])
         end
 
         # Adjuntar fotos según el estado
@@ -189,7 +190,9 @@ module Drivers
           location: params[:location],
           override: false,
           proof: @package.proof_photos.attached? ? 'attached' : nil,
-          motive: params[:reason]
+          motive: params[:reason],
+          receiver_name: params[:receiver_name],
+          receiver_observations: params[:receiver_observations]
         )
 
         unless success
@@ -208,29 +211,14 @@ module Drivers
         error_message = service_errors&.any? ? service_errors.join(', ') : 'No se pudo actualizar el estado. Intenta de nuevo.'
         redirect_to drivers_package_path(@package), alert: error_message
       end
+    rescue StandardError => e
+      # CRÍTICO: Capturar excepciones inesperadas para evitar cierre de sesión
+      Rails.logger.error "[PackageStatus] Error crítico en change_status: #{e.class} - #{e.message}"
+      Rails.logger.error "[PackageStatus] Backtrace: #{e.backtrace.first(10).join("\n")}"
+      redirect_to drivers_package_path(@package), alert: "Error inesperado: #{e.message}. Por favor contacta soporte."
     end
 
-    def update_payment_method
-      authorize @package, :change_status?
-
-      # Solo permitir si el paquete tiene monto > 0 y no está entregado
-      unless @package.amount > 0 && !@package.delivered?
-        redirect_to drivers_package_path(@package), alert: 'No se puede cambiar el método de pago en este momento.'
-        return
-      end
-
-      # Validar que se envió un método de pago válido
-      unless params[:payment_method].present? && %w[cash transfer].include?(params[:payment_method])
-        redirect_to drivers_package_path(@package), alert: 'Método de pago inválido.'
-        return
-      end
-
-      if @package.update(payment_method: params[:payment_method])
-        redirect_to drivers_package_path(@package), notice: "Método de pago actualizado a #{helpers.payment_method_text(@package.payment_method)}."
-      else
-        redirect_to drivers_package_path(@package), alert: 'No se pudo actualizar el método de pago.'
-      end
-    end
+    # ELIMINADO: update_payment_method - ahora se guarda junto con el cambio de estado
 
     private
 

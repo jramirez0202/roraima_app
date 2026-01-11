@@ -41,7 +41,7 @@ module Drivers
       unless tracking_code
         render json: {
           success: false,
-          error: 'Formato de código inválido. Esperado: PKG-XXXXXXXXXXXXXX'
+          error: 'Formato de código inválido.'
         }, status: :unprocessable_entity
         return
       end
@@ -57,6 +57,36 @@ module Drivers
           error: "Paquete no encontrado: #{tracking_code}"
         }, status: :not_found
         return
+      end
+
+      # === SPECIAL CASE: RESCHEDULED PACKAGES ===
+      # Paquetes reprogramados al ser escaneados vuelven a bodega automáticamente
+      if package.rescheduled?
+        service = PackageStatusService.new(package, current_user)
+
+        if service.change_status(
+          :in_warehouse,
+          reason: 'Paquete reprogramado regresado a bodega',
+          location: 'Bodega Principal'
+        )
+          session[:last_scan_at] = Time.current
+          session[:scan_count] ||= 0
+          session[:scan_count] += 1
+
+          render json: {
+            success: true,
+            message: 'Paquete reprogramado ingresado a bodega exitosamente',
+            package: package_summary(package.reload),
+            session_count: session[:scan_count]
+          }
+          return
+        else
+          render json: {
+            success: false,
+            error: service.errors.join(', ')
+          }, status: :unprocessable_entity
+          return
+        end
       end
 
       # === LÓGICA DINÁMICA DE ASIGNACIÓN Y ESTADO ===
@@ -180,30 +210,44 @@ module Drivers
 
     private
 
-    # Extrae el tracking code de varios formatos de input
+    # Extrae el tracking code y detecta el provider automáticamente
+    # Acepta:
+    # 1. Tracking code plano: "PKG-86169301226465" (Rutiservice), "46228651544" (Mercado Libre), o "3219053220" (Falabella)
+    # 2. JSON del QR: {"tracking":"PKG-86169301226465",...}
+    # 3. Con whitespace/newlines (se limpian)
     def extract_tracking_code(input)
       return nil if input.blank?
 
       cleaned = input.strip
 
-      # Caso 1: Tracking code plano
-      return cleaned if cleaned.match?(/^PKG-\d{14}$/)
+      # Caso 1: Detectar provider desde código plano
+      provider = Package.detect_provider(cleaned)
+      return cleaned if provider
 
       # Caso 2: JSON del QR code
       if cleaned.start_with?('{') || cleaned.start_with?('[')
         begin
           json_data = JSON.parse(cleaned)
           data = json_data.is_a?(Array) ? json_data.first : json_data
-          tracking = data['tracking'] || data[:tracking]
-          return tracking if tracking&.match?(/^PKG-\d{14}$/)
+          # Buscar en múltiples claves posibles: "tracking", "id" (Mercado Libre usa "id")
+          tracking = data['tracking'] || data[:tracking] || data['id'] || data[:id]
+
+          if tracking
+            provider = Package.detect_provider(tracking)
+            return tracking if provider
+          end
         rescue JSON::ParserError
-          # Fall through a return nil
+          # Fall through
         end
       end
 
-      # Caso 3: Intentar encontrar patrón PKG- en cualquier parte del string
-      match = cleaned.match(/PKG-\d{14}/)
-      match ? match[0] : nil
+      # Caso 3: Buscar cualquier patrón válido en el string
+      Package::PROVIDER_PATTERNS.each do |provider_name, pattern|
+        match = cleaned.match(pattern)
+        return match[0] if match
+      end
+
+      nil
     end
 
     # Retorna resumen del paquete para respuesta JSON
@@ -211,6 +255,8 @@ module Drivers
       {
         id: package.id,
         tracking_code: package.tracking_code,
+        provider: package.provider,
+        provider_name: package.provider_name,
         customer_name: package.customer_name,
         address: package.address,
         commune: package.commune.name,

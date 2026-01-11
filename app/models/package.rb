@@ -33,7 +33,7 @@ class Package < ApplicationRecord
     pending_pickup: [:in_warehouse, :cancelled],
     in_warehouse: [:in_transit, :return],
     in_transit: [:delivered, :rescheduled, :return, :cancelled],
-    rescheduled: [:in_transit, :return, :cancelled],
+    rescheduled: [:in_warehouse, :in_transit, :return, :cancelled],  # Puede volver a bodega al escanear
     delivered: [],  # Terminal
     return: [:in_warehouse, :cancelled],
     cancelled: []   # Terminal
@@ -41,6 +41,21 @@ class Package < ApplicationRecord
 
   # Terminal statuses (no more transitions allowed)
   TERMINAL_STATUSES = [:delivered, :cancelled].freeze
+
+  # Provider detection patterns
+  PROVIDER_PATTERNS = {
+    'PKG' => /\APKG-\d{14}\z/,    # PKG- + 14 digits (Rutiservice)
+    'MLB' => /\A4622\d{7}\z/,     # 4622 + 7 digits (Mercado Libre)
+    'FLB' => /\A\d{10}\z/         # 10 digits (Falabella)
+  }.freeze
+
+
+  # Provider display names
+  PROVIDER_NAMES = {
+    'PKG' => 'RutiService',
+    'MLB' => 'Mercado Libre',
+    'FLB' => 'Falabella'
+  }.freeze
 
   # Validaciones
   validates :region, :commune, :loading_date, presence: true
@@ -74,6 +89,9 @@ class Package < ApplicationRecord
 
   # Validaciones para etiquetas
   validates :tracking_code, presence: true, uniqueness: true
+
+  # Validate provider format
+  validate :tracking_code_matches_provider_format
 
   # Callbacks
   before_validation :generate_tracking_code, on: :create
@@ -317,10 +335,15 @@ class Package < ApplicationRecord
   def generate_tracking_code
     return if tracking_code.present?
 
+    # Only auto-generate PKG codes
+    # MLB and FLB codes come from external systems
+    return unless provider == 'PKG' || provider.nil?
+
+    self.provider ||= 'PKG'
     self.tracking_code = loop do
       random_digits = 14.times.map { rand(0..9) }.join
       code = "PKG-#{random_digits}"
-      break code unless Package.exists?(tracking_code: code)
+      break code unless Package.exists?(tracking_code: code, provider: 'PKG')
     end
   end
 
@@ -346,6 +369,23 @@ class Package < ApplicationRecord
       notes: description.presence || "Sin indicaciones",
       company: company_name.presence || "N/A"
     }.to_json
+  end
+
+  # Detects provider from tracking code format
+  def self.detect_provider(code)
+    return nil if code.blank?
+
+    # Check in order: PKG (most common), MLB, FLB (last to avoid false positives)
+    PROVIDER_PATTERNS.each do |provider, pattern|
+      return provider if code.match?(pattern)
+    end
+
+    nil
+  end
+
+  # Returns provider display name
+  def provider_name
+    PROVIDER_NAMES[provider] || provider
   end
 
   private
@@ -379,6 +419,16 @@ class Package < ApplicationRecord
   def must_have_photos_or_pending
     unless proof_photos.attached? || pending_photos?
       errors.add(:base, "Debe tener fotos de evidencia o estar marcado como pendiente de fotos")
+    end
+  end
+
+  # Validación: tracking_code debe cumplir con el formato del provider
+  def tracking_code_matches_provider_format
+    return unless tracking_code.present? && provider.present?
+
+    pattern = PROVIDER_PATTERNS[provider]
+    unless pattern && tracking_code.match?(pattern)
+      errors.add(:tracking_code, "no cumple con el formato de #{provider}")
     end
   end
 
