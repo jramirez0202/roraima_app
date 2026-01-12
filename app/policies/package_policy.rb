@@ -6,9 +6,20 @@ class PackagePolicy < ApplicationPolicy
   end
 
   def show?
-    user.admin? ||
-    record.user_id == user.id ||
-    (user.driver? && record.assigned_courier_id == user.id)
+    return true if user.admin?
+    return true if record.user_id == user.id
+
+    # Driver puede ver si actualmente está asignado
+    return true if user.driver? && record.assigned_courier_id == user.id
+
+    # Driver puede ver paquetes terminales que él entregó/canceló
+    # Verificar en status_history si tiene assigned_courier_id = driver.id
+    if user.driver? && record.terminal? && record.status_history.present?
+      # Buscar en el historial si algún registro tiene assigned_courier_id del driver
+      record.status_history.any? { |entry| entry['assigned_courier_id'] == user.id }
+    else
+      false
+    end
   end
 
   def create?
@@ -99,8 +110,17 @@ class PackagePolicy < ApplicationPolicy
       elsif user.customer?
         scope.where(user_id: user.id)
       elsif user.driver?
-        # Drivers see all packages assigned to them (from pending_pickup onwards)
+        # Drivers see:
+        # 1. Active packages currently assigned to them (assigned_courier_id = driver.id)
+        # 2. Terminal packages (delivered/cancelled) that were assigned to them
+        #    (checking status_history because they're auto-unassigned)
+
+        # Combine both conditions with OR
         scope.where(assigned_courier_id: user.id)
+             .or(
+               scope.where(status: [:delivered, :cancelled])
+                    .where("status_history @> ?", [{ assigned_courier_id: user.id }].to_json)
+             )
       else
         scope.none
       end

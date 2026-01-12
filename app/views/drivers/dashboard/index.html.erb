@@ -86,13 +86,15 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <% @pending_packages.each do |package| %>
-              <tr class="hover:bg-gray-50 cursor-pointer <%= 'bg-orange-50' if package.rescheduled? %>"
+              <%# Prioridad: reprogramado > proveedor. Si está reprogramado, usar naranja; sino, usar color del proveedor %>
+              <% row_class = package.rescheduled? ? 'bg-orange-50' : provider_row_class(package.provider) %>
+              <tr class="hover:bg-gray-50 cursor-pointer <%= row_class %>"
                   onclick="window.location='<%= drivers_package_path(package) %>'">
-                
+
                   <!-- Estado -->
                 <td class="px-6 py-4">
                   <div class="flex flex-col items-start">
-                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_class(package.status) %>">
+                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_classes(package.status) %>">
                       <%= status_text(package.status) %>
                     </span>
                     <% if package.delivered? && package.delivered_at %>
@@ -115,11 +117,12 @@
                   <div class="text-xs text-gray-500"><%= package.phone %></div>
                 </td> -->
 
-                <!-- Tracking -->
+                <!-- Tracking + Provider Badge -->
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">
+                  <div class="text-sm font-mono text-xs mb-1">
                     <%= package.tracking_code %>
                   </div>
+                  <%= provider_badge(package) %>
                 </td>
 
                 <!-- Fecha Asignación -->

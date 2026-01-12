@@ -34,8 +34,8 @@
     <!-- Sección: Información de Reprogramación (solo si rescheduled) -->
     <%= render 'reschedule_info', package: @package %>
 
-    <!-- Sección: Formulario de Cambio de Estado (solo si no delivered) -->
-    <% unless @package.delivered? %>
+    <!-- Sección: Formulario de Cambio de Estado (solo si no es terminal) -->
+    <% unless @package.terminal? %>
     <div class="px-6 py-4 bg-gray-50">
       <h2 class="text-lg font-semibold text-gray-900 mb-3">Cambiar Estado</h2>
 
@@ -132,6 +132,19 @@
                       class: "px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300" %>
         </div>
       <% end %>
+    </div>
+    <% else %>
+    <!-- Mensaje de solo lectura para paquetes terminales -->
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+      <div class="flex items-center gap-3 text-gray-700">
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="font-medium">Este paquete está en estado final (<%= status_text(@package.status) %>)</p>
+          <p class="text-sm text-gray-600 mt-1">No se puede modificar. Esta vista es solo de consulta.</p>
+        </div>
+      </div>
     </div>
     <% end %>
 

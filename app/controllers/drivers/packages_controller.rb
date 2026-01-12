@@ -37,17 +37,25 @@ module Drivers
                       assigned_at: :desc
                     )
 
-      # Aplicar filtro por rango de fechas de asignación (si aplica)
+      # Aplicar filtro por rango de fechas de actividad (si aplica)
       # IMPORTANTE:
-      # - Los paquetes reprogramados deben aparecer SIEMPRE (sin importar assigned_at)
+      # - Usa activity_date_between que considera:
+      #   * Estados activos (in_transit): assigned_at
+      #   * Entregados: delivered_at
+      #   * Cancelados: cancelled_at
+      # - Los paquetes reprogramados aparecen SIEMPRE (sin importar assigned_at)
       # - NO aplicar filtro de fecha si se está buscando por tracking code
       if date_from.present? && date_to.present? && !searching_by_tracking
-        @packages = @packages.where(
-          'assigned_at BETWEEN ? AND ? OR status = ?',
-          date_from.beginning_of_day,
-          date_to.end_of_day,
-          Package.statuses[:rescheduled]
-        )
+        # Obtener paquetes en el rango de fechas según su actividad
+        activity_ids = @packages.activity_date_between(date_from, date_to).pluck(:id)
+
+        # Obtener paquetes reprogramados (siempre visibles sin importar fecha)
+        rescheduled_ids = @packages.where(status: :rescheduled).pluck(:id)
+
+        # Combinar ambos conjuntos (unión de arrays)
+        combined_ids = (activity_ids | rescheduled_ids)
+
+        @packages = @packages.where(id: combined_ids) if combined_ids.any?
       end
 
       # Aplicar filtro por estado
@@ -223,18 +231,21 @@ module Drivers
     private
 
     def set_package
-      @package = current_driver.visible_packages
-                                .includes(
-                                  :region,
-                                  :commune,
-                                  :user,
-                                  :assigned_courier,
-                                  :assigned_by,
-                                  proof_photos_attachments: :blob,
-                                  reschedule_photos_attachments: :blob,
-                                  cancelled_photos_attachments: :blob
-                                )
-                                .find(params[:id])
+      # Usar policy_scope para aplicar la lógica de acceso actualizada
+      # Esto permite ver tanto paquetes activos como terminales (delivered/cancelled)
+      # que fueron asignados a este driver (verificando status_history)
+      @package = policy_scope(Package)
+                   .includes(
+                     :region,
+                     :commune,
+                     :user,
+                     :assigned_courier,
+                     :assigned_by,
+                     proof_photos_attachments: :blob,
+                     reschedule_photos_attachments: :blob,
+                     cancelled_photos_attachments: :blob
+                   )
+                   .find(params[:id])
     rescue ActiveRecord::RecordNotFound
       redirect_to drivers_packages_path, alert: 'Paquete no encontrado o no asignado'
     end
