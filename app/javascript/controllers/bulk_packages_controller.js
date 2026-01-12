@@ -114,7 +114,8 @@ export default class extends Controller {
   }
 
   renderStatusOptions() {
-    const statusKeys = ['in_warehouse', 'in_transit', 'delivered', 'rescheduled', 'return', 'cancelled']
+    // Solo permitir cambios masivos a Bodega y Pendiente Retiro
+    const statusKeys = ['pending_pickup', 'in_warehouse']
     this.statusGridTarget.innerHTML = ''
 
     statusKeys.forEach(statusKey => {

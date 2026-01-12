@@ -21,6 +21,16 @@ class PackageStatusService
     # Ejecutar transición
     begin
       package.transaction do
+        # REGLA DE NEGOCIO: Si el nuevo estado es in_warehouse, desasignar conductor automáticamente
+        if new_status_sym == :in_warehouse && package.assigned_courier_id.present?
+          package.update_columns(
+            assigned_courier_id: nil,
+            assigned_at: nil,
+            assigned_by_id: user.id
+          )
+          Rails.logger.info "Paquete #{package.tracking_code} desasignado automáticamente al cambiar a Bodega"
+        end
+
         # Aplicar parámetros adicionales si es necesario
         apply_additional_params(new_status_sym, additional_params)
 
@@ -51,10 +61,27 @@ class PackageStatusService
       # Si el paquete está en in_transit, usar transacción para asegurar atomicidad
       # (cambiar estado PRIMERO, luego desasignar driver)
       if package.status == 'in_transit'
+        # VALIDACIÓN CRÍTICA: No permitir desasignar si el driver ya inició ruta
+        if package.assigned_courier.present? && package.assigned_courier.on_route?
+          driver_name = package.assigned_courier.name || package.assigned_courier.email
+          @errors << "No se puede desasignar el paquete porque #{driver_name} ya inició su ruta. Debe esperar a que finalice la ruta o contactar al conductor."
+          return false
+        end
+
         result = false
 
         ActiveRecord::Base.transaction do
-          # 1. Cambiar a in_warehouse PRIMERO
+          # 1. PRIMERO desasignar el driver (para evitar violación de validación)
+          unless package.update_columns(
+            assigned_courier_id: nil,
+            assigned_at: nil,
+            assigned_by_id: @user.id
+          )
+            @errors << "No se pudo desasignar el conductor"
+            raise ActiveRecord::Rollback
+          end
+
+          # 2. LUEGO cambiar a in_warehouse (ahora sin conductor, no hay conflicto)
           unless package.transition_to!(
             :in_warehouse,
             user: @user,
@@ -62,16 +89,6 @@ class PackageStatusService
             override: true
           )
             @errors << "No se pudo cambiar el paquete a Bodega"
-            raise ActiveRecord::Rollback
-          end
-
-          # 2. Solo SI el cambio de estado fue exitoso, desasignar el driver
-          unless package.update(
-            assigned_courier_id: nil,
-            assigned_at: nil,
-            assigned_by_id: @user.id
-          )
-            @errors << "No se pudo desasignar el conductor"
             raise ActiveRecord::Rollback
           end
 
@@ -277,6 +294,16 @@ class PackageStatusService
     if override && !user.admin?
       @errors << "Solo administradores pueden forzar transiciones con override"
       return false
+    end
+
+    # VALIDACIÓN CRÍTICA DE NEGOCIO: No permitir regresar a bodega si el driver ya inició ruta
+    # Esta validación se aplica SIEMPRE, incluso con override, porque es una regla operativa fundamental
+    if new_status == :in_warehouse && package.status == 'in_transit' && package.assigned_courier.present?
+      if package.assigned_courier.on_route?
+        driver_name = package.assigned_courier.name || package.assigned_courier.email
+        @errors << "No se puede regresar el paquete a Bodega porque #{driver_name} ya inició su ruta. Debe esperar a que finalice la ruta o contactar al conductor."
+        return false
+      end
     end
 
     unless package.can_transition_to?(new_status, override: override)

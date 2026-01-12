@@ -68,7 +68,7 @@ class Package < ApplicationRecord
 
   validates :loading_date, presence: true
   validate :loading_date_must_be_before_delivery
-  validate :user_must_be_customer
+  validate :user_must_be_customer, on: :create
 
   # Validación: delivered debe tener fotos O pending_photos (excepto con override)
   validate :must_have_photos_or_pending, if: -> { delivered? && !admin_override }
