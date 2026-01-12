@@ -10,7 +10,7 @@ import { openDB } from "idb"
  * - Compresión automática paralela (5-8MB → <1MB) usando Web Workers
  * - Persistencia offline (IndexedDB)
  * - Direct Upload a S3
- * - 2-4 fotos requeridas
+ * - 1-4 fotos requeridas
  * - Reintentos automáticos
  *
  * Extendido por:
@@ -33,7 +33,7 @@ export default class extends Controller {
     console.log(`${this.consolePrefixValue} Photo controller CONNECTING (store: ${this.storeNameValue})...`)
 
     this.MIN_PHOTOS = 1
-    this.REQUIRED_FOR_UPLOAD = 2  // Mínimo para activar botón de subir
+    this.REQUIRED_FOR_UPLOAD = 1  // Mínimo para activar botón de subir
     this.MAX_PHOTOS = 4
     this.MAX_SIZE_MB = 0.8
     this.MAX_DIMENSION = 1600
@@ -454,13 +454,10 @@ export default class extends Controller {
     const count = this.photos.length
     this.countTarget.textContent = `${count}/${this.MAX_PHOTOS} fotos`
 
-    // Activar botón con 2 o más fotos (hasta 4 máximo)
+    // Activar botón con 1 o más fotos (hasta 4 máximo)
     if (count >= this.REQUIRED_FOR_UPLOAD && count <= this.MAX_PHOTOS) {
       this.countTarget.className = 'text-lg font-bold text-green-600'
       this.submitTarget.disabled = false
-    } else if (count === 1) {
-      this.countTarget.className = 'text-lg font-bold text-blue-600'
-      this.submitTarget.disabled = true
     } else {
       this.countTarget.className = 'text-lg font-bold text-orange-600'
       this.submitTarget.disabled = true

@@ -1,5 +1,18 @@
 <%= form_with(model: [:admin, package], class: "space-y-6", id: "package-form") do |form| %>
 
+  <% # Preservar parámetros de filtro para el redirect después de guardar %>
+  <% if defined?(@filter_params) && @filter_params.present? %>
+    <% @filter_params.each do |key, value| %>
+      <% if value.is_a?(Array) %>
+        <% value.each do |v| %>
+          <%= hidden_field_tag "#{key}[]", v %>
+        <% end %>
+      <% else %>
+        <%= hidden_field_tag key, value %>
+      <% end %>
+    <% end %>
+  <% end %>
+
   <% if package.errors.any? %>
     <div class="rounded-md bg-red-50 p-4">
       <h3 class="text-sm font-medium text-red-800">
@@ -113,7 +126,7 @@
 
   <!-- ACCIONES -->
   <div class="flex justify-end space-x-3">
-    <%= link_to "Cancelar", admin_packages_path, class: "inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50" %>
+    <%= link_to "Cancelar", admin_packages_path(@filter_params || {}), class: "inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50" %>
     <%= form.submit "Guardar", class: "inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 cursor-pointer" %>
   </div>
 <% end %>

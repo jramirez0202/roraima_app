@@ -8,7 +8,7 @@ import PhotoBaseController from "./photo_base_controller"
  * - Compresión automática paralela (5-8MB → <1MB)
  * - Persistencia offline (IndexedDB)
  * - Direct Upload a S3
- * - 2-4 fotos requeridas
+ * - 1-4 fotos requeridas
  * - Reintentos automáticos
  */
 export default class extends PhotoBaseController {

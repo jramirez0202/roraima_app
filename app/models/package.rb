@@ -201,6 +201,55 @@ class Package < ApplicationRecord
     result
   }
 
+  # Rango de fechas de actividad (considera el estado del paquete)
+  # - Estados activos (pending_pickup, in_warehouse, in_transit, rescheduled): usa assigned_at (o NULL)
+  # - Estado delivered: usa delivered_at
+  # - Estado cancelled: usa cancelled_at
+  # - Estado return: usa assigned_at como fallback
+  scope :activity_date_between, ->(start_date, end_date) {
+    result = all
+
+    if start_date.present? && end_date.present?
+      result = result.where(
+        "(status IN (?, ?, ?, ?) AND (assigned_at BETWEEN ? AND ? OR assigned_at IS NULL)) OR " \
+        "(status = ? AND delivered_at BETWEEN ? AND ?) OR " \
+        "(status = ? AND cancelled_at BETWEEN ? AND ?) OR " \
+        "(status = ? AND (assigned_at BETWEEN ? AND ? OR assigned_at IS NULL))",
+        statuses[:pending_pickup], statuses[:in_warehouse], statuses[:in_transit], statuses[:rescheduled],
+        start_date.beginning_of_day, end_date.end_of_day,
+        statuses[:delivered], start_date.beginning_of_day, end_date.end_of_day,
+        statuses[:cancelled], start_date.beginning_of_day, end_date.end_of_day,
+        statuses[:return], start_date.beginning_of_day, end_date.end_of_day
+      )
+    elsif start_date.present?
+      result = result.where(
+        "(status IN (?, ?, ?, ?) AND (assigned_at >= ? OR assigned_at IS NULL)) OR " \
+        "(status = ? AND delivered_at >= ?) OR " \
+        "(status = ? AND cancelled_at >= ?) OR " \
+        "(status = ? AND (assigned_at >= ? OR assigned_at IS NULL))",
+        statuses[:pending_pickup], statuses[:in_warehouse], statuses[:in_transit], statuses[:rescheduled],
+        start_date.beginning_of_day,
+        statuses[:delivered], start_date.beginning_of_day,
+        statuses[:cancelled], start_date.beginning_of_day,
+        statuses[:return], start_date.beginning_of_day
+      )
+    elsif end_date.present?
+      result = result.where(
+        "(status IN (?, ?, ?, ?) AND (assigned_at <= ? OR assigned_at IS NULL)) OR " \
+        "(status = ? AND delivered_at <= ?) OR " \
+        "(status = ? AND cancelled_at <= ?) OR " \
+        "(status = ? AND (assigned_at <= ? OR assigned_at IS NULL))",
+        statuses[:pending_pickup], statuses[:in_warehouse], statuses[:in_transit], statuses[:rescheduled],
+        end_date.end_of_day,
+        statuses[:delivered], end_date.end_of_day,
+        statuses[:cancelled], end_date.end_of_day,
+        statuses[:return], end_date.end_of_day
+      )
+    end
+
+    result
+  }
+
   # ======================
   # Métodos de tracking
   # ======================

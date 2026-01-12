@@ -1,6 +1,6 @@
 <div class="px-4 sm:px-6 lg:px-8">
   <div class="mb-8">
-    <%= link_to "← Volver", admin_packages_path, class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+    <%= link_to "← Volver", admin_packages_path(@filter_params || {}), class: "text-sm text-indigo-600 hover:text-indigo-900" %>
   </div>
 
   <div class="md:grid md:grid-cols-3 md:gap-6">

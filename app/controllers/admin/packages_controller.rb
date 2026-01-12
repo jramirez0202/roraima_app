@@ -27,12 +27,12 @@ class Admin::PackagesController < Admin::BaseController
       # Si solo especifica "Hasta" sin "Desde", usar HOY como fecha inicial
       date_from ||= Date.current if date_to.present?
 
-      packages_with_date = packages.assigned_date_between(date_from, date_to)
+      packages_with_date = packages.activity_date_between(date_from, date_to)
     elsif !searching_by_tracking
       # Por defecto: solo el día actual (solo si NO busca por tracking)
       date_from = Date.current
       date_to = Date.current
-      packages_with_date = packages.assigned_date_between(date_from, date_to)
+      packages_with_date = packages.activity_date_between(date_from, date_to)
     else
       # Si busca por tracking sin fechas explícitas, NO filtrar por fecha
       packages_with_date = packages
@@ -68,10 +68,18 @@ class Admin::PackagesController < Admin::BaseController
     @filtered_count = packages.count
 
     # Ordenar según si hay filtro de fecha
-    # Si hay filtro de fecha, ordenar por assigned_at DESC (más recientes primero)
+    # Si hay filtro de fecha, ordenar por fecha de actividad (según estado) DESC
     # Si no hay filtro, ordenar por created_at DESC (más recientes primero)
     if filter_params[:date_from].present? || filter_params[:date_to].present?
-      @pagy, @packages = pagy(packages.order(assigned_at: :desc, created_at: :desc), items: 20)
+      # Ordenar usando CASE WHEN para elegir la fecha apropiada según el estado
+      activity_date_order = Arel.sql(
+        "CASE " \
+          "WHEN status = #{Package.statuses[:delivered]} THEN delivered_at " \
+          "WHEN status = #{Package.statuses[:cancelled]} THEN cancelled_at " \
+          "ELSE COALESCE(assigned_at, created_at) " \
+        "END DESC NULLS LAST, created_at DESC"
+      )
+      @pagy, @packages = pagy(packages.order(activity_date_order), items: 20)
     else
       @pagy, @packages = pagy(packages.order(created_at: :desc), items: 20)
     end
@@ -114,6 +122,18 @@ class Admin::PackagesController < Admin::BaseController
     @package.region_id = metropolitan_region.id
     authorize @package
     @communes = metropolitan_region.communes.order(:name)
+
+    # Preservar parámetros de filtro para el botón "Cancelar"
+    @filter_params = {
+      status: params[:status],
+      commune_search: params[:commune_search],
+      commune_ids: params[:commune_ids],
+      courier_search: params[:courier_search],
+      courier_ids: params[:courier_ids],
+      tracking_query: params[:tracking_query],
+      date_from: params[:date_from],
+      date_to: params[:date_to]
+    }.compact
   end
 
   def create
@@ -124,10 +144,23 @@ class Admin::PackagesController < Admin::BaseController
     @package.company_name ||= @package.user&.company
     authorize @package
 
+    # Preservar parámetros de filtro para el redirect
+    filter_params_for_redirect = {
+      status: params[:status],
+      commune_search: params[:commune_search],
+      commune_ids: params[:commune_ids],
+      courier_search: params[:courier_search],
+      courier_ids: params[:courier_ids],
+      tracking_query: params[:tracking_query],
+      date_from: params[:date_from],
+      date_to: params[:date_to]
+    }.compact
+
     if @package.save
-      redirect_to admin_packages_path, notice: 'Paquete creado exitosamente'
+      redirect_to admin_packages_path(filter_params_for_redirect), notice: 'Paquete creado exitosamente'
     else
       @communes = metropolitan_region.communes.order(:name)
+      @filter_params = filter_params_for_redirect
       render :new, status: :unprocessable_content
     end
   end
@@ -152,10 +185,23 @@ class Admin::PackagesController < Admin::BaseController
     @package.assign_attributes(package_params)
     @package.region_id = metropolitan_region.id
 
+    # Preservar parámetros de filtro para el redirect
+    filter_params_for_redirect = {
+      status: params[:status],
+      commune_search: params[:commune_search],
+      commune_ids: params[:commune_ids],
+      courier_search: params[:courier_search],
+      courier_ids: params[:courier_ids],
+      tracking_query: params[:tracking_query],
+      date_from: params[:date_from],
+      date_to: params[:date_to]
+    }.compact
+
     if @package.save
-      redirect_to admin_packages_path, notice: 'Paquete actualizado'
+      redirect_to admin_packages_path(filter_params_for_redirect), notice: 'Paquete actualizado'
     else
       @communes = metropolitan_region.communes.order(:name)
+      @filter_params = filter_params_for_redirect
       render :edit, status: :unprocessable_content
     end
   end
