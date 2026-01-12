@@ -202,13 +202,40 @@ export default class extends Controller {
       })
 
       if (response.ok) {
-        this.applyBtnTarget.innerHTML = `
-          <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-          </svg>
-          Éxito
-        `
-        setTimeout(() => window.location.reload(), 500)
+        const data = await response.json()
+
+        // Verificar si hubo errores en el procesamiento
+        if (data.failed > 0) {
+          // Construir mensaje de error detallado
+          let errorMessage = `${data.failed} de ${data.total} paquetes no pudieron cambiar de estado:\n\n`
+          data.errors.forEach(err => {
+            errorMessage += `• ${err.tracking_code}: ${err.error}\n`
+          })
+
+          if (data.successful > 0) {
+            errorMessage += `\n✓ ${data.successful} paquetes cambiaron correctamente.`
+          }
+
+          alert(errorMessage)
+
+          // Si hubo algunos exitosos, recargar para mostrar los cambios
+          if (data.successful > 0) {
+            setTimeout(() => window.location.reload(), 500)
+          } else {
+            // Si todos fallaron, restaurar el botón
+            this.applyBtnTarget.disabled = false
+            this.applyBtnTarget.textContent = 'Aplicar cambio'
+          }
+        } else {
+          // Todo exitoso
+          this.applyBtnTarget.innerHTML = `
+            <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            Éxito
+          `
+          setTimeout(() => window.location.reload(), 500)
+        }
       } else {
         const data = await response.json()
         throw new Error(data.error || 'Error al cambiar estados')
