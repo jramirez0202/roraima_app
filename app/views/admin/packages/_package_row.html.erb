@@ -1,8 +1,10 @@
 <%
   # Expected local variables:
   # - package: Package instance
-  # - drivers: Collection of Driver users
   # - filter_params: Hash of filter parameters (optional)
+  #
+  # Nota: El conductor se carga dinámicamente vía autocomplete (driver_autocomplete_controller.js)
+  # No necesita recibir la colección de drivers como parámetro
 %>
 
 <tr class="hover:bg-gray-50 <%= provider_row_class(package.provider) %>">
@@ -35,11 +37,6 @@
     <%= provider_badge(package) %>
   </td>
 
-  <!-- Destinatario-->
-  <td class="px-3 py-2 text-sm max-w-xs">
-    <div class="font-medium text-gray-900 wrap-break-word"><%= display_customer_name(package) %></div>
-  </td>
-
   <!-- Empresa -->
   <td class="px-3 py-2 text-sm">
     <% if package.user.present? %>
@@ -48,11 +45,6 @@
     <% else %>
       —
     <% end %>
-  </td>
-
-  <!-- Teléfono -->
-  <td class="px-3 py-2 text-sm">
-    <%= package.phone.present? ? package.phone : "—" %>
   </td>
 
   <!-- Dirección + Comuna -->
@@ -72,20 +64,42 @@
 
   <!-- Conductor Asignado -->
   <td class="px-3 py-2 text-sm">
-    <select name="driver_assignment"
-            class="block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            data-package-id="<%= package.id %>"
-            data-assign-url="<%= assign_courier_admin_package_path(package) %>"
-            data-csrf-token="<%= form_authenticity_token %>"
-            data-action="change->bulk-packages#assignDriver">
-      <option value=""><%= display_unassigned_driver(package) %></option>
-      <% drivers.each do |driver| %>
-        <option value="<%= driver.id %>"
-                <%= 'selected' if package.assigned_courier_id == driver.id %>>
-          <%= driver.name %>
-        </option>
-      <% end %>
-    </select>
+    <div class="relative w-full"
+         data-controller="driver-autocomplete"
+         data-driver-autocomplete-package-id-value="<%= package.id %>"
+         data-driver-autocomplete-assign-url-value="<%= assign_courier_admin_package_path(package) %>"
+         data-driver-autocomplete-current-driver-id-value="<%= package.assigned_courier_id %>"
+         data-driver-autocomplete-current-driver-name-value="<%= package.assigned_courier&.name || 'Sin asignar' %>">
+
+      <!-- Input de búsqueda compacto -->
+      <div class="relative">
+        <input type="text"
+               data-driver-autocomplete-target="input"
+               data-action="input->driver-autocomplete#search focus->driver-autocomplete#focusInput blur->driver-autocomplete#blurInput"
+               value="<%= package.assigned_courier&.name || 'Sin asignar' %>"
+               placeholder="Escribe 2+ letras..."
+               class="block w-full text-xs rounded border-gray-300 py-1.5 px-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 pr-7">
+
+        <!-- Botón de limpiar (solo si tiene driver asignado) -->
+        <% if package.assigned_courier_id.present? %>
+          <button type="button"
+                  data-action="click->driver-autocomplete#clearDriver"
+                  class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-600"
+                  title="Desasignar conductor">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        <% end %>
+      </div>
+
+      <!-- Dropdown de resultados compacto (posicionado con JS usando fixed) -->
+      <div data-driver-autocomplete-target="dropdown"
+           class="hidden bg-white shadow-xl rounded border border-gray-300 max-h-60 overflow-y-auto"
+           style="z-index: 9999;">
+        <!-- Resultados se cargan dinámicamente -->
+      </div>
+    </div>
   </td>
 
   <!-- Acciones -->

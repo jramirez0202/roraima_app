@@ -59,6 +59,10 @@ class PackagePolicy < ApplicationPolicy
     user.admin? # Solo admin puede hacer cambios masivos
   end
 
+  def bulk_assign_driver?
+    user.admin? # Solo admin puede asignar paquetes masivamente a drivers
+  end
+
   def override_transition?
     user.admin? # Solo admin puede forzar transiciones
   end

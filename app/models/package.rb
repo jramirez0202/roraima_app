@@ -73,6 +73,10 @@ class Package < ApplicationRecord
   # Validación: delivered debe tener fotos O pending_photos (excepto con override)
   validate :must_have_photos_or_pending, if: -> { delivered? && !admin_override }
 
+  # Validación: solo paquetes in_transit pueden tener conductor asignado
+  # Esto previene inconsistencias donde paquetes en "Bodega" o "Pendiente Retiro" tienen driver
+  validate :assigned_courier_must_match_status
+
   validates :amount, numericality: { greater_than_or_equal_to: 0 }
 
   validates :address,
@@ -419,6 +423,15 @@ class Package < ApplicationRecord
   def must_have_photos_or_pending
     unless proof_photos.attached? || pending_photos?
       errors.add(:base, "Debe tener fotos de evidencia o estar marcado como pendiente de fotos")
+    end
+  end
+
+  # Validación: solo paquetes in_transit pueden tener conductor asignado
+  # Previene inconsistencias de datos (ej: paquete en "Bodega" con driver asignado)
+  def assigned_courier_must_match_status
+    # Si tiene conductor asignado, DEBE estar en in_transit
+    if assigned_courier_id.present? && !in_transit?
+      errors.add(:assigned_courier_id, "solo puede estar presente cuando el paquete está En Camino (actual: #{status_i18n})")
     end
   end
 

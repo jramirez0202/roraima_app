@@ -5,11 +5,22 @@ export default class extends Controller {
     "checkbox",
     "selectAll",
     "bulkStatusBtn",
+    "bulkAssignBtn",
     "generateLabelsBtn",
     "modal",
     "selectedCount",
     "statusGrid",
-    "applyBtn"
+    "applyBtn",
+    "assignModal",
+    "assignCount",
+    "driverSearch",
+    "driversDropdown",
+    "assignPreview",
+    "selectedDriverName",
+    "currentAssigned",
+    "newAssigned",
+    "totalAssigned",
+    "assignApplyBtn"
   ]
 
   static values = {
@@ -42,11 +53,15 @@ export default class extends Controller {
 
     if (selectedCount > 0) {
       this.bulkStatusBtnTarget.classList.remove('hidden')
+      this.bulkAssignBtnTarget.classList.remove('hidden')
       this.generateLabelsBtnTarget.classList.remove('hidden')
       this.bulkStatusBtnTarget.querySelector('span').textContent =
         `Cambiar Estado (${selectedCount} seleccionados)`
+      this.bulkAssignBtnTarget.querySelector('span').textContent =
+        `Asignar a Driver (${selectedCount})`
     } else {
       this.bulkStatusBtnTarget.classList.add('hidden')
+      this.bulkAssignBtnTarget.classList.add('hidden')
       this.generateLabelsBtnTarget.classList.add('hidden')
     }
   }
@@ -281,6 +296,282 @@ export default class extends Controller {
       select.value = ''
       select.disabled = false
       select.style.opacity = '1'
+    }
+  }
+
+  // ========================================
+  // BULK ASSIGN DRIVER METHODS
+  // ========================================
+
+  openAssignModal() {
+    const count = this.getSelectedCount()
+    if (count === 0) {
+      alert('Selecciona al menos un paquete')
+      return
+    }
+
+    this.selectedPackageIds = this.getSelectedIds()
+    this.assignCountTarget.textContent = count
+    this.newAssignedTarget.textContent = count
+
+    // Reset modal state
+    this.selectedDriverId = null
+    this.assignPreviewTarget.classList.add('hidden')
+    this.assignApplyBtnTarget.disabled = true
+    this.driverSearchTarget.value = ''
+    this.closeDriversDropdown()
+
+    this.assignModalTarget.classList.remove('hidden')
+    document.body.style.overflow = 'hidden'
+  }
+
+  closeAssignModal() {
+    this.assignModalTarget.classList.add('hidden')
+    document.body.style.overflow = ''
+    this.selectedDriverId = null
+    this.selectedPackageIds = []
+    this.driverSearchTarget.value = ''
+    this.closeDriversDropdown()
+    this.assignPreviewTarget.classList.add('hidden')
+    this.assignApplyBtnTarget.disabled = true
+  }
+
+  // Búsqueda de drivers con lazy loading (reutiliza el endpoint existente)
+  searchDrivers(event) {
+    const query = event.target.value.trim()
+
+    // Si el query es muy corto, cerrar dropdown
+    if (query.length < 2) {
+      this.closeDriversDropdown()
+      return
+    }
+
+    // Limpiar timeout anterior
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout)
+    }
+
+    // Debounce de 300ms
+    this.searchTimeout = setTimeout(() => {
+      this.performDriverSearch(query)
+    }, 300)
+  }
+
+  // Realizar búsqueda al backend (reutiliza /admin/drivers/search)
+  async performDriverSearch(query) {
+    try {
+      const url = `/admin/drivers/search?q=${encodeURIComponent(query)}`
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al buscar drivers')
+      }
+
+      const drivers = await response.json()
+      this.renderDriverResults(drivers)
+      this.showDriversDropdown()
+    } catch (error) {
+      console.error('Error en búsqueda de drivers:', error)
+      this.driversDropdownTarget.innerHTML = `
+        <div class="px-4 py-3 text-sm text-red-600 text-center">
+          Error al buscar conductores
+        </div>
+      `
+    }
+  }
+
+  // Renderizar resultados de drivers (máximo 8)
+  renderDriverResults(drivers) {
+    if (drivers.length === 0) {
+      this.driversDropdownTarget.innerHTML = `
+        <div class="px-4 py-3 text-sm text-gray-500 text-center italic">
+          No se encontraron conductores
+        </div>
+      `
+      return
+    }
+
+    // Limitar a 8 resultados máximo
+    const maxResults = 8
+    const displayDrivers = drivers.slice(0, maxResults)
+    const hasMore = drivers.length > maxResults
+
+    let html = displayDrivers.map(driver => `
+      <div class="driver-option px-4 py-3 hover:bg-green-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+           data-driver-id="${driver.id}"
+           data-driver-name="${driver.name}"
+           data-driver-assigned="${driver.assigned_count}"
+           data-action="click->bulk-packages#selectDriverFromDropdown">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium text-gray-900">${driver.name}</p>
+          <p class="text-xs text-gray-600">${driver.assigned_count} paquetes</p>
+        </div>
+      </div>
+    `).join('')
+
+    // Si hay más resultados, mostrar mensaje
+    if (hasMore) {
+      html += `
+        <div class="px-4 py-2 text-xs text-gray-500 text-center italic bg-gray-50">
+          +${drivers.length - maxResults} conductores más... Escribe para filtrar
+        </div>
+      `
+    }
+
+    this.driversDropdownTarget.innerHTML = html
+  }
+
+  showDriversDropdown() {
+    this.driversDropdownTarget.classList.remove('hidden')
+  }
+
+  closeDriversDropdown() {
+    this.driversDropdownTarget.classList.add('hidden')
+  }
+
+  clearSearch() {
+    // Al hacer focus, limpiar el campo
+    this.driverSearchTarget.value = ''
+    this.closeDriversDropdown()
+  }
+
+  // Seleccionar driver desde el dropdown (nueva lógica)
+  selectDriverFromDropdown(event) {
+    const option = event.currentTarget
+    this.selectedDriverId = option.dataset.driverId
+    const driverName = option.dataset.driverName
+    const currentAssigned = parseInt(option.dataset.driverAssigned)
+    const newToAssign = this.selectedPackageIds.length
+    const totalAssigned = currentAssigned + newToAssign
+
+    // Cerrar dropdown y mostrar nombre seleccionado en el input
+    this.closeDriversDropdown()
+    this.driverSearchTarget.value = driverName
+
+    // Update preview
+    this.selectedDriverNameTarget.textContent = driverName
+    this.currentAssignedTarget.textContent = currentAssigned
+    this.newAssignedTarget.textContent = newToAssign
+    this.totalAssignedTarget.textContent = totalAssigned
+
+    // Show preview and enable button
+    this.assignPreviewTarget.classList.remove('hidden')
+    this.assignApplyBtnTarget.disabled = false
+  }
+
+  selectDriver(event) {
+    const option = event.currentTarget
+    this.selectedDriverId = option.dataset.driverId
+    const driverName = option.dataset.driverName
+    const currentAssigned = parseInt(option.dataset.driverAssigned)
+    const newToAssign = this.selectedPackageIds.length
+    const totalAssigned = currentAssigned + newToAssign
+
+    // Update visual selection
+    this.driversListTarget.querySelectorAll('.driver-option').forEach(opt => {
+      opt.classList.remove('ring-2', 'ring-green-500', 'bg-green-50')
+    })
+    option.classList.add('ring-2', 'ring-green-500', 'bg-green-50')
+
+    // Update preview
+    this.selectedDriverNameTarget.textContent = driverName
+    this.currentAssignedTarget.textContent = currentAssigned
+    this.newAssignedTarget.textContent = newToAssign
+    this.totalAssignedTarget.textContent = totalAssigned
+
+    // Show preview and enable button
+    this.assignPreviewTarget.classList.remove('hidden')
+    this.assignApplyBtnTarget.disabled = false
+  }
+
+  async confirmAssignDriver() {
+    if (!this.selectedDriverId || this.selectedPackageIds.length === 0) {
+      alert('Debes seleccionar un conductor')
+      return
+    }
+
+    // Show loading
+    this.assignApplyBtnTarget.disabled = true
+    this.assignApplyBtnTarget.innerHTML = `
+      <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Asignando...
+    `
+
+    try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content
+      const response = await fetch('/admin/packages/bulk_assign_driver', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          package_ids: this.selectedPackageIds,
+          driver_id: this.selectedDriverId
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Build clear and simple message
+        let message = `📊 Asignación Masiva Completada\n\n`
+        message += `Conductor: ${data.driver.name}\n`
+        message += `Paquetes seleccionados: ${data.total}\n\n`
+
+        // Successes
+        if (data.successful > 0) {
+          message += `✅ Asignados correctamente: ${data.successful} paquetes\n`
+        }
+
+        // Skipped - mensaje simple y claro
+        if (data.skipped > 0) {
+          message += `\n❌ NO se pudieron asignar ${data.skipped} paquetes por estado diferente a Bodega\n`
+
+          // Show which statuses were found
+          const wrongStatus = data.skipped_items.filter(item => item.reason === 'wrong_status')
+          const alreadyAssigned = data.skipped_items.filter(item => item.reason === 'already_assigned')
+
+          if (wrongStatus.length > 0) {
+            message += `   → ${wrongStatus.length} no están en Bodega\n`
+          }
+
+          if (alreadyAssigned.length > 0) {
+            message += `   → ${alreadyAssigned.length} ya tienen driver asignado\n`
+          }
+        }
+
+        // Errors
+        if (data.failed > 0) {
+          message += `\n⚠️ Errores inesperados: ${data.failed}\n`
+        }
+
+        message += `\n📦 Total del conductor: ${data.driver.total_assigned} paquetes`
+
+        // Show alert
+        alert(message)
+
+        // Reload to show updated data
+        window.location.reload()
+      } else {
+        throw new Error(data.error || 'Error al asignar paquetes')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert(`❌ Error: ${error.message}`)
+
+      // Restore button
+      this.assignApplyBtnTarget.disabled = false
+      this.assignApplyBtnTarget.innerHTML = 'Confirmar Asignación'
     }
   }
 }

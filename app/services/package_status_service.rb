@@ -45,34 +45,52 @@ class PackageStatusService
   end
 
   # Asigna un courier al paquete
-  def assign_courier(courier_id)
+  def assign_courier(courier_id, force_reassign: false)
     # CASO 1: Desasignación (courier_id vacío o nil)
     if courier_id.blank?
-      result = package.update(
-        assigned_courier_id: nil,
-        assigned_at: nil,
-        assigned_by_id: @user.id
-      )
+      # Si el paquete está en in_transit, usar transacción para asegurar atomicidad
+      # (cambiar estado PRIMERO, luego desasignar driver)
+      if package.status == 'in_transit'
+        result = false
 
-      # LÓGICA SIMÉTRICA: Si está en in_transit, regresar a in_warehouse
-      # (Asignación → in_transit, Desasignación → in_warehouse)
-      if result && package.status == 'in_transit'
-        begin
-          package.transition_to!(
+        ActiveRecord::Base.transaction do
+          # 1. Cambiar a in_warehouse PRIMERO
+          unless package.transition_to!(
             :in_warehouse,
             user: @user,
             reason: "Desasignación automática por admin",
             override: true
           )
-          Rails.logger.info "Paquete #{package.tracking_code} regresado a in_warehouse tras desasignación"
-        rescue StandardError => e
-          Rails.logger.warn "No se pudo regresar a in_warehouse: #{e.message}"
-          # No fallar la desasignación por esto
-        end
-      end
+            @errors << "No se pudo cambiar el paquete a Bodega"
+            raise ActiveRecord::Rollback
+          end
 
-      Rails.logger.info "Paquete #{package.tracking_code} desasignado por #{@user.email}"
-      return result
+          # 2. Solo SI el cambio de estado fue exitoso, desasignar el driver
+          unless package.update(
+            assigned_courier_id: nil,
+            assigned_at: nil,
+            assigned_by_id: @user.id
+          )
+            @errors << "No se pudo desasignar el conductor"
+            raise ActiveRecord::Rollback
+          end
+
+          Rails.logger.info "Paquete #{package.tracking_code} desasignado y regresado a in_warehouse por #{@user.email}"
+          result = true
+        end
+
+        return result
+      else
+        # Si NO está en in_transit, solo desasignar (sin cambio de estado)
+        result = package.update(
+          assigned_courier_id: nil,
+          assigned_at: nil,
+          assigned_by_id: @user.id
+        )
+
+        Rails.logger.info "Paquete #{package.tracking_code} desasignado por #{@user.email}"
+        return result
+      end
     end
 
     # CASO 2: Asignación a un conductor
@@ -95,6 +113,31 @@ class PackageStatusService
       return false
     end
 
+    # ========================================
+    # VALIDACIONES CRÍTICAS DE SEGURIDAD
+    # ========================================
+
+    # VALIDACIÓN 1: SOLO se pueden asignar paquetes en BODEGA
+    unless package.status == 'in_warehouse'
+      @errors << "Solo se pueden asignar paquetes en estado 'Bodega'. Estado actual: #{package.status_i18n}"
+      return false
+    end
+
+    # VALIDACIÓN 2: Prevenir reasignación de paquetes ya asignados
+    if package.assigned_courier_id.present? && package.assigned_courier_id != courier_id.to_i
+      # El paquete ya está asignado a OTRO driver
+      previous_driver = User.find_by(id: package.assigned_courier_id)
+      previous_driver_name = previous_driver&.name || previous_driver&.email || "Driver ID #{package.assigned_courier_id}"
+
+      # Solo admin puede forzar reasignación
+      if force_reassign && @user.admin?
+        Rails.logger.warn "[REASIGNACIÓN FORZADA] Admin #{@user.email} reasigna #{package.tracking_code} de #{previous_driver_name} a #{courier.name || courier.email}"
+      else
+        @errors << "El paquete ya está asignado a #{previous_driver_name}. No se puede reasignar sin autorización admin."
+        return false
+      end
+    end
+
     # CRÍTICO: Validar que el driver NO tenga una ruta activa de otro día
     if courier.on_route?
       # Buscar CUALQUIER ruta activa de otro día (no solo la primera)
@@ -109,37 +152,43 @@ class PackageStatusService
       end
     end
 
-    # Actualizar con campos de auditoría
-    result = package.update(
-      assigned_courier_id: courier_id,
-      assigned_at: Time.current,
-      assigned_by_id: @user.id
-    )
+    # CRÍTICO: Usar transacción para asegurar atomicidad
+    # Si falla el cambio de estado, la asignación se revierte automáticamente
+    result = false
 
-    # LÓGICA CRÍTICA: Cambiar automáticamente a in_transit tras asignación
-    # Esto evita que el driver quede bloqueado con paquetes en pending_pickup/in_warehouse
-    # Aplica tanto para admins como para drivers que se auto-asignan mediante escaneo
-    if result && package.status != 'in_transit'
-      begin
-        assign_reason = if @user.admin?
-                         "Asignación automática por admin"
-                       elsif @user.driver?
-                         "Asignación por escaneo del driver"
-                       else
-                         "Asignación automática"
-                       end
+    ActiveRecord::Base.transaction do
+      # 1. Cambiar a in_transit PRIMERO
+      assign_reason = if @user.admin?
+                        "Asignación automática por admin"
+                      elsif @user.driver?
+                        "Asignación por escaneo del driver"
+                      else
+                        "Asignación automática"
+                      end
 
-        package.transition_to!(
-          :in_transit,
-          user: @user,
-          reason: assign_reason,
-          override: true
-        )
-        Rails.logger.info "Paquete #{package.tracking_code} cambiado automáticamente a in_transit tras asignación por #{@user.role}"
-      rescue StandardError => e
-        Rails.logger.warn "No se pudo cambiar automáticamente a in_transit: #{e.message}"
-        # No fallar la asignación por esto
+      # Intentar cambiar a in_transit
+      unless package.transition_to!(
+        :in_transit,
+        user: @user,
+        reason: assign_reason,
+        override: true
+      )
+        @errors << "No se pudo cambiar el paquete a estado En Camino"
+        raise ActiveRecord::Rollback
       end
+
+      # 2. Solo SI el cambio de estado fue exitoso, asignar el driver
+      unless package.update(
+        assigned_courier_id: courier_id,
+        assigned_at: Time.current,
+        assigned_by_id: @user.id
+      )
+        @errors << "No se pudo asignar el conductor"
+        raise ActiveRecord::Rollback
+      end
+
+      Rails.logger.info "Paquete #{package.tracking_code} asignado a #{courier.name || courier.email} y cambiado a in_transit por #{@user.email}"
+      result = true
     end
 
     result

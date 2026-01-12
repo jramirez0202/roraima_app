@@ -23,6 +23,7 @@ Rails.application.routes.draw do
       end
       collection do
         post :bulk_start_routes
+        get :search  # Para autocomplete de drivers
       end
     end
 
@@ -36,6 +37,7 @@ Rails.application.routes.draw do
       collection do
         post :generate_labels
         post :bulk_status_change
+        post :bulk_assign_driver
       end
       member do
         patch :change_status

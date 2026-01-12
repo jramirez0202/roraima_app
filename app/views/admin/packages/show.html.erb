@@ -398,19 +398,6 @@
                 </p>
               </div>
 
-              <!-- Ubicación -->
-              <div class="mb-4">
-                <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Ubicación Actual</label>
-                <input type="text" name="location" id="location"
-                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                       placeholder="Ej: Bodega Central, En camino a Las Condes...">
-                <div id="location-suggestions" class="mt-2 text-xs text-gray-500 hidden">
-                  <span class="font-medium">Sugerencias rápidas:</span>
-                  <button type="button" onclick="document.getElementById('location').value='Bodega Central'" class="ml-2 text-indigo-600 hover:text-indigo-800">Bodega Central</button> |
-                  <button type="button" onclick="document.getElementById('location').value='Bodega de Distribución'" class="ml-1 text-indigo-600 hover:text-indigo-800">Bodega de Distribución</button>
-                </div>
-              </div>
-
               <!-- Campos específicos para ciertos estados -->
               <div id="en-camino-fields" class="hidden mb-4">
                 <label for="courier_id" class="block text-sm font-medium text-gray-700 mb-2">
@@ -458,11 +445,6 @@
               </div>
 
               <div id="reprogramado-fields" class="hidden space-y-4 mb-4">
-                <div>
-                  <label for="reprogram_date" class="block text-sm font-medium text-gray-700 mb-2">Nueva Fecha de Entrega</label>
-                  <input type="datetime-local" name="reprogram_date" id="reprogram_date"
-                         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                </div>
                 <div>
                   <label for="motive" class="block text-sm font-medium text-gray-700 mb-2">
                     Motivo de Reprogramación (Requerido)

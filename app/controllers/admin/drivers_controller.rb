@@ -135,6 +135,41 @@ module Admin
       end
     end
 
+    # Búsqueda de drivers para autocomplete (usado en asignación de paquetes)
+    # GET /admin/drivers/search?q=carlos
+    def search
+      authorize Driver, :index?
+
+      query = params[:q].to_s.strip
+
+      # Si el query está vacío, devolver los primeros 20 drivers activos
+      if query.blank?
+        drivers = Driver.active.limit(20).order(:name)
+      else
+        # Buscar por nombre o email (case insensitive)
+        drivers = Driver.active
+                        .where("name ILIKE ? OR email ILIKE ?", "%#{query}%", "%#{query}%")
+                        .limit(20)
+                        .order(:name)
+      end
+
+      # Incluir assigned_packages para evitar N+1
+      drivers = drivers.includes(:assigned_packages)
+
+      # Formatear respuesta JSON
+      results = drivers.map do |driver|
+        {
+          id: driver.id,
+          name: driver.name.presence || driver.email,
+          email: driver.email,
+          assigned_count: driver.assigned_packages.count,
+          zone: driver.assigned_zone&.name
+        }
+      end
+
+      render json: results
+    end
+
     private
 
     def set_driver

@@ -11,9 +11,6 @@ class Admin::PackagesController < Admin::BaseController
 
     packages = policy_scope(Package).includes(:region, :commune, assigned_courier: :assigned_zone,user: { company_logo_attachment: :blob })
 
-    # Cargar drivers activos para el dropdown de asignación individual
-    @drivers = Driver.active.includes(:assigned_zone).order(:email)
-
     # === APLICAR FILTRO DE FECHA PRIMERO (para counts correctos en tabs) ===
     # IMPORTANTE: Si busca por tracking, NO aplicar filtro de fecha por defecto
     searching_by_tracking = filter_params[:tracking_query].present?
@@ -355,6 +352,107 @@ end
         format.json { render json: { errors: service.errors }, status: :unprocessable_entity }
       end
     end
+  end
+
+  # Asigna múltiples paquetes a un conductor (bulk assign)
+  def bulk_assign_driver
+    authorize Package, :bulk_assign_driver?
+
+    package_ids = params[:package_ids] || []
+    driver_id = params[:driver_id]
+
+    # Validaciones básicas
+    if package_ids.empty?
+      render json: { success: false, error: 'No se seleccionaron paquetes' }, status: :unprocessable_entity
+      return
+    end
+
+    if driver_id.blank?
+      render json: { success: false, error: 'Debe seleccionar un conductor' }, status: :unprocessable_entity
+      return
+    end
+
+    # Validar que el driver existe y es activo
+    driver = Driver.find_by(id: driver_id)
+    unless driver&.active?
+      render json: { success: false, error: 'Conductor no válido o inactivo' }, status: :unprocessable_entity
+      return
+    end
+
+    # Cargar paquetes con includes para evitar N+1
+    packages = Package.includes(:assigned_courier).where(id: package_ids)
+    successes = []
+    errors = []
+    skipped = []
+
+    packages.each do |package|
+      # Verificar permisos individuales
+      unless policy(package).assign_courier?
+        errors << {
+          tracking_code: package.tracking_code,
+          error: 'Sin permisos para asignar este paquete',
+          status: package.status_i18n
+        }
+        next
+      end
+
+      # CRÍTICO: Validación previa de estado - SOLO paquetes en BODEGA
+      unless package.status == 'in_warehouse'
+        skipped << {
+          tracking_code: package.tracking_code,
+          error: "No está en Bodega (Estado: #{package.status_i18n})",
+          status: package.status_i18n,
+          reason: 'wrong_status'
+        }
+        next
+      end
+
+      # CRÍTICO: Validación previa de driver ya asignado
+      if package.assigned_courier_id.present? && package.assigned_courier_id != driver_id.to_i
+        previous_driver = package.assigned_courier
+        skipped << {
+          tracking_code: package.tracking_code,
+          error: "Ya asignado a #{previous_driver&.name || previous_driver&.email}",
+          status: package.status_i18n,
+          assigned_to: previous_driver&.name || previous_driver&.email,
+          reason: 'already_assigned'
+        }
+        next
+      end
+
+      # Asignar usando el servicio (NO usar force_reassign en bulk)
+      service = PackageStatusService.new(package, current_user)
+      if service.assign_courier(driver_id, force_reassign: false)
+        successes << {
+          tracking_code: package.tracking_code,
+          status: package.reload.status_i18n
+        }
+        Rails.logger.info "[BULK_ASSIGN] #{current_user.email} asignó #{package.tracking_code} a #{driver.name || driver.email}"
+      else
+        errors << {
+          tracking_code: package.tracking_code,
+          error: service.errors.join(', '),
+          status: package.status_i18n
+        }
+      end
+    end
+
+    # Retornar resultado con estadísticas detalladas
+    render json: {
+      success: errors.empty?,  # Solo true si NO hubo errores críticos
+      driver: {
+        id: driver.id,
+        name: driver.name || driver.email,
+        total_assigned: driver.assigned_packages.count
+      },
+      total: packages.count,
+      successful: successes.count,
+      skipped: skipped.count,
+      failed: errors.count,
+      successes: successes,
+      skipped_items: skipped,
+      errors: errors
+    }
   end
 
   # Muestra el historial completo de cambios de estado

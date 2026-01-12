@@ -22,6 +22,9 @@ application.register("cancelled-photos", CancelledPhotosController)
 import DeliveryPhotosController from "./delivery_photos_controller"
 application.register("delivery-photos", DeliveryPhotosController)
 
+import DriverAutocompleteController from "./driver_autocomplete_controller"
+application.register("driver-autocomplete", DriverAutocompleteController)
+
 import FiltersPanelController from "./filters_panel_controller"
 application.register("filters-panel", FiltersPanelController)
 

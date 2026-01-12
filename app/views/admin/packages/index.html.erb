@@ -29,8 +29,11 @@
   <%= render 'global_summary' %>
 
   <%# Packages table %>
-  <%= render 'table', packages: @packages, drivers: @drivers, pagy: @pagy %>
+  <%= render 'table', packages: @packages, pagy: @pagy %>
 
   <%# Bulk status change modal %>
   <%= render 'bulk_status_modal' %>
+
+  <%# Bulk assign driver modal %>
+  <%= render 'bulk_assign_driver_modal' %>
 </div>
