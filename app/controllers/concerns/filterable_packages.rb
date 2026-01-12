@@ -47,10 +47,10 @@ module FilterablePackages
         date_from, date_to = date_to, date_from
       end
 
-      scope = scope.loading_date_between(date_from, date_to)
+      scope = scope.assigned_date_between(date_from, date_to)
     elsif !searching_by_tracking
       # Solo aplicar filtro por defecto si NO está buscando por tracking
-      scope = scope.loading_date_between(Date.current - 2.days, Date.current)
+      scope = scope.assigned_date_between(Date.current - 2.days, Date.current)
     end
     # Si está buscando por tracking y no hay fechas explícitas, NO filtrar por fecha
 

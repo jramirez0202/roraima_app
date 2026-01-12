@@ -21,30 +21,39 @@ class PackageStatusService
     # Ejecutar transición
     begin
       package.transaction do
-        # REGLA DE NEGOCIO: Si el nuevo estado es in_warehouse, desasignar conductor automáticamente
-        if new_status_sym == :in_warehouse && package.assigned_courier_id.present?
+        # CRÍTICO: Capturar assigned_courier_id ANTES de limpiar para auditoría
+        courier_at_transition = package.assigned_courier_id
+
+        # REGLA DE NEGOCIO: Solo paquetes in_transit y rescheduled pueden tener conductor asignado
+        # - in_transit: El driver tiene el paquete físicamente
+        # - rescheduled: El driver falló la entrega pero sigue siendo responsable
+        # Estados que desasignan: delivered, cancelled, return, in_warehouse, pending_pickup
+        states_with_courier = [:in_transit, :rescheduled]
+
+        if !states_with_courier.include?(new_status_sym) && package.assigned_courier_id.present?
           package.update_columns(
             assigned_courier_id: nil,
             assigned_at: nil,
             assigned_by_id: user.id
           )
-          Rails.logger.info "Paquete #{package.tracking_code} desasignado automáticamente al cambiar a Bodega"
+          Rails.logger.info "Paquete #{package.tracking_code} desasignado automáticamente al cambiar a #{new_status_sym}"
         end
 
         # Aplicar parámetros adicionales si es necesario
         apply_additional_params(new_status_sym, additional_params)
 
-        # Ejecutar transición
+        # Ejecutar transición (pasar el conductor capturado para auditoría)
         package.transition_to!(
           new_status_sym,
           user: user,
           reason: reason,
           location: location,
-          override: override
+          override: override,
+          assigned_courier_at_time: courier_at_transition
         )
 
-        # Acciones post-transición
-        after_transition_actions(new_status_sym)
+        # Acciones post-transición (pasar el conductor capturado)
+        after_transition_actions(new_status_sym, courier_at_transition)
       end
 
       true
@@ -71,6 +80,9 @@ class PackageStatusService
         result = false
 
         ActiveRecord::Base.transaction do
+          # CRÍTICO: Capturar assigned_courier_id ANTES de limpiar para auditoría
+          courier_at_transition = package.assigned_courier_id
+
           # 1. PRIMERO desasignar el driver (para evitar violación de validación)
           unless package.update_columns(
             assigned_courier_id: nil,
@@ -82,11 +94,13 @@ class PackageStatusService
           end
 
           # 2. LUEGO cambiar a in_warehouse (ahora sin conductor, no hay conflicto)
+          # Pasar el conductor capturado para auditoría
           unless package.transition_to!(
             :in_warehouse,
             user: @user,
             reason: "Desasignación automática por admin",
-            override: true
+            override: true,
+            assigned_courier_at_time: courier_at_transition
           )
             @errors << "No se pudo cambiar el paquete a Bodega"
             raise ActiveRecord::Rollback
@@ -341,10 +355,10 @@ class PackageStatusService
         return false
       end
 
-      # Validar que exista el nombre del receptor
-      # NOTA: Esta validación se hace aquí porque validate_requirements solo se ejecuta
-      # cuando NO hay override (ver línea 19: return false unless override || validate_requirements)
-      unless package.receiver_name.present?
+      # Validar que exista el nombre del receptor en los PARÁMETROS
+      # CRÍTICO: Validar params[:receiver_name] NO package.receiver_name
+      # porque apply_additional_params aún no se ha ejecutado
+      unless params[:receiver_name].present?
         @errors << "Se requiere el nombre del receptor para marcar como entregado"
         return false
       end
@@ -385,7 +399,7 @@ class PackageStatusService
   end
 
   # Actions executed after a successful transition
-  def after_transition_actions(new_status)
+  def after_transition_actions(new_status, courier_id_at_transition = nil)
     # PERFORMANCE: Limpiar fotos huérfanas ANTES de las acciones específicas
     # Esto previene que fotos de estados anteriores queden adjuntas
     cleanup_orphan_photos(new_status)
@@ -397,8 +411,12 @@ class PackageStatusService
       Rails.logger.info "Paquete #{package.tracking_code} marcado como #{new_status}"
 
       # Auto-complete route if all packages delivered
-      if package.assigned_courier.driver? && package.assigned_courier.on_route?
-        RouteManagementService.new(package.assigned_courier).auto_complete_if_finished
+      # IMPORTANTE: Usar el courier_id capturado ANTES de desasignar
+      if courier_id_at_transition.present?
+        courier = User.find_by(id: courier_id_at_transition)
+        if courier&.driver? && courier.on_route?
+          RouteManagementService.new(courier).auto_complete_if_finished
+        end
       end
 
     when :cancelled

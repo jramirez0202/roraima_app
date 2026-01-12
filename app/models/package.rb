@@ -185,6 +185,22 @@ class Package < ApplicationRecord
     result
   }
 
+  # Rango de fechas de asignación (desde/hasta)
+  # NOTA: Incluye paquetes con assigned_at NULL (nunca asignados) para que siempre sean visibles
+  scope :assigned_date_between, ->(start_date, end_date) {
+    result = all
+    if start_date.present? && end_date.present?
+      result = result.where('(assigned_at >= ? AND assigned_at <= ?) OR assigned_at IS NULL',
+                           start_date.beginning_of_day,
+                           end_date.end_of_day)
+    elsif start_date.present?
+      result = result.where('assigned_at >= ? OR assigned_at IS NULL', start_date.beginning_of_day)
+    elsif end_date.present?
+      result = result.where('assigned_at <= ? OR assigned_at IS NULL', end_date.end_of_day)
+    end
+    result
+  }
+
   # ======================
   # Métodos de tracking
   # ======================
@@ -214,8 +230,11 @@ class Package < ApplicationRecord
   # Marca como entregado pendiente de fotos (sin evidencia aún)
   def mark_delivered_pending_photos!(user:, location: nil)
     transaction do
+      # Capturar conductor asignado para auditoría
+      courier_at_delivery = self.assigned_courier_id
+
       self.pending_photos = true
-      transition_to!(:delivered, user: user, location: location, override: false)
+      transition_to!(:delivered, user: user, location: location, override: false, assigned_courier_at_time: courier_at_delivery)
     end
   end
 
@@ -242,7 +261,7 @@ class Package < ApplicationRecord
   end
 
   # Ejecuta una transición de estado con validación y registro
-  def transition_to!(new_status, user:, reason: nil, location: nil, override: false)
+  def transition_to!(new_status, user:, reason: nil, location: nil, override: false, assigned_courier_at_time: nil)
     new_status_sym = new_status.to_sym
 
     # Validar transición
@@ -255,13 +274,14 @@ class Package < ApplicationRecord
     # Guardar estado anterior
     self.previous_status = Package.statuses[status]
 
-    # Registrar en historial
+    # Registrar en historial (incluir conductor asignado si se proporciona)
     add_to_history(
       status: new_status_sym,
       user_id: user.id,
       reason: reason,
       location: location,
-      override: override
+      override: override,
+      assigned_courier_at_time: assigned_courier_at_time
     )
 
     # Actualizar timestamps según el nuevo estado
@@ -277,7 +297,7 @@ class Package < ApplicationRecord
   end
 
   # Agrega un registro al historial de estados
-  def add_to_history(status:, user_id:, reason: nil, location: nil, override: false)
+  def add_to_history(status:, user_id:, reason: nil, location: nil, override: false, assigned_courier_at_time: nil)
     history_entry = {
       status: status.to_s,
       previous_status: self.status,
@@ -287,6 +307,12 @@ class Package < ApplicationRecord
       location: location,
       override: override
     }
+
+    # Guardar información del conductor asignado en el momento de la transición
+    # Esto permite auditar qué driver tenía el paquete cuando cambió de estado
+    if assigned_courier_at_time.present?
+      history_entry[:assigned_courier_id] = assigned_courier_at_time
+    end
 
     self.status_history ||= []
     self.status_history << history_entry
@@ -308,7 +334,9 @@ class Package < ApplicationRecord
 
   # Method to cancel package (wrapper for transition_to!)
   def cancel!(user:, reason: nil)
-    transition_to!(:cancelled, user: user, reason: reason)
+    # Capturar conductor asignado para auditoría
+    courier_at_cancellation = self.assigned_courier_id
+    transition_to!(:cancelled, user: user, reason: reason, assigned_courier_at_time: courier_at_cancellation)
   end
 
   # Helper to check if it can be cancelled
@@ -426,12 +454,14 @@ class Package < ApplicationRecord
     end
   end
 
-  # Validación: solo paquetes in_transit pueden tener conductor asignado
+  # Validación: solo paquetes in_transit o rescheduled pueden tener conductor asignado
   # Previene inconsistencias de datos (ej: paquete en "Bodega" con driver asignado)
   def assigned_courier_must_match_status
-    # Si tiene conductor asignado, DEBE estar en in_transit
-    if assigned_courier_id.present? && !in_transit?
-      errors.add(:assigned_courier_id, "solo puede estar presente cuando el paquete está En Camino (actual: #{status_i18n})")
+    # Si tiene conductor asignado, DEBE estar en in_transit o rescheduled
+    # - in_transit: El driver tiene el paquete físicamente
+    # - rescheduled: El driver falló la entrega pero sigue siendo responsable
+    if assigned_courier_id.present? && !in_transit? && !rescheduled?
+      errors.add(:assigned_courier_id, "solo puede estar presente cuando el paquete está En Camino o Reprogramado (actual: #{status_i18n})")
     end
   end
 

@@ -50,13 +50,29 @@
           <%= f.hidden_field :payment_method, value: @package.payment_method, id: "form_payment_method" %>
         <% end %>
 
-        <!-- Selector de Estado y Campo de Motivo -->
+        <!-- Selector de Estado -->
         <%= render 'status_form_fields', form: f, package: @package %>
 
-        <!-- Grid responsive: Receptor + Monto/Pago -->
+        <!-- Grid responsive: Motivo/Receptor + Método de Pago -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          <!-- Columna 1: Datos del Receptor -->
+          <!-- Columna 1: Motivo (para reprogramado/return/cancelled) o Receptor (para delivered) -->
           <div>
+            <!-- Campo de Motivo (condicional para reprogramado, return, cancelled) -->
+            <div id="reason-field" style="display: none">
+              <%= f.label :reason, class: "block text-sm font-medium text-gray-700 mb-1" do %>
+                Motivo <span class="text-red-500">*</span>
+              <% end %>
+              <%= f.text_area :reason, rows: 3, maxlength: 30,
+                                 class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+                                 placeholder: "Ej: Cliente no disponible...",
+                                 required: true,
+                                 oninput: "updateDriverReasonCounter()" %>
+              <p class="mt-1 text-xs text-gray-500">
+                <span id="driver-reason-counter">0</span>/30 caracteres
+              </p>
+            </div>
+
+            <!-- Datos del Receptor (condicional para delivered) -->
             <%= render 'receiver_form_fields', form: f, package: @package %>
           </div>
 

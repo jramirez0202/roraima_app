@@ -97,6 +97,8 @@ class Driver < User
   end
 
   # Reprogramados persistentes (históricos) - NO filtra por fecha de asignación
+  # NOTA: Los paquetes rescheduled SÍ mantienen assigned_courier_id
+  # porque el driver sigue siendo responsable de ellos
   def persistent_rescheduled
     visible_packages.where(status: :rescheduled)
   end
@@ -130,16 +132,21 @@ class Driver < User
   end
 
   def delivered_count(date = Date.current)
-    # Si está en ruta, cuenta solo los entregados DESPUÉS de iniciar la ruta
+    # IMPORTANTE: Ahora los paquetes delivered se desasignan automáticamente
+    # Debemos buscar en status_history con JSONB query
     if on_route? && route_started_at.present?
-      visible_packages
-        .where('delivered_at >= ?', route_started_at)
+      # Paquetes entregados DESPUÉS de iniciar la ruta
+      Package
         .where(status: :delivered)
+        .where('delivered_at >= ?', route_started_at)
+        .where("status_history @> ?", [{ assigned_courier_id: id, status: 'delivered' }].to_json)
         .count
     else
-      visible_packages
-        .where(assigned_at: date.all_day)
+      # Paquetes entregados en la fecha especificada que fueron asignados a este driver
+      Package
         .where(status: :delivered)
+        .where(delivered_at: date.all_day)
+        .where("status_history @> ?", [{ assigned_courier_id: id, status: 'delivered' }].to_json)
         .count
     end
   end
@@ -147,6 +154,8 @@ class Driver < User
   def rescheduled_count(date = Date.current)
     # DEPRECATED: Usa persistent_rescheduled_count en su lugar
     # Mantenido por compatibilidad
+    # NOTA: Los paquetes rescheduled SÍ mantienen assigned_courier_id
+    # porque el driver sigue siendo responsable de ellos
     visible_packages
       .where(assigned_at: date.all_day)
       .where(status: :rescheduled)
@@ -154,16 +163,21 @@ class Driver < User
   end
 
   def cancelled_count(date = Date.current)
-    # Si está en ruta, cuenta solo los cancelados DESPUÉS de iniciar la ruta
+    # IMPORTANTE: Ahora los paquetes cancelled se desasignan automáticamente
+    # Debemos buscar en status_history con JSONB query
     if on_route? && route_started_at.present?
-      visible_packages
-        .where('cancelled_at >= ?', route_started_at)
+      # Paquetes cancelados DESPUÉS de iniciar la ruta
+      Package
         .where(status: :cancelled)
+        .where('cancelled_at >= ?', route_started_at)
+        .where("status_history @> ?", [{ assigned_courier_id: id, status: 'cancelled' }].to_json)
         .count
     else
-      visible_packages
-        .where(assigned_at: date.all_day)
+      # Paquetes cancelados en la fecha especificada que fueron asignados a este driver
+      Package
         .where(status: :cancelled)
+        .where(cancelled_at: date.all_day)
+        .where("status_history @> ?", [{ assigned_courier_id: id, status: 'cancelled' }].to_json)
         .count
     end
   end

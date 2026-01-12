@@ -29,6 +29,10 @@
           </div>
           <p class="mt-2 text-sm text-gray-600">
             Cliente: <span class="font-medium"><%= display_customer_name(@package) %></span>
+            <% if (driver = driver_for_current_status(@package)) %>
+              <span class="mx-2">•</span>
+              Driver: <span class="font-medium"><%= driver.name || driver.email %></span>
+            <% end %>
           </p>
         </div>
         <div class="flex gap-2 flex-shrink-0">

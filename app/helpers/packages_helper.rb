@@ -320,6 +320,27 @@ TAB_BADGE_ACTIVE_CLASSES = {
     (package.reprogramed_to || package.reprogram_motive || package.reschedule_photos.attached?) && package.rescheduled?
   end
 
+  # Obtiene el driver que manejó el paquete cuando cambió a su estado actual
+  # Busca en el status_history para estados que desasignan automáticamente
+  # @param package [Package] El paquete
+  # @return [User, nil] El driver que manejó el paquete, o nil si no hay
+  def driver_for_current_status(package)
+    return package.assigned_courier if package.assigned_courier.present?
+
+    # Para estados que desasignan automáticamente (delivered, cancelled, return)
+    # buscar en el status_history
+    return nil if package.status_history.blank?
+
+    # Buscar la última entrada en el historial que coincida con el estado actual
+    history_entry = package.status_history.reverse.find do |entry|
+      entry['status'] == package.status && entry['assigned_courier_id'].present?
+    end
+
+    return nil unless history_entry
+
+    User.find_by(id: history_entry['assigned_courier_id'])
+  end
+
   private
 
   # Normaliza el estado a symbol

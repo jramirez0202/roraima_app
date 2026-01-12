@@ -27,12 +27,12 @@ class Admin::PackagesController < Admin::BaseController
       # Si solo especifica "Hasta" sin "Desde", usar HOY como fecha inicial
       date_from ||= Date.current if date_to.present?
 
-      packages_with_date = packages.loading_date_between(date_from, date_to)
+      packages_with_date = packages.assigned_date_between(date_from, date_to)
     elsif !searching_by_tracking
       # Por defecto: solo el día actual (solo si NO busca por tracking)
       date_from = Date.current
       date_to = Date.current
-      packages_with_date = packages.loading_date_between(date_from, date_to)
+      packages_with_date = packages.assigned_date_between(date_from, date_to)
     else
       # Si busca por tracking sin fechas explícitas, NO filtrar por fecha
       packages_with_date = packages
@@ -68,10 +68,10 @@ class Admin::PackagesController < Admin::BaseController
     @filtered_count = packages.count
 
     # Ordenar según si hay filtro de fecha
-    # Si hay filtro de fecha, ordenar por loading_date DESC (más recientes primero)
+    # Si hay filtro de fecha, ordenar por assigned_at DESC (más recientes primero)
     # Si no hay filtro, ordenar por created_at DESC (más recientes primero)
     if filter_params[:date_from].present? || filter_params[:date_to].present?
-      @pagy, @packages = pagy(packages.order(loading_date: :desc, created_at: :desc), items: 20)
+      @pagy, @packages = pagy(packages.order(assigned_at: :desc, created_at: :desc), items: 20)
     else
       @pagy, @packages = pagy(packages.order(created_at: :desc), items: 20)
     end

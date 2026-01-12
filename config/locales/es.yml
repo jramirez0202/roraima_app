@@ -106,3 +106,11 @@ es:
       timeout: "Tu sesión ha expirado. Inicia sesión nuevamente para continuar."
       unauthenticated: "Debes iniciar sesión o registrarte para continuar."
       unconfirmed: "Debes confirmar tu cuenta para continuar."
+
+  activerecord:
+    errors:
+      messages:
+        record_invalid: "La validación falló: %{errors}"
+        restrict_dependent_destroy:
+          has_one: "No se puede eliminar el registro porque existe un %{record} dependiente"
+          has_many: "No se puede eliminar el registro porque existen %{record} dependientes"
