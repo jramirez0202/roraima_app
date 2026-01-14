@@ -45,7 +45,7 @@ class Package < ApplicationRecord
   # Provider detection patterns
   PROVIDER_PATTERNS = {
     'PKG' => /\APKG-\d{14}\z/,    # PKG- + 14 digits (Rutiservice)
-    'MLB' => /\A4622\d{7}\z/,     # 4622 + 7 digits (Mercado Libre)
+    'MLB' => /\A\d{11}\z/,     # 11 digits (Mercado Libre)
     'FLB' => /\A\d{10}\z/         # 10 digits (Falabella)
   }.freeze
 

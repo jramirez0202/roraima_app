@@ -699,7 +699,7 @@ export default class extends Controller {
     // Provider patterns (same as Ruby)
     const patterns = {
       'PKG': /^PKG-\d{14}$/,     // PKG- + 14 digits (Rutiservice)
-      'MLB': /^4622\d{7}$/,      // 4622 + 7 digits (Mercado Libre)
+      'MLB': /^\d{11}$/,      // 11 digits (Mercado Libre)
       'FLB': /^\d{10}$/          // 10 digits (Falabella)
     }
 
