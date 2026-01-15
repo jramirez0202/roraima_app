@@ -104,6 +104,7 @@ Rails.application.configure do
   config.hosts << devise_host.split(':').first  # Solo el dominio, sin puerto
   config.hosts << 'staging.rutiservice.com'
   config.hosts << 'localhost'
+  config.hosts << 'roraima-staging.onrender.com'
 
   # CRITICAL: Disable importmap cache sweeping in production-like environments
   config.importmap.sweep_cache = false
