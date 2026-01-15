@@ -168,6 +168,8 @@ ENV RAILS_ENV="staging" \
 
 # 3. COPIAR gemas desde builder
 COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
+# Verificar que sidekiq esté presente
+RUN ls -la /rails/vendor/bundle/bin/ | grep sidekiq || (echo "Sidekiq not found!" && exit 1)
 
 # 4. COPIAR código desde builder
 COPY --from=builder /rails /rails
