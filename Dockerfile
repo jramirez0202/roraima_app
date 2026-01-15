@@ -164,10 +164,15 @@ ENV RAILS_ENV="staging" \
     BUNDLE_DEPLOYMENT="0" \
     BUNDLE_WITHOUT="" \
     RAILS_SERVE_STATIC_FILES="true" \
-    RAILS_LOG_TO_STDOUT="true"
+    RAILS_LOG_TO_STDOUT="true" \
+    PATH="/rails/vendor/bundle/bin:${PATH}"
 
 # 3. COPIAR gemas desde builder
 COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
+
+# Reinstalar gemas para asegurar ejecutables
+RUN bundle install --local --no-prune || bundle install
+
 # Verificar que sidekiq esté presente
 RUN ls -la /rails/vendor/bundle/bin/ | grep sidekiq || (echo "Sidekiq not found!" && exit 1)
 
