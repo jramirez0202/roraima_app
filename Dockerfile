@@ -174,6 +174,8 @@ RUN useradd rails --create-home --shell /bin/bash && \
     chown -R rails:rails /rails && \
     find /rails/bin -type f -exec chmod +x {} \;
 
+RUN chmod +x /rails/vendor/bundle/bin/sidekiq
+
 USER rails:rails
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
