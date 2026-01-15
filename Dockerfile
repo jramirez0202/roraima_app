@@ -160,9 +160,9 @@ RUN apt-get update -qq && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # 2. Configurar variables de entorno
-ENV RAILS_ENV="production" \
-    BUNDLE_DEPLOYMENT="1" \
-    BUNDLE_WITHOUT="development:test" \
+ENV RAILS_ENV="staging" \
+    BUNDLE_DEPLOYMENT="0" \
+    BUNDLE_WITHOUT="" \
     RAILS_SERVE_STATIC_FILES="true" \
     RAILS_LOG_TO_STDOUT="true"
 
