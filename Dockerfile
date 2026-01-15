@@ -177,11 +177,11 @@ RUN useradd rails --create-home --shell /bin/bash && \
 USER rails:rails
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000/up || exit 1
+CMD curl -f http://localhost:3000/up || exit 1
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 EXPOSE 3000
-CMD ["sh", "-c", "cd /rails && bundle install && bundle exec sidekiq -c 5 -v"]
+CMD ["bundle", "exec", "sidekiq", "-c", "5", "-v"]
 
 # ============================================
 # STAGE 5: PRODUCTION
