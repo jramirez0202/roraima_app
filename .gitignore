@@ -1,0 +1,24 @@
+# Environment variables (secretos)
+.env
+.env.production
+.env.staging
+.env.docker
+.env.local
+
+# Ruby/Rails
+*.rbc
+*.sassc
+.sass-cache/
+*.swp
+*.swo
+*~
+.DS_Store
+.bundle
+.rvmrc
+log/
+tmp/
+vendor/bundle/
+public/uploads/
+
+# Docker
+.docker/

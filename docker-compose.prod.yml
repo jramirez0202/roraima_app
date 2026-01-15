@@ -1,0 +1,189 @@
+version: '3.8'
+
+# ============================================================================
+# ROIRAIMA DELIVERY - DOCKER COMPOSE PRODUCCIÓN
+# ============================================================================
+# Optimizado para AWS EC2 t3.medium + ALB
+# Usa AWS RDS, ElastiCache, S3 (NO servicios locales)
+# ============================================================================
+
+networks:
+  roiraima_network:
+    driver: bridge
+
+volumes:
+  storage_data:  # Solo almacenamiento local de Rails (logs, tmp)
+
+services:
+  # =========================================================================
+  # RAILS WEB SERVER
+  # =========================================================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        RUBY_VERSION: 3.2.2
+    
+    container_name: roiraima_web
+    
+    # Puertos: 3000 SOLO internamente (ALB lo accede)
+    # NO exponer a 0.0.0.0:3000 (mantener privado)
+    ports:
+      - "3000:3000"
+    
+    # Variables de entorno desde .env.production
+    env_file:
+      - .env.production
+    
+    # Sobrescribir variables si es necesario
+    environment:
+      - RAILS_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - RAILS_HOST=${RAILS_HOST}
+      - PROTOCOL=${PROTOCOL}
+    
+    # Health check para ALB
+    # ALB usará GET /up para verificar si app está healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Reiniciar automáticamente
+    restart: always
+    
+    # Volúmenes
+    volumes:
+      # PRODUCCIÓN: NO montar código local (usar código bakeado en imagen)
+      # Esto garantiza reproducibilidad y seguridad
+      - storage_data:/rails/storage
+    
+    # Dependencias (NO hay postgres/redis locales - usar RDS/ElastiCache)
+    # depends_on: [] (vacío - servicios están en AWS)
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    
+    # Límites de recursos (para t3.medium)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    networks:
+      - roiraima_network
+
+  # =========================================================================
+  # SIDEKIQ - BACKGROUND JOBS WORKER
+  # =========================================================================
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        RUBY_VERSION: 3.2.2
+    
+    container_name: roiraima_sidekiq
+    
+    # Comando para Sidekiq
+    command: bundle exec sidekiq -C config/sidekiq.yml -c ${SIDEKIQ_CONCURRENCY:-15} -v
+    
+    env_file:
+      - .env.production
+    
+    environment:
+      - RAILS_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+    
+    # NO exposer puertos (interno solo)
+    
+    restart: always
+    
+    volumes:
+      - storage_data:/rails/storage
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    
+    # Límites de recursos (Sidekiq puede usar más CPU)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    networks:
+      - roiraima_network
+
+# ============================================================================
+# DIFERENCIAS CON STAGING:
+# ============================================================================
+#
+# ❌ STAGING (docker-compose.staging.yml):
+#   - postgres:5432 local (volumen en EC2)
+#   - redis:6379 local (volumen en EC2)
+#   - Puertos expuestos: 5432, 6379, 3001
+#   - Volúmenes de datos: postgres_data, redis_data
+#
+# ✅ PRODUCCIÓN (docker-compose.prod.yml):
+#   - RDS PostgreSQL en AWS (DB dedicada)
+#   - ElastiCache Redis en AWS (Cache dedicada)
+#   - S3 para almacenamiento de archivos
+#   - Puertos: SOLO 3000 (internamente)
+#   - Health checks para ALB
+#   - Límites de recursos (t3.medium)
+#   - NO montar código local (imagen bakeada)
+#
+# ============================================================================
+#
+# CÓMO USAR:
+#
+# 1. BUILD:
+#    docker compose -f docker-compose.prod.yml build --no-cache
+#
+# 2. START:
+#    docker compose -f docker-compose.prod.yml up -d
+#
+# 3. MIGRATIONS:
+#    docker compose -f docker-compose.prod.yml exec web \
+#      ./bin/rails db:create db:migrate db:seed
+#
+# 4. LOGS:
+#    docker compose -f docker-compose.prod.yml logs -f web
+#    docker compose -f docker-compose.prod.yml logs -f sidekiq
+#
+# 5. HEALTH CHECK:
+#    curl http://localhost:3000/up
+#    # Esperado: HTTP/1.1 200 OK
+#
+# ============================================================================
