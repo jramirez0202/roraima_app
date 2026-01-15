@@ -178,6 +178,9 @@ COPY --from=builder /rails /rails
 RUN find /rails/vendor/bundle/bin -type f -exec chmod +x {} \; && \
     find /rails/vendor/bundle -name "*.so" -o -name "*.so.*" -exec chmod +x {} \; 2>/dev/null || true
 
+RUN echo "Sidekiq location:" && which sidekiq || echo "Sidekiq not in PATH" && \
+    ls -la /rails/vendor/bundle/bin/sidekiq || echo "File doesn't exist"
+
 # 6. Precompilar assets UNA SOLA VEZ
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
