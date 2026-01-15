@@ -198,20 +198,13 @@ RUN apt-get update -qq && \
 
 # 2. Configurar variables de entorno
 ENV RAILS_ENV="staging" \
-    BUNDLE_DEPLOYMENT="0" \
+    BUNDLE_DEPLOYMENT="1" \
     BUNDLE_WITHOUT="" \
     RAILS_SERVE_STATIC_FILES="true" \
-    RAILS_LOG_TO_STDOUT="true" \
-    PATH="/rails/vendor/bundle/bin:${PATH}"
+    RAILS_LOG_TO_STDOUT="true"
 
 # 3. COPIAR gemas desde builder
 COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
-
-# Reinstalar gemas para asegurar ejecutables
-RUN bundle install --local --no-prune || bundle install
-
-# Verificar que sidekiq esté presente
-RUN ls -la /rails/vendor/bundle/bin/ | grep sidekiq || (echo "Sidekiq not found!" && exit 1)
 
 # 4. COPIAR código desde builder
 COPY --from=builder /rails /rails
@@ -219,9 +212,6 @@ COPY --from=builder /rails /rails
 # 5. Dar permisos a binarios (AHORA SÍ existen)
 RUN find /rails/vendor/bundle/bin -type f -exec chmod +x {} \; && \
     find /rails/vendor/bundle -name "*.so" -o -name "*.so.*" -exec chmod +x {} \; 2>/dev/null || true
-
-RUN echo "Sidekiq location:" && which sidekiq || echo "Sidekiq not in PATH" && \
-    ls -la /rails/vendor/bundle/bin/sidekiq || echo "File doesn't exist"
 
 # 6. Precompilar assets UNA SOLA VEZ
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
