@@ -62,7 +62,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_11_183942) do
   end
 
   create_table "communes", force: :cascade do |t|
-    t.string "name", null: false
+    t.string "name"
     t.bigint "region_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

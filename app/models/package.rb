@@ -23,10 +23,13 @@ class Package < ApplicationRecord
   }
 
   # Enum for payment method (cuando monto > 0)
-  enum payment_method: {
-    cash: 0,        # Efectivo (default)
-    transfer: 1     # Transferencia
-  }
+  # Esto fue u problema al cargar migraciones mejorar esta solucion 
+
+  if  ActiveRecord::Base.connection.data_source_exists?('packages') &&
+      ActiveRecord::Base.connection.column_exists?(:packages, :payment_method)
+  enum payment_method: { cash: 0, transfer: 1 }
+  end
+
 
   # Allowed transitions matrix
   ALLOWED_TRANSITIONS = {
