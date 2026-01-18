@@ -16,7 +16,7 @@
       <div class="p-3 sm:p-5">
         <div class="flex items-center">
           <div class="flex-shrink-0 hidden sm:block">
-            <svg class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="h-6 w-6 text-[#247ba0]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
           </div>
@@ -95,7 +95,7 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex justify-end gap-2">
-                    <%= link_to customers_package_path(package), class: "text-indigo-600 hover:text-indigo-900", title: "Ver detalles" do %>
+                    <%= link_to customers_package_path(package), class: "text-[#247ba0] hover:text-[#1d6584]", title: "Ver detalles" do %>
                       <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -122,7 +122,7 @@
           <h3 class="mt-2 text-sm font-medium text-gray-900">No hay paquetes activos</h3>
           <p class="mt-1 text-sm text-gray-500">Todos tus paquetes han sido entregados o cancelados.</p>
           <div class="mt-6">
-            <%= link_to "Crear Paquete", new_customers_package_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+            <%= link_to "Crear Paquete", new_customers_package_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#247ba0] hover:bg-[#1d6584] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#247ba0]" %>
           </div>
         </div>
       <% end %>

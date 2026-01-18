@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html class="h-full">
   <head>
     <title>RutiService - Panel de Conductor</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,22 +11,41 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-gray-50">
-    <div data-controller="sidebar" class="min-h-screen">
+  <body class="h-full bg-blue-950">
+    <!-- Layout con Sidebar fijo y Main flotante -->
+    <div class="min-h-full">
+      <!-- Sidebar - Siempre visible en desktop -->
       <%= render "shared/sidebar" %>
+
+      <!-- Bottom Navigation - Solo mobile -->
       <%= render "shared/mobile_bottom_nav" %>
 
-      <!-- Wrapper que recibe el margin cuando sidebar está abierto -->
-      <div data-sidebar-target="main" class="transition-all duration-300 ease-in-out md:ml-80">
-        <main class="max-w-7xl mx-auto pt-6 pb-24 md:py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Main Content - Tarjeta flotante gigante -->
+      <main class="
+        min-h-screen
+        bg-white
+        md:ml-64
+        md:mr-4
+        md:my-4
+        md:rounded-[2rem]
+        shadow-2xl
+        relative
+        z-20
+        pb-20 md:pb-0
+      ">
+        <!-- Contenedor interior con padding -->
+        <div class="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <!-- Flash Messages Container -->
           <div id="flash-container">
             <%= render partial: "shared/flash", locals: { notice: notice, alert: alert } %>
           </div>
 
-          <%= yield %>
-        </main>
-      </div>
+          <!-- Page Content -->
+          <div class="max-w-7xl mx-auto">
+            <%= yield %>
+          </div>
+        </div>
+      </main>
     </div>
   </body>
 </html>

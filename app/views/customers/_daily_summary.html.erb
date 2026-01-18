@@ -23,16 +23,16 @@
         <label class="text-sm text-gray-500">Desde:</label>
         <%= f.date_field :date_from,
             value: @date_from,
-            class: "rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-1.5 px-2" %>
+            class: "rounded-md border-gray-300 shadow-sm focus:border-[#247ba0] focus:ring-[#247ba0] text-sm py-1.5 px-2" %>
       </div>
       <div class="flex items-center gap-2">
         <label class="text-sm text-gray-500">Hasta:</label>
         <%= f.date_field :date_to,
             value: @date_to,
-            class: "rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-1.5 px-2" %>
+            class: "rounded-md border-gray-300 shadow-sm focus:border-[#247ba0] focus:ring-[#247ba0] text-sm py-1.5 px-2" %>
       </div>
       <%= f.submit "Filtrar",
-          class: "inline-flex items-center px-4 py-1.5 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 cursor-pointer" %>
+          class: "inline-flex items-center px-4 py-1.5 text-sm font-medium text-white bg-[#247ba0] border border-transparent rounded-md hover:bg-[#1d6584] cursor-pointer" %>
       <% if params[:date_from].present? || params[:date_to].present? %>
         <%= link_to "Hoy", customers_dashboard_path,
             class: "inline-flex items-center px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50" %>

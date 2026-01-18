@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html class="h-full">
   <head>
     <title>RutiService</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,90 +11,108 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="bg-gray-50">
+  <%
+    # Determinar color de fondo del body según el rol
+    if user_signed_in?
+      if current_user.driver?
+        body_bg = "bg-blue-950"
+      elsif current_user.admin?
+        body_bg = "bg-blue-950"
+      else
+        body_bg = "bg-[#247ba0]"
+      end
+    else
+      body_bg = "bg-slate-100"
+    end
+  %>
+
+  <body class="h-full <%= body_bg %>">
     <% if user_signed_in? %>
-      <div data-controller="sidebar" class="min-h-screen">
+      <!-- Layout con Sidebar fijo y Main flotante -->
+      <div class="min-h-full">
+        <!-- Sidebar - Siempre visible en desktop, oculto en mobile -->
         <%= render "shared/sidebar" %>
+
+        <!-- Bottom Navigation - Solo mobile -->
         <%= render "shared/mobile_bottom_nav" %>
 
-        <!-- Wrapper que recibe el margin cuando sidebar está abierto -->
-        <div data-sidebar-target="main" class="transition-all duration-300 ease-in-out md:ml-80">
-          <main class="max-w-7xl mx-auto pt-6 pb-24 md:py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Main Content - Tarjeta flotante gigante -->
+        <main class="
+          min-h-screen
+          bg-white
+          md:ml-64
+          md:mr-4
+          md:my-4
+          md:rounded-[2rem]
+          shadow-2xl
+          relative
+          z-20
+          pb-20 md:pb-0
+        ">
+          <!-- Contenedor interior con padding -->
+          <div class="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+            <!-- Flash Messages -->
+            <% if notice %>
+              <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 shadow-sm animate-fade-in">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <p class="ml-3 text-sm font-medium text-emerald-800"><%= notice %></p>
+                </div>
+              </div>
+            <% end %>
+
+            <% if alert %>
+              <div class="mb-6 bg-rose-50 border border-rose-200 rounded-2xl p-4 shadow-sm animate-fade-in">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <p class="ml-3 text-sm font-medium text-rose-800"><%= alert %></p>
+                </div>
+              </div>
+            <% end %>
+
+            <!-- Page Content -->
+            <div class="max-w-7xl mx-auto">
+              <%= yield %>
+            </div>
+          </div>
+        </main>
+      </div>
+    <% else %>
+      <!-- Layout para usuarios no autenticados -->
+      <main class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <% if notice %>
-            <div class="mb-4 bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
-              <div class="flex">
-                <div class="flex-shrink-0">
-                  <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                  </svg>
-                </div>
-                <div class="ml-3">
-                  <p class="text-sm font-medium text-green-800">
-                    <%= notice %>
-                  </p>
-                </div>
+            <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 shadow-sm">
+              <div class="flex items-center">
+                <svg class="h-5 w-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <p class="ml-3 text-sm font-medium text-emerald-800"><%= notice %></p>
               </div>
             </div>
           <% end %>
 
           <% if alert %>
-            <div class="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
-              <div class="flex">
-                <div class="flex-shrink-0">
-                  <svg class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                  </svg>
-                </div>
-                <div class="ml-3">
-                  <p class="text-sm font-medium text-red-800">
-                    <%= alert %>
-                  </p>
-                </div>
+            <div class="mb-6 bg-rose-50 border border-rose-200 rounded-2xl p-4 shadow-sm">
+              <div class="flex items-center">
+                <svg class="h-5 w-5 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <p class="ml-3 text-sm font-medium text-rose-800"><%= alert %></p>
               </div>
             </div>
           <% end %>
 
           <%= yield %>
-          </main>
         </div>
-      </div>
-    <% else %>
-      <main class="max-w-7xl mx-auto pt-6 pb-24 md:py-6 px-4 sm:px-6 lg:px-8">
-        <% if notice %>
-          <div class="mb-4 bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                </svg>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm font-medium text-green-800">
-                  <%= notice %>
-                </p>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <% if alert %>
-          <div class="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                </svg>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm font-medium text-red-800">
-                  <%= alert %>
-                </p>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <%= yield %>
       </main>
     <% end %>
   </body>
