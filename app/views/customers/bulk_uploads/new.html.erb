@@ -16,13 +16,13 @@
       <div class="flex justify-between items-start mb-3">
         <h2 class="text-lg font-semibold text-blue-900">📋 Instrucciones</h2>
         <div class="flex gap-2">
-          <%= link_to "/carga_masiva_paquetes.xlsx", class: "inline-flex items-center px-4 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" do %>
+          <%= link_to "/carga_masiva_paquetes_customer.xlsx", class: "inline-flex items-center px-4 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" do %>
             <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             XLSX
           <% end %>
-          <%= link_to "/carga_masiva_paquetes.csv", class: "inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" do %>
+          <%= link_to "/carga_masiva_paquetes_customer.csv", class: "inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" do %>
             <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -60,11 +60,6 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">NRO DE PEDIDO</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Texto (opcional)</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ORD-001</td>
-            </tr>
             <tr class="bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DESTINATARIO</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Texto</td>
@@ -99,11 +94,6 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">CAMBIO</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">SI/NO</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">SI o NO</td>
-            </tr>
-            <tr class="bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">EMPRESA</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Texto (opcional)</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Mi Empresa</td>
             </tr>
           </tbody>
         </table>

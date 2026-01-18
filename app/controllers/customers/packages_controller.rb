@@ -13,8 +13,8 @@ module Customers
       # Cargar drivers activos para el dropdown de asignación
       @drivers = Driver.active.includes(:assigned_zone).order(:email)
 
-      # Aplicar filtros (tracking code y rango de fechas)
-      packages = apply_package_filters(packages)
+      # Aplicar filtros específicos para customers (usa loading_date)
+      packages = apply_customer_filters(packages)
 
       # Datos para filtros
       @active_filters = active_filters
@@ -136,6 +136,47 @@ module Customers
 
     def metropolitan_region
       @metropolitan_region ||= Region.find_by(name: "Región Metropolitana")
+    end
+
+    # Filtros específicos para customers: usa loading_date (fecha de carga)
+    # en lugar de activity_date_between que es más complejo
+    def apply_customer_filters(base_scope)
+      scope = base_scope
+
+      # Filtro por estado
+      if filter_params[:status].present? && Package.statuses.key?(filter_params[:status])
+        scope = scope.where(status: filter_params[:status])
+      end
+
+      # Búsqueda por tracking code
+      searching_by_tracking = filter_params[:tracking_query].present?
+      if searching_by_tracking
+        scope = scope.search_by_tracking(filter_params[:tracking_query].strip)
+      end
+
+      # Rango de fechas por LOADING_DATE (fecha de carga del cliente)
+      if filter_params[:date_from].present? || filter_params[:date_to].present?
+        date_from = parse_date(filter_params[:date_from])
+        date_to = parse_date(filter_params[:date_to])
+
+        # Si solo especifica "Desde" sin "Hasta", usar la misma fecha
+        date_to ||= date_from if date_from.present?
+
+        # Si solo especifica "Hasta" sin "Desde", usar la misma fecha
+        date_from ||= date_to if date_to.present?
+
+        # Validar que date_from <= date_to, si no, intercambiar
+        if date_from && date_to && date_from > date_to
+          date_from, date_to = date_to, date_from
+        end
+
+        scope = scope.loading_date_between(date_from, date_to)
+      elsif !searching_by_tracking
+        # Por defecto: mostrar paquetes del día actual si no busca por tracking
+        scope = scope.where(loading_date: Date.current)
+      end
+
+      scope
     end
   end
 end

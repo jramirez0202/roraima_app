@@ -177,6 +177,112 @@
               <dt class="text-sm font-medium text-gray-500">Descripción</dt>
               <dd class="mt-1 text-sm text-gray-900"><%= @package.description.presence || '—' %></dd>
             </div>
+
+            <%# Detalles del Receptor %>
+            <% if @package.receiver_name.present? || @package.receiver_observations.present? %>
+              <div class="sm:col-span-2 border-t border-gray-200 pt-4">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Detalles del Receptor</h3>
+
+                <% if @package.receiver_name.present? %>
+                  <div class="mb-3">
+                    <dt class="text-sm font-medium text-gray-500 mb-1">Nombre del Receptor</dt>
+                    <dd class="mt-1">
+                      <p class="text-base font-semibold text-gray-900"><%= @package.receiver_name %></p>
+                    </dd>
+                  </div>
+                <% end %>
+
+                <% if @package.receiver_observations.present? %>
+                  <div>
+                    <dt class="text-sm font-medium text-gray-500 mb-1">Observaciones</dt>
+                    <dd class="mt-1">
+                      <p class="text-sm text-gray-900 whitespace-pre-wrap"><%= @package.receiver_observations %></p>
+                    </dd>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+
+            <%# Información de Reprogramación - Solo mostrar si está rescheduled %>
+            <% if (@package.reprogram_motive.present? || @package.reschedule_photos.attached?) && @package.rescheduled? %>
+              <div class="sm:col-span-2 border-t border-gray-200 pt-4">
+                <h3 class="text-base font-semibold text-gray-900 mb-4">Información de Reprogramación</h3>
+
+                <% if @package.reprogram_motive.present? %>
+                  <div class="mb-4">
+                    <dt class="text-sm font-medium text-gray-500 mb-1">Motivo de Reprogramación</dt>
+                    <dd class="mt-1">
+                      <p class="text-base font-bold text-red-600"><%= @package.reprogram_motive %></p>
+                    </dd>
+                  </div>
+                <% end %>
+
+                <% if @package.reschedule_photos.attached? %>
+                  <div>
+                    <dt class="text-sm font-medium text-gray-500 mb-2">Fotos de Evidencia</dt>
+                    <dd class="mt-2">
+                      <div class="grid grid-cols-2 gap-3">
+                        <% @package.reschedule_photos.each do |photo| %>
+                          <div class="relative group">
+                            <%= image_tag photo,
+                                class: "w-full h-32 object-cover rounded-lg border-2 border-gray-300 cursor-pointer hover:opacity-90 hover:border-indigo-500 transition-all",
+                                onclick: "openReschedulePhotoModal('#{url_for(photo)}')",
+                                alt: "Foto de reprogramación" %>
+                            <button type="button"
+                                    onclick="openReschedulePhotoModal('#{url_for(photo)}')"
+                                    class="absolute top-2 right-2 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-1.5 shadow-lg transition-all opacity-0 group-hover:opacity-100">
+                              <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                              </svg>
+                            </button>
+                          </div>
+                        <% end %>
+                      </div>
+                      <p class="mt-2 text-xs text-gray-500">
+                        <svg class="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        Click en la foto para verla en tamaño completo
+                      </p>
+                    </dd>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+
+            <!-- Fotos de Evidencia de Entrega (Active Storage) - Solo mostrar si está delivered -->
+            <% if @package.proof_photos.attached? && @package.delivered? %>
+              <div class="sm:col-span-2">
+                <dt class="text-sm font-medium text-gray-500 mb-2">Fotos de Entrega</dt>
+                <dd class="mt-1">
+                  <div class="grid grid-cols-2 gap-2">
+                    <% @package.proof_photos.each do |photo| %>
+                      <div class="relative group">
+                        <%= image_tag photo,
+                            class: "w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-90 transition-opacity",
+                            onclick: "openProofPhotoModal('#{url_for(photo)}')",
+                            alt: "Foto de evidencia de entrega" %>
+                        <button type="button"
+                                onclick="openProofPhotoModal('#{url_for(photo)}')"
+                                class="absolute top-1 right-1 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-1 shadow-lg transition-all opacity-0 group-hover:opacity-100">
+                          <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
+                          </svg>
+                        </button>
+                      </div>
+                    <% end %>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-500">
+                    <svg class="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Click en la foto para verla en tamaño completo
+                  </p>
+                </dd>
+              </div>
+            <% end %>
           </dl>
         </div>
       </div>
@@ -249,3 +355,135 @@
     </div>
   </div>
 </div>
+
+<!-- Modal para ver fotos de reprogramación en tamaño completo -->
+<% if @package.reschedule_photos.attached? %>
+  <div id="reschedule-photo-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Overlay -->
+    <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onclick="closeReschedulePhotoModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex min-h-screen items-center justify-center p-4">
+      <div class="relative max-w-7xl w-full">
+        <!-- Botón de cerrar -->
+        <button type="button"
+                onclick="closeReschedulePhotoModal()"
+                class="absolute -top-12 right-0 text-white hover:text-gray-300 focus:outline-none">
+          <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span class="sr-only">Cerrar</span>
+        </button>
+
+        <!-- Imagen -->
+        <img id="reschedule-photo-modal-img"
+             src=""
+             alt="Foto de reprogramación - Tamaño completo"
+             class="w-full h-auto rounded-lg shadow-2xl">
+
+        <!-- Info adicional -->
+        <div class="mt-4 bg-white bg-opacity-90 rounded-lg p-4">
+          <p class="text-sm text-gray-900">
+            <strong>Paquete:</strong> <%= @package.tracking_code %>
+            <span class="mx-2">•</span>
+            <strong>Estado:</strong> <%= status_text(@package.status) %>
+          </p>
+          <% if @package.reprogramed_to %>
+            <p class="text-xs text-gray-600 mt-1">
+              Reprogramado para <%= l(@package.reprogramed_to, format: :long) %>
+            </p>
+          <% end %>
+          <% if @package.reprogram_motive %>
+            <p class="text-xs font-bold text-red-600 mt-1">
+              <strong>Motivo:</strong> <%= @package.reprogram_motive %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openReschedulePhotoModal(imageUrl) {
+      const modal = document.getElementById('reschedule-photo-modal');
+      const img = document.getElementById('reschedule-photo-modal-img');
+      img.src = imageUrl;
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeReschedulePhotoModal() {
+      document.getElementById('reschedule-photo-modal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+
+    // Cerrar con ESC
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeReschedulePhotoModal();
+        closeProofPhotoModal();
+      }
+    });
+  </script>
+<% end %>
+
+<!-- Modal para ver fotos de evidencia de entrega en tamaño completo -->
+<% if @package.proof_photos.attached? %>
+  <div id="proof-photo-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Overlay -->
+    <div class="fixed inset-0 bg-black bg-opacity-75 transition-opacity" onclick="closeProofPhotoModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex min-h-screen items-center justify-center p-4">
+      <div class="relative max-w-7xl w-full">
+        <!-- Botón de cerrar -->
+        <button type="button"
+                onclick="closeProofPhotoModal()"
+                class="absolute -top-12 right-0 text-white hover:text-gray-300 focus:outline-none">
+          <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span class="sr-only">Cerrar</span>
+        </button>
+
+        <!-- Imagen -->
+        <img id="proof-photo-modal-img"
+             src=""
+             alt="Foto de evidencia de entrega - Tamaño completo"
+             class="w-full h-auto rounded-lg shadow-2xl">
+
+        <!-- Info adicional -->
+        <div class="mt-4 bg-white bg-opacity-90 rounded-lg p-4">
+          <p class="text-sm text-gray-900">
+            <strong>Paquete:</strong> <%= @package.tracking_code %>
+            <span class="mx-2">•</span>
+            <strong>Estado:</strong> <%= status_text(@package.status) %>
+          </p>
+          <% if @package.delivered_at %>
+            <p class="text-xs text-gray-600 mt-1">
+              Entregado el <%= l(@package.delivered_at, format: :long) %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openProofPhotoModal(imageUrl) {
+      const modal = document.getElementById('proof-photo-modal');
+      const img = document.getElementById('proof-photo-modal-img');
+      img.src = imageUrl;
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeProofPhotoModal() {
+      const modal = document.getElementById('proof-photo-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+      }
+    }
+  </script>
+<% end %>

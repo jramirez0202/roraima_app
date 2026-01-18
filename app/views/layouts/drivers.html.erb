@@ -12,16 +12,21 @@
   </head>
 
   <body class="bg-gray-50">
-    <%= render "shared/sidebar" %>
-    <%= render "shared/mobile_bottom_nav" %>
+    <div data-controller="sidebar" class="min-h-screen">
+      <%= render "shared/sidebar" %>
+      <%= render "shared/mobile_bottom_nav" %>
 
-    <main class="max-w-7xl mx-auto pt-6 pb-24 md:py-6 px-4 sm:px-6 lg:px-8">
-      <!-- Flash Messages Container -->
-      <div id="flash-container">
-        <%= render partial: "shared/flash", locals: { notice: notice, alert: alert } %>
+      <!-- Wrapper que recibe el margin cuando sidebar está abierto -->
+      <div data-sidebar-target="main" class="transition-all duration-300 ease-in-out md:ml-80">
+        <main class="max-w-7xl mx-auto pt-6 pb-24 md:py-6 px-4 sm:px-6 lg:px-8">
+          <!-- Flash Messages Container -->
+          <div id="flash-container">
+            <%= render partial: "shared/flash", locals: { notice: notice, alert: alert } %>
+          </div>
+
+          <%= yield %>
+        </main>
       </div>
-
-      <%= yield %>
-    </main>
+    </div>
   </body>
 </html>

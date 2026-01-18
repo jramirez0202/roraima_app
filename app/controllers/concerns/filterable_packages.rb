@@ -22,6 +22,12 @@ module FilterablePackages
       scope = scope.by_couriers(courier_ids) if courier_ids.any?
     end
 
+    # Filtro por múltiples customers
+    if filter_params[:customer_ids].present?
+      customer_ids = Array(filter_params[:customer_ids]).reject(&:blank?).map(&:to_i).select { |id| id > 0 }
+      scope = scope.by_customers(customer_ids) if customer_ids.any?
+    end
+
     # Búsqueda por tracking code
     searching_by_tracking = filter_params[:tracking_query].present?
     if searching_by_tracking
@@ -70,6 +76,10 @@ module FilterablePackages
       filters[:courier_ids] = Array(filter_params[:courier_ids]).reject(&:blank?).map(&:to_i)
     end
 
+    if filter_params[:customer_ids].present?
+      filters[:customer_ids] = Array(filter_params[:customer_ids]).reject(&:blank?).map(&:to_i)
+    end
+
     filters[:tracking_query] = filter_params[:tracking_query].strip if filter_params[:tracking_query].present?
     filters[:date_from] = parse_date(filter_params[:date_from]) if filter_params[:date_from].present?
     filters[:date_to] = parse_date(filter_params[:date_to]) if filter_params[:date_to].present?
@@ -83,6 +93,7 @@ module FilterablePackages
     count += 1 if filter_params[:status].present?
     count += 1 if filter_params[:commune_ids].present? && Array(filter_params[:commune_ids]).reject(&:blank?).any?
     count += 1 if filter_params[:courier_ids].present? && Array(filter_params[:courier_ids]).reject(&:blank?).any?
+    count += 1 if filter_params[:customer_ids].present? && Array(filter_params[:customer_ids]).reject(&:blank?).any?
     count += 1 if filter_params[:tracking_query].present?
     count += 1 if filter_params[:date_from].present? || filter_params[:date_to].present?
     count
@@ -91,9 +102,9 @@ module FilterablePackages
   private
 
   def filter_params
-    # Permitir commune_ids y courier_ids tanto como scalar (autocomplete) como array (multi-select)
+    # Permitir commune_ids, courier_ids y customer_ids tanto como scalar (autocomplete) como array (multi-select)
     @filter_params ||= begin
-      permitted = params.permit(:status, :tracking_query, :date_from, :date_to, :page, :commune_ids, :courier_ids, :button)
+      permitted = params.permit(:status, :tracking_query, :date_from, :date_to, :page, :commune_ids, :courier_ids, :customer_ids, :button)
 
       # Normalizar commune_ids a array si viene como scalar
       if permitted[:commune_ids].present? && !permitted[:commune_ids].is_a?(Array)
@@ -103,6 +114,11 @@ module FilterablePackages
       # Normalizar courier_ids a array si viene como scalar
       if permitted[:courier_ids].present? && !permitted[:courier_ids].is_a?(Array)
         permitted[:courier_ids] = [permitted[:courier_ids]]
+      end
+
+      # Normalizar customer_ids a array si viene como scalar
+      if permitted[:customer_ids].present? && !permitted[:customer_ids].is_a?(Array)
+        permitted[:customer_ids] = [permitted[:customer_ids]]
       end
 
       permitted

@@ -25,7 +25,7 @@
   <%# Collapsible Panel %>
   <div data-filters-panel-target="panel" class="hidden border-t border-gray-200">
     <%= form_with url: admin_packages_path, method: :get, data: { turbo: false }, class: "px-6 py-4" do |f| %>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <%# Filtro por Estado %>
         <div>
           <%= label_tag :status, "Estado", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -110,6 +110,43 @@
           </div>
 
           <p class="mt-1 text-xs text-gray-500">Escribe nombre o patente</p>
+        </div>
+
+        <%# Filtro por Cliente - Autocomplete %>
+        <div data-controller="autocomplete"
+             data-autocomplete-items-value='<%= customers_json(@customers) %>'
+             class="relative">
+          <%= label_tag :customer_search, "Cliente", class: "block text-sm font-medium text-gray-700 mb-1" %>
+
+          <%# Search Input %>
+          <% selected_customer = @active_filters[:customer_ids] ? @customers.find_by(id: @active_filters[:customer_ids].first) : nil %>
+          <% customer_label = selected_customer ? "#{selected_customer.name} - #{selected_customer.email}#{selected_customer.company.present? ? " (#{selected_customer.company})" : ""}" : nil %>
+          <%= text_field_tag :customer_search,
+                             customer_label,
+                             {
+                               placeholder: "Buscar cliente...",
+                               autocomplete: "off",
+                               class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm",
+                               data: {
+                                 autocomplete_target: "input",
+                                 action: "input->autocomplete#filter focus->autocomplete#handleFocus"
+                               }
+                             } %>
+
+          <%# Hidden Field for Customer ID %>
+          <%= hidden_field_tag :customer_ids,
+                               @active_filters[:customer_ids]&.first,
+                               data: { autocomplete_target: "hiddenField" } %>
+
+          <%# Results Dropdown %>
+          <div data-autocomplete-target="results"
+               class="hidden absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto border border-gray-200">
+            <ul data-autocomplete-target="list" class="py-1">
+              <%# Results populated by Stimulus %>
+            </ul>
+          </div>
+
+          <p class="mt-1 text-xs text-gray-500">Escribe nombre o email</p>
         </div>
 
         <%# Filtro por Tracking Code %>

@@ -63,6 +63,7 @@ class Admin::PackagesController < Admin::BaseController
     # Solo comunas de Región Metropolitana
     @communes = metropolitan_region&.communes&.order(:name) || Commune.none
     @couriers = Driver.active.order(:name)
+    @customers = User.customers_active.order(:name)
     @active_filters = active_filters
     @active_filters_count = active_filters_count
     @filtered_count = packages.count
@@ -111,6 +112,8 @@ class Admin::PackagesController < Admin::BaseController
       commune_ids: params[:commune_ids],
       courier_search: params[:courier_search],
       courier_ids: params[:courier_ids],
+      customer_search: params[:customer_search],
+      customer_ids: params[:customer_ids],
       tracking_query: params[:tracking_query],
       date_from: params[:date_from],
       date_to: params[:date_to]
@@ -130,6 +133,8 @@ class Admin::PackagesController < Admin::BaseController
       commune_ids: params[:commune_ids],
       courier_search: params[:courier_search],
       courier_ids: params[:courier_ids],
+      customer_search: params[:customer_search],
+      customer_ids: params[:customer_ids],
       tracking_query: params[:tracking_query],
       date_from: params[:date_from],
       date_to: params[:date_to]
@@ -151,6 +156,8 @@ class Admin::PackagesController < Admin::BaseController
       commune_ids: params[:commune_ids],
       courier_search: params[:courier_search],
       courier_ids: params[:courier_ids],
+      customer_search: params[:customer_search],
+      customer_ids: params[:customer_ids],
       tracking_query: params[:tracking_query],
       date_from: params[:date_from],
       date_to: params[:date_to]
@@ -175,6 +182,8 @@ class Admin::PackagesController < Admin::BaseController
       commune_ids: params[:commune_ids],
       courier_search: params[:courier_search],
       courier_ids: params[:courier_ids],
+      customer_search: params[:customer_search],
+      customer_ids: params[:customer_ids],
       tracking_query: params[:tracking_query],
       date_from: params[:date_from],
       date_to: params[:date_to]
@@ -192,6 +201,8 @@ class Admin::PackagesController < Admin::BaseController
       commune_ids: params[:commune_ids],
       courier_search: params[:courier_search],
       courier_ids: params[:courier_ids],
+      customer_search: params[:customer_search],
+      customer_ids: params[:customer_ids],
       tracking_query: params[:tracking_query],
       date_from: params[:date_from],
       date_to: params[:date_to]

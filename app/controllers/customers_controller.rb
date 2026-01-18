@@ -2,37 +2,51 @@ class CustomersController < ApplicationController
   before_action :authorize_customer
 
   def index
-    # === ESTADÍSTICAS DEL DÍA ACTUAL ===
-    # Optimización: Usamos queries con Date.current (timezone Santiago configurado en application.rb)
+    # === FILTRO DE FECHA PARA RESUMEN ===
+    # Permite filtrar por rango de fechas de carga (loading_date)
+    @date_from = parse_date(params[:date_from]) || Date.current
+    @date_to = parse_date(params[:date_to]) || Date.current
 
+    # Base query: paquetes del cliente con estados visibles
+    base_packages = current_user.packages.customer_visible_statuses
+
+    # Paquetes filtrados por fecha de carga
+    packages_in_date_range = base_packages.where(loading_date: @date_from..@date_to)
+
+    # === CONTADORES POR ESTADO (RESUMEN DEL DÍA) ===
+    status_counts = packages_in_date_range.group(:status).count
+    @total_count = packages_in_date_range.count
+    @pending_pickup_count = status_counts["pending_pickup"] || 0
+    @in_warehouse_count = status_counts["in_warehouse"] || 0
+    @in_transit_count = status_counts["in_transit"] || 0
+    @rescheduled_count = status_counts["rescheduled"] || 0
+    @delivered_count = status_counts["delivered"] || 0
+    @return_count = status_counts["return"] || 0
+    @cancelled_count = status_counts["cancelled"] || 0
+
+    # Contador de reprogramados persistentes (sin filtro de fecha - para alerta global)
+    @persistent_rescheduled_count = base_packages.where(status: :rescheduled).count
+
+    # === ESTADÍSTICAS ADICIONALES ===
     today_start = Date.current.beginning_of_day
     today_end = Date.current.end_of_day
 
-    # Contador 1: Paquetes creados/cargados HOY (solo estados visibles)
-    # Usa índice: index_packages_on_user_id + index_packages_on_created_at
-    today = Date.current
-    @today_packages_count = current_user.packages
-                                    .customer_visible_statuses  # Filtra por estados visibles
-                                    .where(loading_date: today)
-                                    .count
+    # Paquetes cargados hoy (independiente del filtro)
+    @today_packages_count = base_packages.where(loading_date: Date.current).count
 
-    # Contador 2: Paquetes entregados HOY (solo estados visibles)
-    # Usa índice: index_packages_on_user_id + delivered_at (si existe)
-    # Nota: delivered_at se actualiza cuando status cambia a 'delivered'
-    @today_delivered_count = current_user.packages
-                                         .customer_visible_statuses  # Filtra por estados visibles
-                                         .where(delivered_at: today_start..today_end)
-                                         .count
+    # Paquetes entregados hoy (independiente del filtro)
+    @today_delivered_count = base_packages.where(delivered_at: today_start..today_end).count
 
     # === PAQUETES RECIENTES EN PROCESO ===
     # Muestra últimos 5 paquetes activos (no terminados) para dar contexto
-    # Usa índice: index_packages_on_user_id_and_status
-    @recent_packages = current_user.packages
-                                   .customer_visible_statuses  # Filtra por estados visibles
-                                   .active  # Scope: excluye delivered, cancelled
-                                   .includes(:region, :commune)  # Evita N+1 en la vista
-                                   .recent  # Scope: order(created_at: :desc)
-                                   .limit(5)
+    @recent_packages = base_packages
+                         .active
+                         .includes(:region, :commune)
+                         .recent
+                         .limit(5)
+
+    # Preservar parámetros de filtro para los links
+    @filter_params = { date_from: @date_from, date_to: @date_to }.compact
   end
 
   private
@@ -43,5 +57,12 @@ class CustomersController < ApplicationController
     elsif current_user.driver?
       redirect_to drivers_root_path, alert: 'Acceso denegado'
     end
+  end
+
+  def parse_date(date_string)
+    return nil if date_string.blank?
+    Date.parse(date_string)
+  rescue ArgumentError, TypeError
+    nil
   end
 end

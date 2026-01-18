@@ -169,6 +169,11 @@ class Package < ApplicationRecord
     where(assigned_courier_id: courier_ids) if courier_ids.present?
   }
 
+  # Filtrar por múltiples customers (IN query)
+  scope :by_customers, ->(customer_ids) {
+    where(user_id: customer_ids) if customer_ids.present?
+  }
+
   # Rango de fechas de carga (desde/hasta)
   scope :loading_date_between, ->(start_date, end_date) {
     result = all
