@@ -1,8 +1,22 @@
+# ============================================================================
+# SIDEKIQ CONFIGURATION - PRODUCTION
+# ============================================================================
 :concurrency: 5
 :max_retries: 3
 :timeout: 25
+:verbose: false
 
+# Queues con prioridad
+# Formato: [queue_name, weight]
+# Weight determina cuántos jobs de esa queue por ciclo
 :queues:
-  - [roraima_app_staging_default, 2]
-  - [roraima_app_staging_mailers, 1]
-  - [roraima_app_staging_bulk_uploads, 3]
+  - [roiraima_delivery_default, 2]      # Default jobs (prioridad media)
+  - [roiraima_delivery_mailers, 1]      # Email jobs (baja prioridad)
+  - [roiraima_delivery_bulk_uploads, 3] # Bulk uploads (alta prioridad)
+  - [roiraima_delivery_critical, 5]     # Critical jobs (máxima prioridad)
+
+# Redis connection pool
+:pool: 5
+
+# Logging
+:logfile: /rails/log/sidekiq.log
