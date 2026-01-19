@@ -164,7 +164,8 @@ ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_WITHOUT="development:test" \
     RAILS_SERVE_STATIC_FILES="true" \
-    RAILS_LOG_TO_STDOUT="true"
+    RAILS_LOG_TO_STDOUT="true" \
+    PATH="/rails/vendor/bundle/bin:${PATH}"
 
 # 3. COPIAR gemas desde builder
 COPY --from=builder /rails/vendor/bundle /rails/vendor/bundle
