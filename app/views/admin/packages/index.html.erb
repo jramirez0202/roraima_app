@@ -1,0 +1,39 @@
+<div class="max-w-7xl lg:max-w-full xl:max-w-full mx-auto px-4 sm:px-6 lg:px-8"
+     data-controller="bulk-packages"
+     data-bulk-packages-translations-value='<%= status_translations_json %>'
+     data-bulk-packages-badge-classes-value='<%= PackagesHelper::STATUS_BADGE_CLASSES.transform_keys(&:to_s).to_json %>'>
+  <%# Header with title and action buttons %>
+  <%= render 'header', pagy: @pagy %>
+
+  <%# Status filter tabs %>
+  <%= render 'status_tabs',
+      status_counts: {
+        total: @total_count,
+        pending_pickup: @pending_pickup_count,
+        in_warehouse: @in_warehouse_count,
+        in_transit: @in_transit_count,
+        rescheduled: @rescheduled_count,
+        return: @return_count,
+        delivered: @delivered_count,
+        cancelled: @cancelled_count
+      },
+      current_status: params[:status] %>
+
+  <%# Filters Panel - Accordion %>
+  <%= render 'filters_panel' %>
+
+  <%# Bulk action buttons %>
+  <%= render 'bulk_actions' %>
+
+  <%# Global summary counter %>
+  <%= render 'global_summary' %>
+
+  <%# Packages table %>
+  <%= render 'table', packages: @packages, pagy: @pagy %>
+
+  <%# Bulk status change modal %>
+  <%= render 'bulk_status_modal' %>
+
+  <%# Bulk assign driver modal %>
+  <%= render 'bulk_assign_driver_modal' %>
+</div>

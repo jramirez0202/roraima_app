@@ -1,0 +1,142 @@
+<!-- Modal para ver fotos de reprogramación en tamaño completo -->
+<% if show_reschedule_photos?(package) %>
+<% info_content = capture do %>
+  <p class="text-sm text-gray-900">
+    <strong>Paquete:</strong> <%= package.tracking_code %>
+    <span class="mx-2">•</span>
+    <strong>Receptor:</strong> <%= package.receiver_name.presence || 'No especificado' %>
+    <span class="mx-2">•</span>
+    <strong>Estado:</strong> <%= status_text(package.status) %>
+  </p>
+  <% if package.receiver_observations.present? %>
+  <p class="text-sm text-gray-700 mt-2">
+    <strong>Observación:</strong> <%= package.receiver_observations %>
+  </p>
+  <% end %>
+  <% if package.reprogramed_to %>
+  <p class="text-xs text-gray-600 mt-1">
+    Reprogramado para <%= l(package.reprogramed_to, format: :long) %>
+  </p>
+  <% end %>
+  <% if package.reprogram_motive %>
+  <p class="text-xs font-bold text-red-600 mt-1">
+    <strong>Motivo:</strong> <%= package.reprogram_motive %>
+  </p>
+  <% end %>
+<% end %>
+
+<%= render 'shared/photo_modal',
+           modal_id: 'reschedule-photo-view-modal',
+           img_id: 'reschedule-photo-view-modal-img',
+           close_function: 'closeReschedulePhotoModal',
+           alt_text: 'Foto de reprogramación',
+           info_content: info_content %>
+
+<script>
+  function openReschedulePhotoModal(imageUrl) {
+    const modal = document.getElementById("reschedule-photo-view-modal");
+    const img = document.getElementById("reschedule-photo-view-modal-img");
+
+    // Validar que los elementos existen
+    if (!modal || !img) {
+      console.warn("Reschedule modal elements not found");
+      return;
+    }
+
+    img.src = imageUrl;
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeReschedulePhotoModal() {
+    const modal = document.getElementById("reschedule-photo-view-modal");
+    if (modal) {
+      modal.classList.add("hidden");
+      document.body.style.overflow = "auto";
+    }
+  }
+
+  // Contador de caracteres para el campo de razón
+  function updateDriverReasonCounter() {
+    const reasonField = document.querySelector("#reason");
+    const counter = document.getElementById("driver-reason-counter");
+    if (reasonField && counter) {
+      counter.textContent = reasonField.value.length;
+    }
+  }
+
+  // Cerrar con ESC
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      closeReschedulePhotoModal();
+      closeProofPhotoModal();
+    }
+  });
+</script>
+<% end %>
+
+<!-- Modal para ver fotos de evidencia de entrega en tamaño completo -->
+<% if show_proof_photos?(package) %>
+<% info_content = capture do %>
+  <p class="text-sm text-gray-900">
+    <strong>Paquete:</strong> <%= package.tracking_code %>
+    <span class="mx-2">•</span>
+    <strong>Receptor:</strong> <%= package.receiver_name.presence || 'No especificado' %>
+    <span class="mx-2">•</span>
+    <strong>Estado:</strong> <%= status_text(package.status) %>
+  </p>
+  <% if package.receiver_observations.present? %>
+  <p class="text-sm text-gray-700 mt-2">
+    <strong>Observación:</strong> <%= package.receiver_observations %>
+  </p>
+  <% end %>
+  <% if package.delivered_at %>
+  <p class="text-xs text-gray-600 mt-1">
+    Entregado el <%= l(package.delivered_at, format: :long) %>
+  </p>
+  <% end %>
+<% end %>
+
+<%= render 'shared/photo_modal',
+           modal_id: 'proof-photo-modal',
+           img_id: 'proof-photo-modal-img',
+           close_function: 'closeProofPhotoModal',
+           alt_text: 'Foto de evidencia de entrega',
+           info_content: info_content %>
+
+<script>
+  console.log("✅ Proof photo modal script loaded");
+
+  function openProofPhotoModal(imageUrl) {
+    console.log("🖼️ openProofPhotoModal called with:", imageUrl);
+    const modal = document.getElementById("proof-photo-modal");
+    const img = document.getElementById("proof-photo-modal-img");
+
+    console.log("Modal elements found:", { modal: !!modal, img: !!img });
+
+    // Validar que los elementos existen
+    if (!modal || !img) {
+      console.error("❌ Modal elements not found:", {
+        modal: modal ? "found" : "NOT FOUND",
+        img: img ? "found" : "NOT FOUND",
+      });
+      return;
+    }
+
+    img.src = imageUrl;
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    console.log("✅ Modal opened successfully");
+  }
+
+  function closeProofPhotoModal() {
+    console.log("🚪 Closing proof photo modal");
+    const modal = document.getElementById("proof-photo-modal");
+    if (modal) {
+      modal.classList.add("hidden");
+      document.body.style.overflow = "auto";
+      console.log("✅ Modal closed");
+    }
+  }
+</script>
+<% end %>

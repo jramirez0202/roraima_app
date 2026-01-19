@@ -1,0 +1,131 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-8">
+    <div class="flex items-center gap-4">
+      <%= render 'shared/customer_logo_header' %>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="mt-2 text-sm text-gray-600">Bienvenido, <%= current_user.company %></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estadísticas rápidas del día actual (responsive) -->
+  <div class="grid grid-cols-2 gap-3 sm:gap-6 mb-6">
+    <!-- Paquetes Cargados Hoy -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-3 sm:p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 hidden sm:block">
+            <svg class="h-6 w-6 text-[#247ba0]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+          </div>
+          <div class="sm:ml-5 w-full sm:w-0 flex-1">
+            <dl>
+              <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Cargados Hoy</dt>
+              <dd class="text-2xl sm:text-3xl font-semibold text-gray-900"><%= @today_packages_count %></dd>
+              <dd class="mt-1 text-[10px] sm:text-xs text-gray-400"><%= Date.current.strftime("%d/%m/%Y") %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paquetes Entregados Hoy -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-3 sm:p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 hidden sm:block">
+            <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="sm:ml-5 w-full sm:w-0 flex-1">
+            <dl>
+              <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Entregados Hoy</dt>
+              <dd class="text-2xl sm:text-3xl font-semibold text-green-600"><%= @today_delivered_count %></dd>
+              <dd class="mt-1 text-[10px] sm:text-xs text-gray-400"><%= Date.current.strftime("%d/%m/%Y") %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen de Operación del Día -->
+  <%= render 'daily_summary' %>
+
+  <!-- Últimos 5 Paquetes Activos -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+      <h3 class="text-sm font-semibold text-gray-700">Últimos 5 Paquetes Activos</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <% if @recent_packages.any? %>
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Carga</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dirección</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @recent_packages.each do |package| %>
+              <tr>
+                <td class="px-6 py-4">
+                  <div class="flex flex-col items-start">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_classes(package.status) %>">
+                      <%= status_text(package.status) %>
+                    </span>
+                    <% if package.delivered? && package.delivered_at %>
+                      <span class="mt-1 text-xs text-gray-500">
+                        <%= l(package.delivered_at, format: :short) %>
+                      </span>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= l(package.loading_date, format: :short) if package.loading_date %></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><%= package.customer_name %></td>
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                  <div class="break-words"><%= package.address.present? ? package.address : "—" %></div>
+                  <div class="text-xs text-gray-400 mt-1"><%= package.commune&.name || "—" %></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div class="flex justify-end gap-2">
+                    <%= link_to customers_package_path(package), class: "text-[#247ba0] hover:text-[#1d6584]", title: "Ver detalles" do %>
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    <% end %>
+                    <% if policy(package).update? %>
+                      <%= link_to edit_customers_package_path(package), class: "text-gray-600 hover:text-gray-900", title: "Editar" do %>
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <div class="px-6 py-12 text-center">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No hay paquetes activos</h3>
+          <p class="mt-1 text-sm text-gray-500">Todos tus paquetes han sido entregados o cancelados.</p>
+          <div class="mt-6">
+            <%= link_to "Crear Paquete", new_customers_package_path, class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#247ba0] hover:bg-[#1d6584] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#247ba0]" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

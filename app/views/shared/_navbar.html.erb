@@ -1,0 +1,141 @@
+<%
+  # Determinar colores según el rol
+  if current_user.driver?
+    bg_color = "bg-blue-900"
+    text_color = "text-white"
+    hover_color = "hover:bg-blue-800"
+    logo_emoji = "🚚"
+    logo_text = "RutiService Driver"
+    badge_color = "bg-blue-700 text-blue-100"
+    logout_color = "text-blue-200 hover:text-white"
+    border_color = "border-blue-800"
+  elsif current_user.admin?
+    bg_color = "bg-white"
+    text_color = "text-gray-900"
+    hover_color = "hover:bg-gray-100"
+    logo_emoji = "📦"
+    logo_text = "Paquetería"
+    badge_color = "bg-purple-100 text-purple-800"
+    logout_color = "text-red-600 hover:text-red-800"
+    border_color = "border-gray-200"
+  else
+    # Customer - Azul grisáceo (Slate) para transmitir confianza y profesionalismo
+    bg_color = "bg-slate-800"
+    text_color = "text-slate-100"
+    hover_color = "hover:bg-slate-700"
+    logo_emoji = "📦"
+    logo_text = "Paquetería"
+    badge_color = "bg-slate-700 text-slate-100"
+    logout_color = "text-slate-200 hover:text-white"
+    border_color = "border-slate-700"
+  end
+%>
+
+<nav class="<%= bg_color %> fixed w-full z-20 top-0 start-0 border-b <%= border_color %> shadow-sm" data-controller="navbar">
+  <div class="max-w-7xl flex flex-wrap items-center justify-between mx-auto p-4">
+
+    <%= link_to dashboard_path_for(current_user), class: "flex items-center space-x-2" do %>
+      <span class="text-2xl"><%= logo_emoji %></span>
+      <span class="self-center text-xl <%= text_color %> font-bold whitespace-nowrap"><%= logo_text %></span>
+    <% end %>
+
+    <button
+      data-action="click->navbar#toggle"
+      type="button"
+      class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm <%= text_color %> rounded-lg md:hidden <%= hover_color %> focus:outline-none focus:ring-2 focus:ring-gray-300">
+      <span class="sr-only">Abrir menú principal</span>
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-width="2" d="M5 7h14M5 12h14M5 17h14"/>
+      </svg>
+    </button>
+
+    <div class="hidden w-full md:block md:w-auto absolute md:relative top-full left-0 md:top-auto md:left-auto z-50 md:z-auto bg-white md:bg-transparent shadow-lg md:shadow-none" data-navbar-target="menu">
+      <ul class="flex flex-col font-medium p-4 md:p-0 mt-4 border <%= border_color %> rounded-lg <%= bg_color %> md:space-x-6 md:flex-row md:mt-0 md:border-0">
+
+        <% if current_user.admin? %>
+          <li>
+            <%= link_to "Paquetes", admin_packages_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(admin_packages_path)}" %>
+          </li>
+          <li>
+            <%= link_to admin_scanner_warehouse_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "flex items-center py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(admin_scanner_warehouse_path)}" do %>
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+              </svg>
+              Escáner
+            <% end %>
+          </li>
+          <li>
+            <%= link_to "Usuarios", admin_users_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(admin_users_path)}" %>
+          </li>
+          <li>
+            <%= link_to "Conductores", admin_drivers_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(admin_drivers_path)}" %>
+          </li>
+          <li>
+            <%= link_to "Configuración", admin_settings_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(admin_settings_path)}" %>
+          </li>
+
+        <% elsif current_user.driver? %>
+          <li>
+            <%= link_to "Dashboard", drivers_root_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(drivers_root_path)}" %>
+          </li>
+          <li>
+            <%= link_to "Mis Paquetes", drivers_packages_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if request.path.start_with?('/drivers/packages')}" %>
+          </li>
+          <li>
+            <%= link_to "Mi Perfil", drivers_profile_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(drivers_profile_path)}" %>
+          </li>
+
+        <% else %>
+          <li>
+            <%= link_to "Dashboard", customers_dashboard_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(customers_dashboard_path)}" %>
+          </li>
+          <li>
+            <%= link_to "Mis Paquetes", customers_packages_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(customers_packages_path)}" %>
+          </li>
+          <li>
+            <%= link_to "Mi Perfil", customers_profile_path,
+              data: { turbo_prefetch: false, action: "click->navbar#close" },
+              class: "block py-2 px-3 #{text_color} rounded #{hover_color} md:p-0 #{'font-bold' if current_page?(customers_profile_path)}" %>
+          </li>
+        <% end %>
+
+        <li class="border-t <%= border_color %> md:border-t-0 mt-2 md:mt-0 pt-2 md:pt-0">
+          <div class="flex flex-col md:flex-row md:items-center gap-2 py-2 px-3 md:p-0">
+            <span class="text-sm <%= text_color %>">
+              <%= current_user.driver? ? current_user.name : current_user.email %>
+              <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full <%= badge_color %>">
+                <%= current_user.role.titleize %>
+              </span>
+            </span>
+            <%= button_to "Cerrar sesión", destroy_user_session_path,
+              method: :delete,
+              class: "text-sm font-medium #{logout_color}",
+              data: { turbo: false } %>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="h-16"></div>

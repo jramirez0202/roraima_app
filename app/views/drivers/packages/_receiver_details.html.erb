@@ -1,0 +1,22 @@
+<!-- Detalles del Receptor (solo mostrar cuando ya está entregado, para ver datos) -->
+<% if show_receiver_details?(package) %>
+<div class="px-6 py-4 border-b border-gray-200 bg-green-50">
+  <h2 class="text-lg font-semibold text-gray-900 mb-3">
+    👤 Detalles del Receptor
+  </h2>
+  <dl class="grid grid-cols-1 gap-4">
+    <% if package.receiver_name.present? %>
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Nombre del Receptor</dt>
+      <dd class="mt-1 text-sm text-gray-900 font-semibold"><%= package.receiver_name %></dd>
+    </div>
+    <% end %>
+    <% if package.receiver_observations.present? %>
+    <div>
+      <dt class="text-sm font-medium text-gray-500">Observaciones</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= package.receiver_observations %></dd>
+    </div>
+    <% end %>
+  </dl>
+</div>
+<% end %>

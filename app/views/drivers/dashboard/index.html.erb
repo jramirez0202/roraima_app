@@ -1,0 +1,156 @@
+<div class="px-4 sm:px-0" data-controller="form-cleanup">
+  <h1 class="text-3xl font-bold text-gray-900 mb-6">Dashboard del Conductor</h1>
+
+  <!-- Resumen de Estados -->
+  <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-6">
+    <div class="mb-4">
+      <h2 class="text-lg font-semibold text-gray-900">Mi Trabajo Actual</h2>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      <!-- Pendiente -->
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-100 border border-yellow-300">
+        <span class="text-yellow-800 font-semibold">Pendiente:</span>
+        <span class="text-xl font-bold text-yellow-900"><%= @stats[:pending] %></span>
+      </div>
+
+      <!-- Entregado -->
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 border border-green-300">
+        <span class="text-green-800 font-semibold">Entregado:</span>
+        <span class="text-xl font-bold text-green-900"><%= @stats[:delivered] %></span>
+      </div>
+
+      <!-- Reprogramado -->
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 border border-orange-300">
+        <span class="text-orange-800 font-semibold">Reprogramado:</span>
+        <span class="text-xl font-bold text-orange-900"><%= @stats[:rescheduled] %></span>
+      </div>
+
+      <!-- Cancelado -->
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 border border-red-300">
+        <span class="text-red-800 font-semibold">Cancelado:</span>
+        <span class="text-xl font-bold text-red-900"><%= @stats[:cancelled] %></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón de Control de Ruta - Destacado -->
+  <div class="mb-6">
+    <% if current_driver.can_start_route? && @stats[:pending] > 0 %>
+      <%= button_to drivers_start_route_path, method: :post,
+          class: "w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-lg bg-green-600 px-6 py-4 text-base font-bold text-white hover:bg-green-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105",
+          data: { confirm: "¿Estás seguro de iniciar tu ruta? Esto registrará el inicio de tus entregas." } do %>
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Iniciar Ruta
+      <% end %>
+    <% elsif current_driver.on_route? %>
+      <button type="button"
+              data-controller="route-complete"
+              data-action="click->route-complete#showModal"
+              data-route-complete-pending-count-value="<%= @stats[:pending] %>"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-lg bg-blue-600 px-6 py-4 text-base font-bold text-white hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Finalizar Ruta
+      </button>
+    <% elsif @stats[:pending] == 0 && !current_driver.on_route? %>
+      <button disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-lg bg-gray-300 px-6 py-4 text-base font-bold text-gray-500 cursor-not-allowed shadow">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        Sin Paquetes Pendientes
+      </button>
+    <% end %>
+  </div>
+
+  <!-- Paquetes Pendientes de Entrega -->
+  <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-xl font-semibold text-gray-900">Paquetes Pendientes de Entrega</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <% if @pending_packages.any? %>
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+                Estado
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tracking
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @pending_packages.each do |package| %>
+              <%# Prioridad: reprogramado > proveedor. Si está reprogramado, usar naranja; sino, usar color del proveedor %>
+              <% row_class = package.rescheduled? ? 'bg-orange-50' : provider_row_class(package.provider) %>
+              <tr class="hover:bg-gray-50 cursor-pointer <%= row_class %>"
+                  onclick="window.location='<%= drivers_package_path(package) %>'">
+
+                  <!-- Estado -->
+                <td class="px-6 py-4">
+                  <div class="flex flex-col items-start">
+                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_classes(package.status) %>">
+                      <%= status_text(package.status) %>
+                    </span>
+                    <% if package.delivered? && package.delivered_at %>
+                      <span class="mt-1 text-xs text-gray-500">
+                        <%= package.delivered_at.strftime('%d/%m/%y %H:%M') %>
+                      </span>
+                    <% end %>
+                  </div>
+                </td>
+
+                <!-- Dirección + Comuna -->
+                <!-- <td class="px-6 py-4 text-sm max-w-xs">
+                  <div class="text-gray-900"><%= package.address.present? ? package.address : "—" %></div>
+                  <div class="text-xs text-gray-500 mt-1"><%= package.commune&.name || "—" %></div>
+                </td> -->
+
+                <!-- Destinatario -->
+                <!-- <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900"><%= package.customer_name %></div>
+                  <div class="text-xs text-gray-500"><%= package.phone %></div>
+                </td> -->
+
+                <!-- Tracking + Provider Badge -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-mono text-xs mb-1">
+                    <%= package.tracking_code %>
+                  </div>
+                  <%= provider_badge(package) %>
+                </td>
+
+                <!-- Fecha Asignación -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <!-- <div class="text-sm text-gray-500">
+                    <%= package.assigned_at&.strftime('%d/%m/%Y %H:%M') || '-' %>
+                  </div> -->
+                  <% if package.rescheduled? && package.assigned_at.present? %>
+                    <% days_ago = (Date.current - package.assigned_at.to_date).to_i %>
+                    <div class="text-xs text-orange-600 font-semibold mt-1">
+                      📅 Hace <%= days_ago %> <%= days_ago == 1 ? 'día' : 'días' %>
+                    </div>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <div class="px-6 py-12 text-center">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No hay paquetes pendientes</h3>
+          <p class="mt-1 text-sm text-gray-500">Todos tus paquetes han sido entregados.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+</div>

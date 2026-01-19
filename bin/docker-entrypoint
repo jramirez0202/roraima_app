@@ -1,0 +1,177 @@
+#!/bin/bash -e
+
+# ============================================
+# DOCKER ENTRYPOINT - RutiService App
+# ============================================
+# Este script se ejecuta ANTES de iniciar la aplicación Rails.
+# Prepara el entorno: espera a que las dependencias (Postgres, Redis)
+# estén listas y ejecuta migraciones pendientes.
+#
+# FLUJO:
+# 1. Docker inicia el contenedor
+# 2. ENTRYPOINT ejecuta este script
+# 3. Script espera a Postgres/Redis
+# 4. Script ejecuta rails db:prepare (si es servidor)
+# 5. CMD ejecuta el comando final (rails server, bash, etc.)
+#
+# USO:
+# - Normal: docker compose up (ejecuta rails server)
+# - Custom: docker compose run web bash (ejecuta bash en lugar de server)
+# ============================================
+
+# ------------------------------------------
+# FUNCIÓN: Esperar a PostgreSQL
+# ------------------------------------------
+# Intenta conectarse a PostgreSQL cada 1 segundo, máximo 30 intentos.
+# Si no puede conectarse después de 30 segundos, falla y detiene el contenedor.
+
+wait_for_postgres() {
+  echo ""
+  echo "================================================"
+  echo "⏳ Esperando a que PostgreSQL esté listo..."
+  echo "================================================"
+
+  # Extraer el host de DATABASE_URL (formato: postgresql://user:pass@host:port/db)
+  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:]*\):.*|\1|p')
+
+  # Intentar conectar 30 veces usando pg_isready (mucho más rápido que rails runner)
+  for i in {1..30}; do
+    if pg_isready -h "$DB_HOST" -U postgres &> /dev/null; then
+      echo "✅ PostgreSQL está listo y aceptando conexiones"
+      return 0  # Éxito, salir de la función
+    fi
+
+    # Si llegamos aquí, falló el intento
+    echo "   Intento $i/30... PostgreSQL aún no está listo"
+    sleep 1  # Esperar 1 segundo antes del siguiente intento
+  done
+
+  # Si salimos del loop sin return, significa que fallaron los 30 intentos
+  echo ""
+  echo "❌ ERROR CRÍTICO: PostgreSQL no respondió después de 30 segundos"
+  echo "   Verifica que el servicio postgres esté corriendo:"
+  echo "   docker compose ps postgres"
+  echo ""
+  exit 1  # Salir con código de error (detiene el contenedor)
+}
+
+# ------------------------------------------
+# FUNCIÓN: Esperar a Redis
+# ------------------------------------------
+# Similar a wait_for_postgres, pero para Redis.
+# Solo se ejecuta si REDIS_URL está configurado.
+
+wait_for_redis() {
+  # Verificar si REDIS_URL está definido
+  if [ -z "$REDIS_URL" ]; then
+    echo ""
+    echo "⚠️  REDIS_URL no está configurado, omitiendo verificación de Redis"
+    echo "   (Sidekiq no funcionará sin Redis)"
+    return 0
+  fi
+
+  echo ""
+  echo "================================================"
+  echo "⏳ Esperando a que Redis esté listo..."
+  echo "================================================"
+
+  # Extraer host y puerto de REDIS_URL (formato: redis://host:port/db)
+  REDIS_HOST=$(echo "$REDIS_URL" | sed -n 's|redis://\([^:]*\):.*|\1|p')
+  REDIS_PORT=$(echo "$REDIS_URL" | sed -n 's|redis://[^:]*:\([0-9]*\).*|\1|p')
+
+  for i in {1..30}; do
+    # Usar nc (netcat) para verificar si el puerto está abierto
+    # Es más confiable que redis-cli en algunos entornos
+    if nc -z "$REDIS_HOST" "$REDIS_PORT" 2>/dev/null; then
+      echo "✅ Redis está listo y aceptando conexiones"
+      return 0
+    fi
+
+    echo "   Intento $i/30... Redis aún no está listo"
+    sleep 1
+  done
+
+  echo ""
+  echo "❌ ERROR CRÍTICO: Redis no respondió después de 30 segundos"
+  echo "   Verifica que el servicio redis esté corriendo:"
+  echo "   docker compose ps redis"
+  echo ""
+  exit 1
+}
+
+# ------------------------------------------
+# LÓGICA PRINCIPAL
+# ------------------------------------------
+# Solo preparar la base de datos si el comando es "rails server"
+# Esto evita ejecutar migraciones cuando haces:
+# docker compose run web rails console
+# docker compose run web bash
+# etc.
+
+if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
+  # Banner de inicio
+  echo ""
+  echo "================================================"
+  echo "🚀 INICIANDO RUTISERVICE APP"
+  echo "================================================"
+  echo ""
+  echo "📋 Configuración del entorno:"
+  echo "   - RAILS_ENV:    ${RAILS_ENV:-not set}"
+  echo "   - DATABASE_URL: ${DATABASE_URL:0:50}..." # Solo primeros 50 caracteres
+  echo "   - REDIS_URL:    ${REDIS_URL:-not set}"
+  echo ""
+  echo "ℹ️  Docker Compose ya verificó que PostgreSQL y Redis están listos"
+  echo "   (gracias a depends_on con condition: service_healthy)"
+  echo ""
+
+  # Skip db:prepare in staging/production - run manually:
+  # docker compose -f docker-compose.staging.yml exec web rails db:create db:migrate
+  if [ "${RAILS_ENV}" != "staging" ] && [ "${RAILS_ENV}" != "production" ]; then
+    echo "================================================"
+    echo "📊 Preparando base de datos..."
+    echo "================================================"
+    echo ""
+
+    # rails db:prepare hace:
+    # 1. Crea la DB si no existe (rails db:create)
+    # 2. Ejecuta migraciones pendientes (rails db:migrate)
+    # 3. Carga el schema si es DB nueva (rails db:schema:load)
+    # Es idempotente: puedes ejecutarlo múltiples veces sin problemas
+    ./bin/rails db:prepare
+
+    echo ""
+    echo "✅ Base de datos lista"
+    echo ""
+  else
+    echo "ℹ️  En staging/production, ejecuta manualmente:"
+    echo "   docker compose exec web rails db:create db:migrate"
+    echo ""
+  fi
+
+  echo "================================================"
+  echo "🌐 Iniciando servidor Rails..."
+  echo "================================================"
+  echo ""
+  echo "   La aplicación estará disponible en:"
+  echo "   http://localhost:3000"
+  echo ""
+  echo "   Para ver logs en tiempo real:"
+  echo "   docker compose logs -f web"
+  echo ""
+  echo "   Para abrir consola Rails:"
+  echo "   docker compose exec web rails console"
+  echo ""
+  echo "================================================"
+  echo ""
+fi
+
+# ------------------------------------------
+# EJECUTAR COMANDO ORIGINAL
+# ------------------------------------------
+# exec reemplaza el proceso actual con el comando especificado
+# "${@}" expande todos los argumentos pasados al script
+# Ejemplos:
+# - Si CMD es ["./bin/rails", "server"], ejecuta: ./bin/rails server
+# - Si ejecutas: docker compose run web bash, ejecuta: bash
+
+exec "${@}"

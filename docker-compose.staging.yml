@@ -1,0 +1,104 @@
+networks:
+  roraima_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  storage_data:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: roraima_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: roraima_app_staging
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - roraima_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: roraima_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - roraima_network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        RUBY_VERSION: 3.2.2
+    container_name: roraima_web
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.staging
+    volumes:
+      # STAGING: No montar código local - usar código bakeado en imagen
+      # Esto evita sobrescribir /rails/vendor/bundle con gemas instaladas
+      - storage_data:/rails/storage
+    ports:
+      - "127.0.0.1:3001:3000"
+    restart: unless-stopped
+    networks:
+      - roraima_network
+
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+      args:
+        RUBY_VERSION: 3.2.2
+    container_name: roraima_sidekiq
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    env_file:
+      - .env.staging
+    volumes:
+      # STAGING: No montar código local - usar código bakeado en imagen
+      # Esto evita sobrescribir /rails/vendor/bundle con gemas instaladas
+      - storage_data:/rails/storage
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+    networks:
+      - roraima_network

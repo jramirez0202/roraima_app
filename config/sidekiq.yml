@@ -1,0 +1,8 @@
+:concurrency: 5
+:max_retries: 3
+:timeout: 25
+
+:queues:
+  - [roraima_app_staging_default, 2]
+  - [roraima_app_staging_mailers, 1]
+  - [roraima_app_staging_bulk_uploads, 3]

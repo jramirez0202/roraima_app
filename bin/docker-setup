@@ -1,0 +1,418 @@
+#!/bin/bash
+
+# ============================================
+# DOCKER SETUP SCRIPT - RutiService App
+# ============================================
+# Script de configuración inicial para Docker.
+# Este script automatiza TODO el proceso de setup:
+# - Verifica que Docker esté instalado
+# - Crea archivo .env.docker
+# - Genera SECRET_KEY_BASE
+# - Construye imágenes Docker
+# - Inicia servicios
+# - Crea y migra base de datos
+# - Opcionalmente carga seeds
+#
+# USO:
+# chmod +x bin/docker-setup
+# ./bin/docker-setup
+#
+# TIEMPO ESTIMADO: 5-10 minutos la primera vez
+# ============================================
+
+# Salir si cualquier comando falla
+set -e
+
+# ------------------------------------------
+# COLORES PARA OUTPUT
+# ------------------------------------------
+# Códigos ANSI para colorear el output
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Funciones helper para imprimir con colores
+print_success() {
+  echo -e "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+  echo -e "${RED}✗${NC} $1"
+}
+
+print_warning() {
+  echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_info() {
+  echo -e "${BLUE}ℹ${NC} $1"
+}
+
+# ------------------------------------------
+# BANNER DE INICIO
+# ------------------------------------------
+
+echo ""
+echo "================================================"
+echo "🐳 DOCKER SETUP - RutiService APP"
+echo "================================================"
+echo ""
+echo "Este script configurará todo lo necesario para"
+echo "ejecutar la aplicación en Docker."
+echo ""
+echo "Tiempo estimado: 5-10 minutos"
+echo ""
+echo "================================================"
+echo ""
+
+# ------------------------------------------
+# 1. VERIFICAR QUE DOCKER ESTÉ INSTALADO
+# ------------------------------------------
+
+echo "1️⃣  Verificando Docker..."
+echo ""
+
+# Verificar Docker
+if ! command -v docker &> /dev/null; then
+  print_error "Docker no está instalado"
+  echo ""
+  echo "   Instala Docker Desktop desde:"
+  echo "   https://docs.docker.com/get-docker/"
+  echo ""
+  exit 1
+fi
+
+# Verificar Docker Compose
+if ! command -v docker compose &> /dev/null; then
+  print_error "Docker Compose no está instalado"
+  echo ""
+  echo "   Docker Compose debería venir con Docker Desktop."
+  echo "   Si usas Linux, instala docker-compose-plugin."
+  echo ""
+  exit 1
+fi
+
+# Verificar que Docker esté corriendo
+if ! docker info &> /dev/null; then
+  print_error "Docker no está corriendo"
+  echo ""
+  echo "   Inicia Docker Desktop y espera a que esté listo."
+  echo "   Luego ejecuta este script de nuevo."
+  echo ""
+  exit 1
+fi
+
+print_success "Docker instalado: $(docker --version)"
+print_success "Docker Compose instalado: $(docker compose version)"
+echo ""
+
+# ------------------------------------------
+# 2. CREAR ARCHIVO .env.docker
+# ------------------------------------------
+
+echo "2️⃣  Configurando variables de entorno..."
+echo ""
+
+if [ ! -f .env.docker ]; then
+  if [ -f .env.docker.example ]; then
+    cp .env.docker.example .env.docker
+    print_success "Archivo .env.docker creado desde .env.docker.example"
+  else
+    print_error ".env.docker.example no existe"
+    echo "   Este archivo debería estar en el repositorio."
+    exit 1
+  fi
+else
+  print_warning ".env.docker ya existe, no se sobrescribe"
+fi
+
+echo ""
+
+# ------------------------------------------
+# 3. GENERAR SECRET_KEY_BASE
+# ------------------------------------------
+
+echo "3️⃣  Generando SECRET_KEY_BASE..."
+echo ""
+
+# Verificar si el secret ya está configurado
+if grep -q "CHANGE_THIS_SECRET" .env.docker 2>/dev/null; then
+  print_info "Construyendo imagen temporal para generar secret..."
+  echo "   (Esto puede tomar 2-3 minutos la primera vez)"
+  echo ""
+
+  # Construir solo el stage de development (más rápido que producción)
+  docker compose build web --quiet || {
+    print_error "Error al construir la imagen Docker"
+    exit 1
+  }
+
+  # Generar secret usando Rails
+  print_info "Generando secret..."
+  SECRET_KEY=$(docker compose run --rm web rails secret 2>/dev/null | tail -n 1)
+
+  if [ -n "$SECRET_KEY" ]; then
+    # Reemplazar en .env.docker
+    # Diferente sintaxis para macOS (sed -i '') vs Linux (sed -i)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      # macOS
+      sed -i '' "s/SECRET_KEY_BASE=CHANGE_THIS_SECRET.*/SECRET_KEY_BASE=$SECRET_KEY/" .env.docker
+    else
+      # Linux
+      sed -i "s/SECRET_KEY_BASE=CHANGE_THIS_SECRET.*/SECRET_KEY_BASE=$SECRET_KEY/" .env.docker
+    fi
+
+    print_success "SECRET_KEY_BASE generado y guardado en .env.docker"
+  else
+    print_error "Error generando SECRET_KEY_BASE"
+    echo "   Puedes generarlo manualmente más tarde:"
+    echo "   docker compose run --rm web rails secret"
+    exit 1
+  fi
+else
+  print_success "SECRET_KEY_BASE ya está configurado"
+fi
+
+echo ""
+
+# ------------------------------------------
+# 4. CREAR DIRECTORIOS NECESARIOS
+# ------------------------------------------
+
+echo "4️⃣  Creando directorios necesarios..."
+echo ""
+
+# Directorio para scripts de PostgreSQL
+mkdir -p docker/postgres
+
+# Directorios de Rails (por si no existen)
+mkdir -p storage tmp log
+
+print_success "Directorios creados"
+echo ""
+
+# ------------------------------------------
+# 5. CONSTRUIR IMÁGENES DOCKER
+# ------------------------------------------
+
+echo "5️⃣  Construyendo imágenes Docker..."
+echo ""
+echo "   ⏱️  Esto puede tomar 5-10 minutos la primera vez"
+echo "   (Instalando Ruby, gemas, dependencias del sistema, etc.)"
+echo ""
+
+# Construir todas las imágenes
+# --no-cache: No usar cache (para asegurar build limpio)
+# Comentar --no-cache si quieres builds más rápidos en re-runs
+docker compose build || {
+  print_error "Error al construir las imágenes Docker"
+  echo ""
+  echo "   Verifica los errores arriba y corrige cualquier problema."
+  echo "   Luego ejecuta este script de nuevo."
+  echo ""
+  exit 1
+}
+
+echo ""
+print_success "Imágenes construidas correctamente"
+echo ""
+
+# ------------------------------------------
+# 6. INICIAR SERVICIOS BASE (POSTGRES Y REDIS)
+# ------------------------------------------
+
+echo "6️⃣  Iniciando servicios de base de datos..."
+echo ""
+
+# Iniciar solo postgres y redis (servicios base)
+docker compose up -d postgres redis || {
+  print_error "Error al iniciar postgres y redis"
+  exit 1
+}
+
+print_info "Esperando 15 segundos a que los servicios estén listos..."
+echo ""
+
+# Dar tiempo a que PostgreSQL y Redis se inicialicen completamente
+# PostgreSQL necesita crear la DB, ejecutar init scripts, etc.
+sleep 15
+
+# Verificar estado de servicios
+print_info "Verificando estado de servicios..."
+docker compose ps postgres redis
+
+echo ""
+print_success "Servicios base iniciados"
+echo ""
+
+# ------------------------------------------
+# 7. CREAR Y MIGRAR BASE DE DATOS
+# ------------------------------------------
+
+echo "7️⃣  Configurando base de datos..."
+echo ""
+
+# Crear base de datos
+print_info "Creando base de datos..."
+docker compose run --rm web rails db:create || {
+  print_warning "La base de datos ya existe o hubo un error (esto es normal)"
+}
+
+echo ""
+
+# Ejecutar migraciones
+print_info "Ejecutando migraciones..."
+docker compose run --rm web rails db:migrate || {
+  print_error "Error al ejecutar migraciones"
+  exit 1
+}
+
+echo ""
+print_success "Base de datos configurada"
+echo ""
+
+# ------------------------------------------
+# 8. CARGAR SEEDS (OPCIONAL)
+# ------------------------------------------
+
+echo "8️⃣  Datos de prueba (seeds)..."
+echo ""
+print_info "¿Deseas cargar datos de prueba (db:seed)?"
+echo ""
+echo "   Los seeds incluyen:"
+echo "   - 16 regiones de Chile + 345 comunas"
+echo "   - Usuarios de prueba (admin, customer, driver)"
+echo "   - Zonas geográficas"
+echo ""
+
+read -p "   Cargar seeds? [y/N]: " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  print_info "Cargando seeds..."
+  docker compose run --rm web rails db:seed || {
+    print_error "Error al cargar seeds"
+    exit 1
+  }
+  echo ""
+  print_success "Datos de prueba cargados"
+else
+  print_info "Omitiendo seeds (puedes cargarlos más tarde con: docker compose exec web rails db:seed)"
+fi
+
+echo ""
+
+# ------------------------------------------
+# 9. VERIFICAR EXTENSIÓN PG_TRGM
+# ------------------------------------------
+
+echo "9️⃣  Verificando extensión pg_trgm..."
+echo ""
+
+# Verificar que la extensión se instaló correctamente
+EXTENSIONS=$(docker compose exec -T postgres psql -U postgres -d roraima_app_development -c '\dx' 2>/dev/null | grep pg_trgm || echo "")
+
+if [ -n "$EXTENSIONS" ]; then
+  print_success "Extensión pg_trgm habilitada correctamente"
+else
+  print_warning "No se pudo verificar pg_trgm (puede ser normal)"
+  print_info "Verifica manualmente con:"
+  echo "   docker compose exec postgres psql -U postgres -d roraima_app_development -c '\dx'"
+fi
+
+echo ""
+
+# ------------------------------------------
+# 10. INICIAR TODOS LOS SERVICIOS
+# ------------------------------------------
+
+echo "🔟 Iniciando todos los servicios..."
+echo ""
+
+docker compose up -d || {
+  print_error "Error al iniciar servicios"
+  exit 1
+}
+
+echo ""
+print_info "Esperando 5 segundos a que los servicios arranquen..."
+sleep 5
+
+# Mostrar estado de todos los servicios
+echo ""
+print_info "Estado de servicios:"
+docker compose ps
+
+echo ""
+
+# ------------------------------------------
+# FINALIZACIÓN
+# ------------------------------------------
+
+echo ""
+echo "================================================"
+echo "✅ SETUP COMPLETADO CON ÉXITO"
+echo "================================================"
+echo ""
+print_success "La aplicación Docker está lista para usar!"
+echo ""
+echo "📍 ACCESO A LA APLICACIÓN:"
+echo ""
+echo "   🌐 Aplicación web:"
+echo "      http://localhost:3000"
+echo ""
+echo "   👨‍💼 Sidekiq Web UI (solo admin):"
+echo "      http://localhost:3000/sidekiq"
+echo ""
+
+# Mostrar usuarios de prueba si se cargaron seeds
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  echo "👤 USUARIOS DE PRUEBA (contraseña: password123):"
+  echo ""
+  echo "   Admin:    admin@roraima.cl"
+  echo "   Customer: customer@roraima.cl"
+  echo "   Driver:   driver@roraima.cl"
+  echo ""
+fi
+
+echo "📝 COMANDOS ÚTILES:"
+echo ""
+echo "   Ver logs en tiempo real:"
+echo "      docker compose logs -f web"
+echo ""
+echo "   Abrir consola de Rails:"
+echo "      docker compose exec web rails console"
+echo ""
+echo "   Ejecutar migraciones:"
+echo "      docker compose exec web rails db:migrate"
+echo ""
+echo "   Ejecutar tests:"
+echo "      docker compose exec web rails test"
+echo ""
+echo "   Detener servicios:"
+echo "      docker compose down"
+echo ""
+echo "   Reiniciar servicios:"
+echo "      docker compose restart"
+echo ""
+echo "   Ver estado de servicios:"
+echo "      docker compose ps"
+echo ""
+echo "   Conectar a PostgreSQL:"
+echo "      docker compose exec postgres psql -U postgres -d roraima_app_development"
+echo ""
+echo "   Conectar a Redis:"
+echo "      docker compose exec redis redis-cli"
+echo ""
+echo "⚠️  RESET COMPLETO (borra volúmenes):"
+echo "      docker compose down -v"
+echo ""
+echo "================================================"
+echo ""
+print_info "Para documentación completa, lee README.DOCKER.md"
+echo ""
+print_success "¡Feliz desarrollo! 🚀"
+echo ""

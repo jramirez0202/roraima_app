@@ -1,0 +1,132 @@
+<%= form_with(model: [:admin, user], class: "space-y-6") do |form| %>
+  <% if user.errors.any? %>
+    <div class="rounded-md bg-red-50 p-4">
+      <h3 class="text-sm font-medium text-red-800">
+        <%= pluralize(user.errors.count, "error") %> impidieron guardar este usuario:
+      </h3>
+      <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+        <% user.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 space-y-6">
+    <h3 class="text-base font-semibold leading-7 text-gray-900">Información del Usuario</h3>
+
+    <!-- Rol -->
+    <div>
+      <%= form.label :role, "Tipo de Usuario *", class: "block text-sm font-medium text-gray-700" %>
+      <% if form.object.persisted? && form.object.driver? %>
+        <!-- Si es un Driver existente, mostrar como readonly y redirigir a drivers -->
+        <div class="mt-1 block w-full rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2">
+          <p class="text-sm text-yellow-800">
+            ⚠️ Este usuario es un <strong>Conductor</strong>.
+            <%= link_to "Editar desde Gestión de Conductores", edit_admin_driver_path(form.object), class: "text-yellow-900 underline font-medium" %>
+          </p>
+        </div>
+        <%= form.hidden_field :role, value: 'driver' %>
+      <% else %>
+        <%= form.select :role,
+            options_for_select([
+              ['Administrador', 'admin'],
+              ['Cliente', 'customer']
+            ], form.object.role),
+            { prompt: "Seleccione un tipo..." },
+            { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" } %>
+        <p class="mt-1 text-xs text-gray-500">
+          Para crear conductores, use <%= link_to "Gestión de Conductores", new_admin_driver_path, class: "text-indigo-600 hover:text-indigo-500 font-medium" %>
+        </p>
+      <% end %>
+    </div>
+
+    <!-- Email -->
+    <div>
+      <%= form.label :email, "Email *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.email_field :email,
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+    </div>
+
+    <!-- Password -->
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <%= form.label :password, "Contraseña #{user.persisted? ? '(dejar en blanco para no cambiar)' : '*'}",
+            class: "block text-sm font-medium text-gray-700" %>
+        <%= form.password_field :password, autocomplete: "new-password",
+            class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+      </div>
+
+      <div>
+        <%= form.label :password_confirmation, "Confirmar Contraseña",
+            class: "block text-sm font-medium text-gray-700" %>
+        <%= form.password_field :password_confirmation, autocomplete: "new-password",
+            class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+      </div>
+    </div>
+
+    <!-- RUT -->
+    <div>
+      <%= form.label :rut, "RUT *", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :rut, placeholder: "12.345.678-9",
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+      <p class="mt-1 text-xs text-gray-500">Formato: 12.345.678-9</p>
+    </div>
+
+    <!-- Phone -->
+<div data-controller="phone">
+  <%= form.label :phone, "Teléfono *", class: "block text-sm font-medium text-gray-700" %>
+  <%= form.telephone_field :phone,
+      value: form.object.phone.presence || "+569",
+      placeholder: "+56987654321",
+      pattern: "\\+569[0-9]{8}",
+      maxlength: "12",
+      data: {
+        phone_target: "input",
+        action: "focus->phone#focus input->phone#input keydown->phone#keydown paste->phone#paste"
+      },
+      class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+  <p class="mt-1 text-xs text-gray-500">Formato: +569XXXXXXXX (12 caracteres)</p>
+</div>
+
+
+    <!-- Company (solo visible, backend filtra) -->
+    <div>
+      <%= form.label :company, "Nombre Empresa", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :company,
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+      <p class="mt-1 text-xs text-gray-500">Solo para clientes (opcional)</p>
+    </div>
+
+    <!-- Delivery Charge (solo visible, backend filtra) -->
+    <div>
+      <%= form.label :delivery_charge, "Cobro por Envío (CLP)", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.number_field :delivery_charge,
+          value: form.object.delivery_charge || 0,
+          step: "1", min: "0", placeholder: "5000",
+          class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+      <p class="mt-1 text-xs text-gray-500">Solo para clientes (opcional)</p>
+    </div>
+
+    <!-- Active -->
+<div class="flex flex-col">
+  <div class="flex items-center gap-x-2">
+    <span class="font-medium text-gray-900">Cuenta Activa</span>
+    <%= form.check_box :active,
+        class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+  </div>
+  <p class="text-gray-500 text-sm mt-1">Desactivar impedirá que el usuario inicie sesión</p>
+</div>
+
+
+
+  </div>
+
+  <!-- Botones -->
+  <div class="flex justify-end space-x-3 pt-6 border-t">
+    <%= link_to "Cancelar", admin_users_path,
+        class: "inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50" %>
+    <%= form.submit user.persisted? ? "Actualizar Usuario" : "Crear Usuario",
+        class: "inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 cursor-pointer" %>
+  </div>
+<% end %>

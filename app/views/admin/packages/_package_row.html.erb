@@ -1,0 +1,123 @@
+<%
+  # Expected local variables:
+  # - package: Package instance
+  # - filter_params: Hash of filter parameters (optional)
+  #
+  # Nota: El conductor se carga dinámicamente vía autocomplete (driver_autocomplete_controller.js)
+  # No necesita recibir la colección de drivers como parámetro
+%>
+
+<tr class="hover:bg-gray-50 <%= provider_row_class(package.provider) %>">
+  <!-- Checkbox -->
+  <td class="px-3 py-4 whitespace-nowrap">
+    <input type="checkbox"
+          name="package_ids[]"
+          value="<%= package.id %>"
+          data-bulk-packages-target="checkbox"
+          data-action="change->bulk-packages#updateButtons"
+          class="package-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+  </td>
+
+  <!-- Estado -->
+  <td class="px-3 py-2 text-sm">
+    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= status_badge_classes(package.status) %>">
+      <%= status_text(package.status) %>
+    </span>
+
+    <% if package.delivered? && package.delivered_at %>
+      <div class="mt-1 text-xs text-gray-500">
+        <%= l(package.delivered_at, format: :short) %>
+      </div>
+    <% end %>
+  </td>
+
+  <!-- Tracking + Provider -->
+  <td class="px-3 py-2 text-sm whitespace-nowrap">
+    <div class="font-mono text-xs mb-1"><%= package.tracking_code %></div>
+    <%= provider_badge(package) %>
+  </td>
+
+  <!-- Empresa -->
+  <td class="px-3 py-2 text-sm">
+    <% if package.user.present? %>
+      <div><%= package.company_name.presence || package.user&.company || "—" %></div>
+      <div class="text-xs text-gray-600"><%= package.user.email %></div>
+    <% else %>
+      —
+    <% end %>
+  </td>
+
+  <!-- Dirección + Comuna -->
+  <td class="px-3 py-2 text-sm max-w-xs">
+    <div class="wrap-break-word"><%= display_address(package) %></div>
+    <div class="text-xs text-gray-500"><%= package.commune&.name || "—" %></div>
+  </td>
+
+  <!-- Fecha Carga -->
+  <td class="px-3 py-2 text-sm">
+    <% if package.loading_date %>
+      <%= package.loading_date.strftime("%d/%m/%Y") %>
+    <% else %>
+      <span class="text-gray-400">—</span>
+    <% end %>
+  </td>
+
+  <!-- Conductor Asignado -->
+  <td class="px-3 py-2 text-sm">
+    <div class="relative w-full"
+         data-controller="driver-autocomplete"
+         data-driver-autocomplete-package-id-value="<%= package.id %>"
+         data-driver-autocomplete-assign-url-value="<%= assign_courier_admin_package_path(package) %>"
+         data-driver-autocomplete-current-driver-id-value="<%= package.assigned_courier_id %>"
+         data-driver-autocomplete-current-driver-name-value="<%= package.assigned_courier&.name || 'Sin asignar' %>">
+
+      <!-- Input de búsqueda compacto -->
+      <div class="relative">
+        <input type="text"
+               data-driver-autocomplete-target="input"
+               data-action="input->driver-autocomplete#search focus->driver-autocomplete#focusInput blur->driver-autocomplete#blurInput"
+               value="<%= package.assigned_courier&.name || 'Sin asignar' %>"
+               placeholder="Escribe 2+ letras..."
+               class="block w-full text-xs rounded border-gray-300 py-1.5 px-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 pr-7">
+
+        <!-- Botón de limpiar (solo si tiene driver asignado) -->
+        <% if package.assigned_courier_id.present? %>
+          <button type="button"
+                  data-action="click->driver-autocomplete#clearDriver"
+                  class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-600"
+                  title="Desasignar conductor">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        <% end %>
+      </div>
+
+      <!-- Dropdown de resultados compacto (posicionado con JS usando fixed) -->
+      <div data-driver-autocomplete-target="dropdown"
+           class="hidden bg-white shadow-xl rounded border border-gray-300 max-h-60 overflow-y-auto"
+           style="z-index: 9999;">
+        <!-- Resultados se cargan dinámicamente -->
+      </div>
+    </div>
+  </td>
+
+  <!-- Acciones -->
+  <td class="px-2 py-2 text-sm">
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-1">
+      <%= link_to admin_package_path(package, filter_params || {}),
+          data: { turbo_prefetch: false },
+          class: "p-1 sm:p-1.5 text-blue-600 hover:bg-blue-50 rounded text-base sm:text-lg",
+          title: "Ver detalle y cambiar estado" do %>
+        👁️
+      <% end %>
+
+      <%= link_to edit_admin_package_path(package, filter_params || {}),
+          data: { turbo_prefetch: false },
+          class: "p-1 sm:p-1.5 text-indigo-600 hover:bg-indigo-50 rounded text-base sm:text-lg",
+          title: "Editar información" do %>
+        ✏️
+      <% end %>
+    </div>
+  </td>
+</tr>

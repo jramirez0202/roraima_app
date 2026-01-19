@@ -1,0 +1,116 @@
+es:
+  date:
+    abbr_day_names:
+    - dom
+    - lun
+    - mar
+    - mié
+    - jue
+    - vie
+    - sáb
+    day_names:
+    - Domingo
+    - Lunes
+    - Martes
+    - Miércoles
+    - Jueves
+    - Viernes
+    - Sábado
+    abbr_month_names:
+    -
+    - ene
+    - feb
+    - mar
+    - abr
+    - may
+    - jun
+    - jul
+    - ago
+    - sep
+    - oct
+    - nov
+    - dic
+    month_names:
+    -
+    - Enero
+    - Febrero
+    - Marzo
+    - Abril
+    - Mayo
+    - Junio
+    - Julio
+    - Agosto
+    - Septiembre
+    - Octubre
+    - Noviembre
+    - Diciembre
+    formats:
+      default: "%d/%m/%Y"
+      long: "%A, %d de %B de %Y"
+      short: "%d de %b"
+  time:
+    formats:
+      default: "%a, %d %b %Y %H:%M:%S %z"
+      long: "%d de %B de %Y %H:%M"
+      short: "%d de %b %H:%M"
+
+  devise:
+    sessions:
+      signed_in: "Sesión iniciada correctamente."
+      signed_out: "Sesión cerrada correctamente."
+      already_signed_out: "Sesión cerrada correctamente."
+    passwords:
+      no_token: "No puedes acceder a esta página sin venir desde un email de reseteo de contraseña."
+      send_instructions: "Recibirás un email con instrucciones para resetear tu contraseña en unos minutos."
+      send_paranoid_instructions: "Si tu email existe en nuestra base de datos, recibirás un enlace para recuperar tu contraseña."
+      updated: "Tu contraseña ha sido cambiada correctamente."
+      updated_not_active: "Tu contraseña ha sido cambiada correctamente."
+    confirmations:
+      confirmed: "Tu cuenta ha sido confirmada correctamente."
+      send_instructions: "Recibirás un email con instrucciones para confirmar tu cuenta en unos minutos."
+      send_paranoid_instructions: "Si tu email existe en nuestra base de datos, recibirás un email con instrucciones para confirmar tu cuenta en unos minutos."
+    registrations:
+      destroyed: "Adiós. Tu cuenta ha sido cancelada correctamente."
+      signed_up: "Bienvenido. Tu cuenta ha sido creada correctamente."
+      signed_up_but_inactive: "Tu cuenta ha sido creada correctamente. Sin embargo, no puedes iniciar sesión porque tu cuenta no está activada."
+      signed_up_but_locked: "Tu cuenta ha sido creada correctamente. Sin embargo, no puedes iniciar sesión porque tu cuenta está bloqueada."
+      signed_up_but_unconfirmed: "Se ha enviado un mensaje con un enlace de confirmación a tu email. Abre el enlace para activar tu cuenta."
+      update_needs_confirmation: "Has actualizado tu cuenta correctamente, pero necesitamos verificar tu nuevo email. Revisa tu correo y abre el enlace de confirmación."
+      updated: "Tu cuenta ha sido actualizada correctamente."
+      updated_but_not_signed_in: "Tu cuenta ha sido actualizada correctamente, pero como tu contraseña ha cambiado, debes iniciar sesión nuevamente."
+    unlocks:
+      send_instructions: "Recibirás un email con instrucciones para desbloquear tu cuenta en unos minutos."
+      send_paranoid_instructions: "Si tu cuenta existe, recibirás un email con instrucciones para desbloquear tu cuenta en unos minutos."
+      unlocked: "Tu cuenta ha sido desbloqueada correctamente. Inicia sesión para continuar."
+    omniauth_callbacks:
+      failure: "No se te ha podido autorizar de %{kind} porque \"%{reason}\"."
+      success: "Has sido autorizado correctamente de %{kind}."
+    mailer:
+      confirmation_instructions:
+        subject: "Instrucciones de confirmación"
+      reset_password_instructions:
+        subject: "Instrucciones de recuperación de contraseña"
+      unlock_instructions:
+        subject: "Instrucciones de desbloqueo"
+      email_changed:
+        subject: "Email cambiado"
+      password_change:
+        subject: "Contraseña cambiada"
+    failure:
+      already_authenticated: "Ya has iniciado sesión."
+      inactive: "Tu cuenta aún no ha sido activada."
+      invalid: "Email o contraseña inválidos."
+      locked: "Tu cuenta está bloqueada."
+      last_attempt: "Tienes un intento más antes de que tu cuenta sea bloqueada."
+      not_found_in_database: "Email o contraseña inválidos."
+      timeout: "Tu sesión ha expirado. Inicia sesión nuevamente para continuar."
+      unauthenticated: "Debes iniciar sesión o registrarte para continuar."
+      unconfirmed: "Debes confirmar tu cuenta para continuar."
+
+  activerecord:
+    errors:
+      messages:
+        record_invalid: "La validación falló: %{errors}"
+        restrict_dependent_destroy:
+          has_one: "No se puede eliminar el registro porque existe un %{record} dependiente"
+          has_many: "No se puede eliminar el registro porque existen %{record} dependientes"

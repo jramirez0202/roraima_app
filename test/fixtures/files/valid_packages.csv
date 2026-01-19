@@ -1,0 +1,4 @@
+NRO DE PEDIDO,DESTINATARIO,TELÉFONO,DIRECCIÓN,COMUNA,DESCRIPCIÓN,MONTO,CAMBIO,EMPRESA
+TEST-001,Juan Pérez,+56912345678,Av. Providencia 123,Providencia,Paquete con ropa,15000,NO,
+TEST-002,María González,+56987654321,Los Leones 456,Las Condes,Electrónicos,25000,SI,
+TEST-003,Pedro Ramírez,+56956781234,Santa Rosa 789,La Florida,Libros,8000,NO,

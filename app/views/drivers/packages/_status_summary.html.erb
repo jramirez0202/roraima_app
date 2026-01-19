@@ -1,0 +1,76 @@
+<%
+  # Expected local variables:
+  # - status_counters: Hash with status counters (pending, delivered, rescheduled, cancelled)
+  # - filter_date: Current filter date (defaults to Date.current)
+%>
+
+<div class="bg-white shadow-sm rounded-lg border border-gray-200 p-6 mb-6">
+  <div class="flex justify-between items-start mb-4">
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900">
+        Resumen de Estados
+        <% unless filter_date == Date.current %>
+          <span class="text-sm font-normal text-gray-500">(<%= l(filter_date, format: :short) %>)</span>
+        <% end %>
+      </h2>
+    </div>
+
+    <!-- Botones de Control de Ruta -->
+    <div class="flex gap-2">
+      <% if current_driver.can_start_route? && status_counters[:pending] > 0 %>
+        <%= button_to drivers_start_route_path, method: :post,
+            class: "inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 shadow-sm transition-colors",
+            data: { confirm: "¿Estás seguro de iniciar tu ruta? Esto registrará el inicio de tus entregas." } do %>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          Iniciar Ruta
+        <% end %>
+      <% elsif current_driver.on_route? %>
+        <button type="button"
+                data-controller="route-complete"
+                data-action="click->route-complete#showModal"
+                data-route-complete-pending-count-value="<%= status_counters[:pending] %>"
+                class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Finalizar Ruta
+        </button>
+      <% elsif status_counters[:pending] == 0 && !current_driver.on_route? %>
+        <button disabled class="inline-flex items-center gap-2 rounded-md bg-gray-300 px-4 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+          </svg>
+          Sin Paquetes Pendientes
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-3">
+    <!-- Pendiente -->
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-100 border border-yellow-300">
+      <span class="text-yellow-800 font-semibold">Pendiente:</span>
+      <span class="text-xl font-bold text-yellow-900"><%= status_counters[:pending] %></span>
+    </div>
+
+    <!-- Entregado -->
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 border border-green-300">
+      <span class="text-green-800 font-semibold">Entregado:</span>
+      <span class="text-xl font-bold text-green-900"><%= status_counters[:delivered] %></span>
+    </div>
+
+    <!-- Reprogramado -->
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 border border-orange-300">
+      <span class="text-orange-800 font-semibold">Reprogramado:</span>
+      <span class="text-xl font-bold text-orange-900"><%= status_counters[:rescheduled] %></span>
+    </div>
+
+    <!-- Cancelado -->
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-100 border border-red-300">
+      <span class="text-red-800 font-semibold">Cancelado:</span>
+      <span class="text-xl font-bold text-red-900"><%= status_counters[:cancelled] %></span>
+    </div>
+  </div>
+</div>

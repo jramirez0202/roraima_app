@@ -1,0 +1,18 @@
+<!-- Selector de Estado -->
+<div>
+  <%= form.label :new_status, "Selecciona el nuevo estado", class: "block text-sm font-medium text-gray-700 mb-3" %>
+  <div class="flex flex-wrap gap-4">
+    <% status_options = available_status_options_for(package) %>
+    <% status_options.each do |option| %>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <%= form.radio_button :new_status, option[:value],
+                           checked: (option[:value] == 'delivered'),
+                           onchange: "handleStatusChange('#{option[:value]}')",
+                           class: "w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300" %>
+      <span class="text-base font-medium text-gray-900">
+        <%= option[:icon] %> <%= option[:label] %>
+      </span>
+    </label>
+    <% end %>
+  </div>
+</div>

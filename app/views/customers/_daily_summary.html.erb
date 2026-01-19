@@ -1,0 +1,97 @@
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
+  <!-- Header: Título izquierda, Filtro derecha -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 sm:px-4 py-3 bg-gray-50 border-b border-gray-200">
+    <!-- Título -->
+    <div class="flex items-center gap-2">
+      <span class="text-base sm:text-lg">📊</span>
+      <h3 class="text-xs sm:text-sm font-semibold text-gray-700">
+        RESUMEN
+        <% if @date_from.present? %>
+          (<%= @date_from.strftime('%d/%m/%Y') %>
+          <% if @date_to != @date_from %>
+            - <%= @date_to.strftime('%d/%m/%Y') %>
+          <% end %>)
+        <% else %>
+          (<%= Date.current.strftime('%d/%m/%Y') %>)
+        <% end %>
+      </h3>
+    </div>
+
+    <!-- Filtro de fechas a la derecha -->
+    <%= form_with url: customers_dashboard_path, method: :get, local: true, class: "flex flex-wrap items-center gap-3" do |f| %>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-500">Desde:</label>
+        <%= f.date_field :date_from,
+            value: @date_from,
+            class: "rounded-md border-gray-300 shadow-sm focus:border-[#247ba0] focus:ring-[#247ba0] text-sm py-1.5 px-2" %>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-500">Hasta:</label>
+        <%= f.date_field :date_to,
+            value: @date_to,
+            class: "rounded-md border-gray-300 shadow-sm focus:border-[#247ba0] focus:ring-[#247ba0] text-sm py-1.5 px-2" %>
+      </div>
+      <%= f.submit "Filtrar",
+          class: "inline-flex items-center px-4 py-1.5 text-sm font-medium text-white bg-[#247ba0] border border-transparent rounded-md hover:bg-[#1d6584] cursor-pointer" %>
+      <% if params[:date_from].present? || params[:date_to].present? %>
+        <%= link_to "Hoy", customers_dashboard_path,
+            class: "inline-flex items-center px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50" %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Contadores: Total, Pendiente, En Camino, Entregado, Reprogramado, Cancelado -->
+  <!-- Desktop: 6 cols horizontal | Mobile: 2 cols vertical -->
+  <div class="grid grid-cols-2 sm:grid-cols-6 gap-px bg-gray-200">
+    <!-- Total -->
+    <div class="bg-white px-2 sm:px-4 py-2 sm:py-3 text-center">
+      <div class="text-[10px] sm:text-xs font-medium text-gray-500 uppercase mb-1">Total</div>
+      <div class="text-lg sm:text-2xl font-bold text-gray-900"><%= @total_count %></div>
+    </div>
+
+    <!-- Pendiente -->
+    <%= link_to customers_packages_path(status: 'pending_pickup', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-2 sm:px-4 py-2 sm:py-3 text-center hover:bg-gray-50 transition-colors block" do %>
+      <div class="text-[10px] sm:text-xs font-medium text-gray-500 uppercase mb-1">Pendiente</div>
+      <div class="text-lg sm:text-2xl font-bold" style="color: var(--color-status-pending-text, #92400e)">
+        <%= @pending_pickup_count %>
+      </div>
+    <% end %>
+
+    <!-- En Camino -->
+    <%= link_to customers_packages_path(status: 'in_transit', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-2 sm:px-4 py-2 sm:py-3 text-center hover:bg-gray-50 transition-colors block" do %>
+      <div class="text-[10px] sm:text-xs font-medium text-gray-500 uppercase mb-1">En Camino</div>
+      <div class="text-lg sm:text-2xl font-bold" style="color: var(--color-status-transit-text, #6d28d9)">
+        <%= @in_transit_count %>
+      </div>
+    <% end %>
+
+    <!-- Entregado -->
+    <%= link_to customers_packages_path(status: 'delivered', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-2 sm:px-4 py-2 sm:py-3 text-center hover:bg-gray-50 transition-colors block" do %>
+      <div class="text-[10px] sm:text-xs font-medium text-gray-500 uppercase mb-1">Entregado</div>
+      <div class="text-lg sm:text-2xl font-bold" style="color: var(--color-status-delivered-text, #059669)">
+        <%= @delivered_count %>
+      </div>
+    <% end %>
+
+    <!-- Reprogramado -->
+    <%= link_to customers_packages_path(status: 'rescheduled'),
+        class: "bg-white px-2 sm:px-4 py-2 sm:py-3 text-center hover:bg-gray-50 transition-colors block" do %>
+      <div class="text-[10px] sm:text-xs font-medium text-gray-500 uppercase mb-1">Reprog.</div>
+      <div class="text-lg sm:text-2xl font-bold" style="color: var(--color-status-rescheduled-text, #ea580c)">
+        <%= @persistent_rescheduled_count %>
+      </div>
+    <% end %>
+
+    <!-- Cancelado -->
+    <%= link_to customers_packages_path(status: 'cancelled', date_from: @date_from, date_to: @date_to),
+        class: "bg-white px-2 sm:px-4 py-2 sm:py-3 text-center hover:bg-gray-50 transition-colors block" do %>
+      <div class="text-[10px] sm:text-xs font-medium text-gray-500 uppercase mb-1">Cancelado</div>
+      <div class="text-lg sm:text-2xl font-bold" style="color: var(--color-status-cancelled-text, #64748b)">
+        <%= @cancelled_count %>
+      </div>
+    <% end %>
+  </div>
+</div>

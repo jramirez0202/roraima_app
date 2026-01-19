@@ -1,0 +1,158 @@
+<div class="px-4 sm:px-6 lg:px-8">
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div class="sm:flex-auto">
+      <h1 class="text-2xl font-semibold text-gray-900">Configuración del Sistema</h1>
+      <p class="mt-2 text-sm text-gray-700">
+        Ajusta las opciones globales del sistema de gestión de rutas y conductores.
+      </p>
+    </div>
+  </div>
+
+  <%= form_with model: @setting, url: admin_settings_path, method: :patch, local: true, class: "mt-8" do |form| %>
+    <div class="space-y-6">
+      <!-- Sección: Gestión de Conductores -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">
+            Gestión de Conductores
+          </h3>
+
+          <!-- Toggle: Requerir Autorización de Conductores -->
+          <div class="flex items-start">
+            <div class="flex h-6 items-center">
+              <%= form.check_box :require_driver_authorization,
+                  id: 'require_driver_authorization',
+                  class: "h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" %>
+            </div>
+            <div class="ml-3 text-sm leading-6">
+              <%= form.label :require_driver_authorization, class: "font-medium text-gray-900" do %>
+                Requerir autorización para iniciar rutas
+              <% end %>
+              <p class="text-gray-500 mt-1">
+                Cuando está <strong>activado</strong>, los conductores deben ser autorizados explícitamente por un administrador antes de poder iniciar rutas.
+                La columna "Autorizado" se mostrará en la tabla de conductores.
+              </p>
+              <p class="text-gray-500 mt-2">
+                Cuando está <strong>desactivado</strong>, cualquier conductor activo puede iniciar rutas sin autorización previa.
+                La columna "Autorizado" se ocultará de la tabla.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección: Gestión de Estados para Clientes -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">
+            Gestión de Estados para Clientes
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">
+            Controla qué estados opcionales son visibles en el dashboard del cliente.
+            Los estados ocultos se mostrarán como "En proceso".
+          </p>
+
+          <!-- Estados Core (siempre visibles) -->
+          <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h4 class="text-sm font-medium text-blue-800">Estados del Flujo Principal (Siempre Visibles)</h4>
+                <p class="mt-1 text-sm text-blue-700">
+                  Los siguientes estados son esenciales y siempre estarán visibles:
+                  <strong>Pendiente Retiro</strong>, <strong>Bodega</strong>, <strong>En Camino</strong> y <strong>Entregado</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estados Configurables -->
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Estados Opcionales Configurables</h4>
+          <div class="space-y-4">
+            <%
+              # Solo mostrar estados configurables (no core)
+              configurable_statuses = [:rescheduled, :return, :cancelled]
+              PackagesHelper::STATUS_TRANSLATIONS.select { |status, _| configurable_statuses.include?(status) }.each do |status, label|
+            %>
+              <div class="flex items-start">
+                <div class="flex h-6 items-center">
+                  <%= form.check_box "customer_visible_#{status}".to_sym,
+                      id: "customer_visible_#{status}",
+                      class: "h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" %>
+                </div>
+                <div class="ml-3 text-sm leading-6">
+                  <%= form.label "customer_visible_#{status}".to_sym, class: "font-medium text-gray-900" do %>
+                    Mostrar estado "<%= label %>"
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección de Información -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3 flex-1">
+            <h3 class="text-sm font-medium text-blue-800">
+              Información Importante
+            </h3>
+            <div class="mt-2 text-sm text-blue-700">
+              <ul class="list-disc space-y-1 pl-5">
+                <li>Los cambios se aplican inmediatamente después de guardar.</li>
+                <li>Esta configuración afecta el comportamiento del sistema de gestión de rutas.</li>
+                <li>Puedes cambiar esta configuración en cualquier momento según tus necesidades operativas.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="flex items-center justify-end gap-x-6">
+        <%= link_to "Cancelar", admin_root_path, class: "text-sm font-semibold leading-6 text-gray-900" %>
+        <%= form.submit "Guardar Configuración",
+            class: "rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Botón Cerrar Sesión - Solo visible en móvil -->
+  <div class="mt-8 mb-20 md:hidden">
+    <%= button_to destroy_user_session_path,
+      method: :delete,
+      data: { turbo: false, confirm: "¿Estás seguro de que deseas cerrar sesión?" },
+      class: "w-full flex items-center justify-center px-6 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors shadow-sm" do %>
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      <span class="font-semibold">Cerrar Sesión</span>
+    <% end %>
+  </div>
+
+  <script>
+    // Show warning if all checkboxes unchecked
+    document.addEventListener('DOMContentLoaded', function() {
+      const checkboxes = document.querySelectorAll('[id^="customer_visible_"]');
+      const warning = document.getElementById('visibility-warning');
+
+      function checkVisibility() {
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        warning.style.display = anyChecked ? 'none' : 'block';
+      }
+
+      checkboxes.forEach(cb => cb.addEventListener('change', checkVisibility));
+      checkVisibility(); // Initial check
+    });
+  </script>
+</div>

@@ -1,0 +1,165 @@
+<div class="px-4 sm:px-0">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Mi Perfil</h1>
+    <%= link_to "Editar Perfil", edit_drivers_profile_path, class: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" %>
+  </div>
+
+  <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <!-- Información Personal -->
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Información Personal</h2>
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Nombre Completo</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @driver.full_name %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">RUT</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @driver.rut %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Email</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @driver.email %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Teléfono</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @driver.phone || 'No especificado' %></dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Información del Vehículo -->
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Información del Vehículo</h2>
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Patente</dt>
+          <dd class="mt-1 text-sm text-gray-900 font-mono"><%= @driver.vehicle_plate %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Modelo</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @driver.vehicle_model %></dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Capacidad</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @driver.vehicle_capacity %> kg</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Zona Asignada -->
+    <div class="px-6 py-4">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Zona de Trabajo</h2>
+      <dl class="grid grid-cols-1 gap-4">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Zona Asignada</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <% if @driver.assigned_zone.present? %>
+              <div class="flex items-center">
+                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                  <%= @driver.assigned_zone.name %>
+                </span>
+              </div>
+              <% if @driver.assigned_zone.communes.present? %>
+                <div class="mt-2 text-xs text-gray-600">
+                  <strong>Comunas:</strong> <%= @driver.assigned_zone.commune_names.join(', ') %>
+                </div>
+              <% end %>
+            <% else %>
+              <span class="text-gray-400">Sin zona asignada</span>
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Entregas Semanales -->
+  <div class="mt-6 bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-900">Entregas Semanales</h2>
+      <p class="text-sm text-gray-500 mt-1">
+        Del <%= I18n.l(@current_week_start, format: '%A %d/%m') %> al <%= I18n.l(@current_week_end, format: '%A %d/%m') %>
+      </p>
+    </div>
+
+    <!-- Contadores de estadísticas -->
+    <div class="px-6 py-4 border-b border-gray-200">
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <!-- Entregados - SE PAGAN -->
+        <div class="text-center p-4 bg-green-50 rounded-lg border-2 border-green-200">
+          <dt class="text-sm font-medium text-gray-600">✅ Entregados</dt>
+          <dd class="mt-2 text-4xl font-bold text-green-700"><%= @weekly_stats[:delivered] %></dd>
+        </div>
+
+        <!-- Reprogramados - NO SE PAGAN -->
+        <div class="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <dt class="text-sm font-medium text-gray-600">📅 Reprogramados</dt>
+          <dd class="mt-2 text-4xl font-bold text-amber-700"><%= @weekly_stats[:rescheduled] %></dd>
+          <p class="text-xs text-gray-500 mt-1">Solo información</p>
+        </div>
+
+        <!-- Cancelados - NO SE PAGAN -->
+        <div class="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+          <dt class="text-sm font-medium text-gray-600">❌ Cancelados</dt>
+          <dd class="mt-2 text-4xl font-bold text-red-700"><%= @weekly_stats[:cancelled] %></dd>
+          <p class="text-xs text-gray-500 mt-1">Solo información</p>
+        </div>
+      </dl>
+    </div>
+
+  <!-- Navegación de semanas -->
+  <div class="px-6 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  
+  <!-- Indicador de semana -->
+  <div class="order-1 sm:order-2 text-center">
+    <% if @is_current_week %>
+      <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+        Semana Actual
+      </span>
+    <% else %>
+      <span class="text-xs text-gray-500">
+        <%= @current_week_start.strftime('%d/%m/%Y') %>
+      </span>
+    <% end %>
+  </div>
+
+  <!-- Botón Semana Anterior -->
+  <div class="order-2 sm:order-1">
+    <%= link_to drivers_profile_path(week: @previous_week_start.to_s),
+        class: "w-full sm:w-auto flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Anterior
+    <% end %>
+  </div>
+
+  <!-- Botón Semana Siguiente -->
+  <div class="order-3">
+    <% if @next_week_start.present? %>
+      <%= link_to drivers_profile_path(week: @next_week_start.to_s),
+          class: "w-full sm:w-auto flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" do %>
+        Siguiente
+        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+
+  <!-- Botón Cerrar Sesión - Visible especialmente en móvil -->
+  <div class="mt-6 mb-20 md:mb-6">
+    <%= button_to destroy_user_session_path,
+      method: :delete,
+      data: { turbo: false, confirm: "¿Estás seguro de que deseas cerrar sesión?" },
+      class: "w-full flex items-center justify-center px-6 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors shadow-sm" do %>
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      <span class="font-semibold">Cerrar Sesión</span>
+    <% end %>
+  </div>
+</div>
