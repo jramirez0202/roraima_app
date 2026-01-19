@@ -1,23 +1,11 @@
-version: '3.8'
-
-# ============================================================================
-# ROIRAIMA DELIVERY - DOCKER COMPOSE PRODUCCIÓN
-# ============================================================================
-# Optimizado para AWS EC2 t3.medium + RDS + ElastiCache + S3
-# Servicios externos: NO postgres/redis/storage locales (usan AWS)
-# ============================================================================
-
 networks:
   roiraima_prod_network:
     driver: bridge
 
 volumes:
-  storage_data:  # Solo logs, tmp de Rails (volumen local)
+  storage_data:  
 
 services:
-  # =========================================================================
-  # RAILS WEB SERVER
-  # =========================================================================
   web:
     build:
       context: .
@@ -27,17 +15,11 @@ services:
         RUBY_VERSION: 3.2.2
     
     container_name: roiraima_web_prod
-    
-    # Puerto: 3000 SOLO internamente (nginx reverse proxy lo accede)
-    # NO exponer a 0.0.0.0:3000 en producción (usa nginx en el host)
     ports:
-      - "127.0.0.1:3000:3000"  # Solo localhost
-    
-    # Variables de entorno desde .env.production
+      - "127.0.0.1:3000:3000"
+
     env_file:
-      - .env.production
-    
-    # Sobrescribir/agregar variables si es necesario
+      - ./.env.production
     environment:
       RAILS_ENV: production
       DATABASE_URL: ${DATABASE_URL}
@@ -51,25 +33,19 @@ services:
       PROTOCOL: ${PROTOCOL}
       RAILS_MASTER_KEY: ${SECRET_KEY_BASE}
     
-    # Health check para nginx y monitoreo
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    
-    # Reiniciar automáticamente si falla
     restart: always
     
-    # Volúmenes
+
     volumes:
-      # PRODUCCIÓN: NO montar código local
-      # Rails almacena logs y archivos temporales aquí
       - storage_data:/rails/storage
       - storage_data:/rails/log
     
-    # Logging (enviar a CloudWatch si deseas)
     logging:
       driver: "json-file"
       options:
@@ -77,8 +53,6 @@ services:
         max-file: "10"
         labels: "service=roiraima_web"
     
-    # Límites de recursos (para t3.medium: 2 vCPU, 4 GB RAM)
-    # Reservar 1.5 GB para Rails, dejar 2.5 GB para sistema/nginx
     deploy:
       resources:
         limits:
@@ -90,13 +64,8 @@ services:
     
     networks:
       - roiraima_prod_network
-    
-    # Dependencias: NO hay postgres/redis locales
     depends_on: []
 
-  # =========================================================================
-  # SIDEKIQ - BACKGROUND JOBS WORKER
-  # =========================================================================
   sidekiq:
     build:
       context: .
@@ -106,17 +75,15 @@ services:
         RUBY_VERSION: 3.2.2
     
     container_name: roiraima_sidekiq_prod
-    
-    # Comando para Sidekiq
     command: >
       bundle exec sidekiq 
       -C config/sidekiq.yml 
       -c ${SIDEKIQ_CONCURRENCY:-5}
       -v
     
-    # Variables de entorno
+
     env_file:
-      - .env.production
+      - ./.env.production
     
     environment:
       RAILS_ENV: production
@@ -128,8 +95,6 @@ services:
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       RAILS_MASTER_KEY: ${SECRET_KEY_BASE}
-    
-    # NO exponer puertos (interno solo)
     
     restart: always
     
@@ -144,8 +109,6 @@ services:
         max-file: "10"
         labels: "service=roiraima_sidekiq"
     
-    # Límites de recursos
-    # Sidekiq puede usar más CPU que web (procesa jobs en background)
     deploy:
       resources:
         limits:
@@ -159,88 +122,3 @@ services:
       - roiraima_prod_network
     
     depends_on: []
-
-# ============================================================================
-# CÓMO USAR EN PRODUCCIÓN
-# ============================================================================
-#
-# 1. PRIMERO: Conectar a EC2 instance
-#    ssh -i tu-key.pem ubuntu@tu-elastic-ip
-#
-# 2. INSTALAR DOCKER & DOCKER COMPOSE (si no está)
-#    curl -fsSL https://get.docker.com -o get-docker.sh
-#    sudo sh get-docker.sh
-#    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-#    sudo chmod +x /usr/local/bin/docker-compose
-#
-# 3. CLONAR REPO (con .env.production)
-#    cd /home/ubuntu
-#    git clone <tu-repo>
-#    cd Roraima_delivery
-#    # Asegúrate que .env.production está en .gitignore
-#
-# 4. CREAR .env.production EN EC2
-#    Copiar el contenido del .env.production local a:
-#    scp -i tu-key.pem .env.production ubuntu@tu-elastic-ip:~/Roraima_delivery/
-#
-# 5. BUILD DE IMAGEN
-#    docker compose -f docker-compose.production.yml build --no-cache
-#    (Primera vez: ~10-15 minutos)
-#
-# 6. START SERVICIOS
-#    docker compose -f docker-compose.production.yml up -d
-#
-# 7. CREAR BASE DE DATOS (primera vez)
-#    docker compose -f docker-compose.production.yml exec web \
-#      ./bin/rails db:create db:migrate
-#
-# 8. PRECOMPILAR ASSETS (si cambió)
-#    docker compose -f docker-compose.production.yml exec web \
-#      ./bin/rails assets:precompile
-#
-# 9. HEALTH CHECK
-#    curl http://localhost:3000/up
-#    # Esperado: HTTP/1.1 200 OK
-#
-# 10. LOGS
-#     docker compose -f docker-compose.production.yml logs -f web
-#     docker compose -f docker-compose.production.yml logs -f sidekiq
-#
-# 11. STOP SERVICIOS
-#     docker compose -f docker-compose.production.yml down
-#
-# ============================================================================
-# DIFERENCIAS CON STAGING
-# ============================================================================
-#
-# STAGING (docker-compose.yml):
-#   ❌ postgres local en puerto 5432
-#   ❌ redis local en puerto 6379
-#   ❌ Volúmenes: postgres_data, redis_data
-#   ❌ Hot-reload de código
-#   ❌ Logs en stdout
-#
-# PRODUCCIÓN (docker-compose.production.yml):
-#   ✅ RDS PostgreSQL en AWS
-#   ✅ ElastiCache Redis en AWS
-#   ✅ S3 para almacenamiento
-#   ✅ Puerto 3000 solo en localhost (nginx reverse proxy)
-#   ✅ Health checks
-#   ✅ Límites de recursos
-#   ✅ Imagen bakeada (NO código local)
-#   ✅ Logs JSON a archivos
-#   ✅ Sidekiq worker separado
-#
-# ============================================================================
-# NGINX REVERSE PROXY (en el HOST)
-# ============================================================================
-#
-# El EC2 necesita nginx en el HOST (NO en Docker) para:
-# 1. Proxy HTTP/HTTPS a Docker (localhost:3000)
-# 2. SSL/TLS termination
-# 3. Servir archivos estáticos
-# 4. Health checks
-#
-# Ver: scripts/setup-nginx-prod.sh (crear después si necesitas)
-#
-# ============================================================================
